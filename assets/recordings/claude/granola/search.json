@@ -1,0 +1,10 @@
+[
+  {
+    "tool": "mcp__claude_ai_Granola__query_granola_meetings",
+    "args": {
+      "query": "context store"
+    },
+    "wall_clock_ms": 0.0,
+    "response": "I don't have any meeting data loaded at the moment, so I'm unable to surface insights from past meetings right now.\nIs there something specific you'd like to explore? For example:\n- **Upcoming meetings** \u2014 I can check your calendar for what's coming up\n- **Search for past meetings** \u2014 if you have a topic, person, or date in mind, I can look that up\nJust let me know how I can help!"
+  }
+]
