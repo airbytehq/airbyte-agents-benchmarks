@@ -1,0 +1,28 @@
+name: linear
+title: "Linear — 3-task head-to-head"
+connector: linear
+connector_id_env: LINEAR_CONNECTOR_ID
+description: >
+  Linear head-to-head across three agent data tasks. Both sides return JSON,
+  so the gap shifts to field depth (53 vs 25 on March 3) and queryability.
+
+tasks:
+  - label: "Search issues by keyword"
+    action: search
+    entity: issues
+    metric_focus: narrow_context
+    params:
+      keyword: "context store"
+  - label: "Get single issue by ID"
+    action: get
+    entity: issues
+    metric_focus: single_record_fetch
+    params:
+      id: "ec6e00c7-dd96-4875-952c-69ecc33ce06d"
+      identifier: "AGENTIC-338"
+  - label: "List first 50 issues"
+    action: list
+    entity: issues
+    metric_focus: bulk_list
+    params:
+      limit: 50
