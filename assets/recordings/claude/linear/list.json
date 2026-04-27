@@ -1,0 +1,391 @@
+[
+  {
+    "tool": "mcp__claude_ai_Linear__list_issues",
+    "args": {
+      "limit": 25
+    },
+    "wall_clock_ms": 0.0,
+    "response": {
+      "issues": [
+        {
+          "id": "AGENTIC-1087",
+          "title": "Share support bot conversation across floating and help panels",
+          "priority": {
+            "value": 2,
+            "name": "High"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-1087/share-support-bot-conversation-across-floating-and-help-panels",
+          "createdAt": "2026-04-20T18:35:56.758Z",
+          "updatedAt": "2026-04-22T16:05:12.717Z",
+          "status": "In Progress",
+          "labels": [
+            "Feature"
+          ],
+          "assignee": "Volodymyr Petrov",
+          "delegate": "Devin",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-1101",
+          "title": "PR #4240 follow-up: compaction divider cleanup",
+          "priority": {
+            "value": 3,
+            "name": "Medium"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-1101",
+          "createdAt": "2026-04-22T04:36:47.538Z",
+          "updatedAt": "2026-04-22T15:56:50.255Z",
+          "status": "Done",
+          "labels": [
+            "Improvement"
+          ],
+          "assignee": "Sean Lester",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-1103",
+          "title": "Slack connector: no way to scope sync to specific channels",
+          "priority": {
+            "value": 3,
+            "name": "Medium"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-1103",
+          "createdAt": "2026-04-22T15:46:37.212Z",
+          "updatedAt": "2026-04-22T15:46:37.212Z",
+          "status": "Backlog",
+          "labels": [
+            "connector-slack",
+            "Needs Review",
+            "Internal",
+            "Improvement"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-1100",
+          "title": "Persist chat SSE stream in background across in-app navigation",
+          "priority": {
+            "value": 2,
+            "name": "High"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-1100",
+          "createdAt": "2026-04-22T03:05:42.352Z",
+          "updatedAt": "2026-04-22T15:15:07.254Z",
+          "status": "In Progress",
+          "labels": [],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-1086",
+          "title": "Save support chat expanded state across help page routes",
+          "priority": {
+            "value": 3,
+            "name": "Medium"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-1086",
+          "createdAt": "2026-04-20T18:34:26.572Z",
+          "updatedAt": "2026-04-22T15:12:07.463Z",
+          "status": "Done",
+          "labels": [
+            "Feature"
+          ],
+          "assignee": "Volodymyr Petrov",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-753",
+          "title": "Bug bash: chat message styling reduces readability",
+          "priority": {
+            "value": 4,
+            "name": "Low"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-753",
+          "createdAt": "2026-04-06T23:19:05.171Z",
+          "updatedAt": "2026-04-22T15:11:31.417Z",
+          "status": "Done",
+          "labels": [
+            "Bug"
+          ],
+          "assignee": "AJ Steers",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-1102",
+          "title": "fix(automations): legacy IANA timezone aliases rejected",
+          "priority": {
+            "value": 3,
+            "name": "Medium"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-1102",
+          "createdAt": "2026-04-22T14:03:16.479Z",
+          "updatedAt": "2026-04-22T14:03:16.479Z",
+          "status": "Done",
+          "labels": [],
+          "assignee": "Sean Lester",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-1099",
+          "title": "Show compaction indicator in chat",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-1099",
+          "createdAt": "2026-04-22T01:13:40.765Z",
+          "updatedAt": "2026-04-22T04:16:57.967Z",
+          "status": "Done",
+          "labels": [
+            "Improvement"
+          ],
+          "assignee": "Sean Lester",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-792",
+          "title": "Make the cluster private",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-792",
+          "createdAt": "2026-04-08T02:18:15.927Z",
+          "updatedAt": "2026-04-22T03:14:32.980Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-841",
+          "title": "Admin endpoint to acknowledge breaking changes",
+          "priority": {
+            "value": 2,
+            "name": "High"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-841",
+          "createdAt": "2026-04-10T04:21:22.063Z",
+          "updatedAt": "2026-04-22T03:14:32.222Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-830",
+          "title": "Restore direct access to the Sonar prod database",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-830",
+          "createdAt": "2026-04-09T22:44:59.834Z",
+          "updatedAt": "2026-04-22T03:14:31.349Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "assignee": "alexandre@airbyte.io",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-623",
+          "title": "Create a workflow for consolidating and triaging Linear issues",
+          "priority": {
+            "value": 2,
+            "name": "High"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-623",
+          "createdAt": "2026-04-03T01:26:53.586Z",
+          "updatedAt": "2026-04-22T03:14:30.513Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-617",
+          "title": "Job to inspect new OSS GitHub issues for ADP",
+          "priority": {
+            "value": 3,
+            "name": "Medium"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-617",
+          "createdAt": "2026-04-03T00:44:21.238Z",
+          "updatedAt": "2026-04-22T03:14:29.664Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-849",
+          "title": "Allow automerging changes to evals",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-849",
+          "createdAt": "2026-04-10T21:38:53.679Z",
+          "updatedAt": "2026-04-22T03:14:28.922Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-338",
+          "title": "Dashboard All Customers view shows failed Context Store calls",
+          "priority": {
+            "value": 3,
+            "name": "Medium"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-338",
+          "createdAt": "2026-03-18T19:20:09.546Z",
+          "updatedAt": "2026-04-22T03:14:27.887Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt",
+            "Needs Review",
+            "Internal",
+            "Bug"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-781",
+          "title": "Add reporting for failed async jobs",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-781",
+          "createdAt": "2026-04-07T22:44:03.533Z",
+          "updatedAt": "2026-04-22T03:14:26.873Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "assignee": "alexandre@airbyte.io",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-778",
+          "title": "Add alerting for orphaned async jobs",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-778",
+          "createdAt": "2026-04-07T22:25:17.026Z",
+          "updatedAt": "2026-04-22T03:14:26.067Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "assignee": "alexandre@airbyte.io",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-578",
+          "title": "Automate connector UX testing",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-578",
+          "createdAt": "2026-04-02T18:39:40.191Z",
+          "updatedAt": "2026-04-22T03:14:25.210Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-495",
+          "title": "Acceptance test with playwright",
+          "priority": {
+            "value": 2,
+            "name": "High"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-495",
+          "createdAt": "2026-04-01T16:34:07.364Z",
+          "updatedAt": "2026-04-22T03:14:24.451Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-455",
+          "title": "Smoke tests skip the CHECK flow",
+          "priority": {
+            "value": 3,
+            "name": "Medium"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-455",
+          "createdAt": "2026-03-30T20:47:35.968Z",
+          "updatedAt": "2026-04-22T03:14:23.672Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt",
+            "Bug"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-454",
+          "title": "Smoke tests don't validate auth scheme coverage",
+          "priority": {
+            "value": 3,
+            "name": "Medium"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-454",
+          "createdAt": "2026-03-30T20:44:23.310Z",
+          "updatedAt": "2026-04-22T03:14:22.887Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt",
+            "Bug"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-922",
+          "title": "Improve error handling for chat stream cutoff",
+          "priority": {
+            "value": 2,
+            "name": "High"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-922",
+          "createdAt": "2026-04-15T19:40:12.803Z",
+          "updatedAt": "2026-04-22T03:05:42.352Z",
+          "status": "Backlog",
+          "labels": [],
+          "assignee": "Johnny Schmidt",
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-943",
+          "title": "Rename app to Airbyte Agents",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-943",
+          "createdAt": "2026-04-16T16:14:59.471Z",
+          "updatedAt": "2026-04-22T02:49:40.022Z",
+          "status": "Done",
+          "labels": [],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-920",
+          "title": "Consolidate Coral enrollment APIs",
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-920",
+          "createdAt": "2026-04-15T17:55:34.173Z",
+          "updatedAt": "2026-04-22T02:16:41.340Z",
+          "status": "Backlog",
+          "labels": [
+            "tech-debt"
+          ],
+          "team": "airbyte-agentic"
+        },
+        {
+          "id": "AGENTIC-1098",
+          "title": "Rename MCP server to Airbyte Agent MCP",
+          "priority": {
+            "value": 2,
+            "name": "High"
+          },
+          "url": "https://linear.app/airbyteio/issue/AGENTIC-1098",
+          "createdAt": "2026-04-22T01:01:56.541Z",
+          "updatedAt": "2026-04-22T02:14:16.045Z",
+          "status": "In Progress",
+          "labels": [
+            "Improvement"
+          ],
+          "assignee": "cameron.kennedy@airbyte.io",
+          "team": "airbyte-agentic"
+        }
+      ],
+      "hasNextPage": true,
+      "cursor": "0f99e687-d718-4d24-9860-14ca72abd64b"
+    }
+  }
+]
