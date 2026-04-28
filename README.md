@@ -52,6 +52,7 @@ See [docs/RESULTS.md](docs/RESULTS.md) for the full numbers, connector-level bre
 | `docs/RESULTS.md` | Current numbers and safe claims |
 | `docs/CTO_BRIEF.md` | Executive-facing summary and caveats |
 | `docs/SLACK_STATUS.md` | Slack blocker and completion path |
+| `docs/THIRD_PARTY_MCP_SETUP.md` | Installation and configuration guide for third-party MCP servers (Linear, Granola, Slack) |
 
 ## CLI Reference
 
@@ -96,3 +97,4 @@ For Agent Engine MCP, `--wall-ms` can be omitted when the response contains `exe
 - [Results](docs/RESULTS.md) — current numbers, safe claims, and caveats
 - [CTO Brief](docs/CTO_BRIEF.md) — executive-facing summary
 - [Slack Status](docs/SLACK_STATUS.md) — Slack blocker and completion path
+- [Third-Party MCP Setup](docs/THIRD_PARTY_MCP_SETUP.md) — install and configure Linear, Granola, and Slack MCP servers
