@@ -4,8 +4,8 @@ connector: slack
 connector_id_env: SLACK_CONNECTOR_ID
 description: >
   Slack head-to-head across three agent data tasks. Shows narrow-context search,
-  single-record fetch latency, and a bulk-list comparison where Claude MCP has
-  no native equivalent.
+  single-record fetch latency, and a bulk-list comparison where native MCP has
+  no direct equivalent.
 
 tasks:
   - label: "Search channels by keyword"

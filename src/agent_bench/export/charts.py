@@ -7,9 +7,9 @@ from pathlib import Path
 from agent_bench.runner import RunReport
 
 
-PATH_ORDER = ["ae-sdk", "ae-mcp", "claude"]
-PATH_LABEL = {"ae-sdk": "AE SDK", "ae-mcp": "AE MCP", "claude": "Claude MCP"}
-PATH_COLOR = {"ae-sdk": "#3b82f6", "ae-mcp": "#10b981", "claude": "#f59e0b"}
+PATH_ORDER = ["agent-sdk", "agent-mcp", "native-mcp"]
+PATH_LABEL = {"agent-sdk": "Agent SDK", "agent-mcp": "Agent MCP", "native-mcp": "Native MCP"}
+PATH_COLOR = {"agent-sdk": "#3b82f6", "agent-mcp": "#10b981", "native-mcp": "#f59e0b"}
 
 
 def render_charts(report: RunReport, out_dir: Path) -> None:
@@ -106,15 +106,15 @@ def _chart_single_record_gap(report, out_dir, plt) -> None:
     ax.set_ylabel("Tokens")
     if "granola" in connectors:
         idx = connectors.index("granola")
-        claude_match = [
+        native_match = [
             c for c in get_cells
-            if c.scenario.connector == "granola" and c.path_short == "claude"
+            if c.scenario.connector == "granola" and c.path_short == "native-mcp"
         ]
-        if claude_match:
+        if native_match:
             ax.annotate(
-                "Granola transcript\nvs AE summary_text",
-                xy=(idx + 2 * bar_width, claude_match[0].result.total_tokens),
-                xytext=(idx + 0.35, claude_match[0].result.total_tokens * 1.08),
+                "Granola transcript\nvs Agent summary_text",
+                xy=(idx + 2 * bar_width, native_match[0].result.total_tokens),
+                xytext=(idx + 0.35, native_match[0].result.total_tokens * 1.08),
                 arrowprops={"arrowstyle": "->", "color": "#374151"},
                 fontsize=8,
                 color="#374151",

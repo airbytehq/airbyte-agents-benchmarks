@@ -1,14 +1,14 @@
 # Methodology
 
-This repository packages the Agent Engine launch benchmark harness and the April 24, 2026 interim result set.
+This repository packages the Airbyte Agents launch benchmark harness and the April 24, 2026 interim result set.
 
 The benchmark compares three ways an agent can fetch the same business data:
 
 | Path | What it measures | Payload consumed by the agent |
 |---|---|---|
-| Agent Engine SDK/API | Direct `airbyte-agent-sdk` calls to Agent Engine | Full typed records returned by the SDK |
-| Agent Engine MCP | Hosted Airbyte Platform MCP calls with mandatory `select_fields` | Narrow typed JSON selected by the MCP call |
-| Claude cloud MCP | Anthropic-hosted connector MCP calls | Connector-specific MCP responses, which may be JSON, text, or markdown-like |
+| Agent SDK | Direct `airbyte-agent-sdk` calls to Airbyte Agents | Full typed records returned by the SDK |
+| Agent MCP | Hosted Airbyte Platform MCP calls with mandatory `select_fields` | Narrow typed JSON selected by the MCP call |
+| Native MCP | Vendor-native MCP server calls | Connector-specific MCP responses, which may be JSON, text, or markdown-like |
 
 ## Scenario Shape
 
@@ -32,9 +32,9 @@ Token counts are computed with `tiktoken` using the `cl100k_base` encoding. The 
 
 This means:
 
-- SDK/API token counts include full record bodies returned by `airbyte-agent-sdk`.
-- Agent Engine MCP token counts include the MCP response after `select_fields` narrows the returned fields.
-- Claude MCP token counts include the recorded Claude MCP tool response, preserving its connector-specific shape.
+- SDK token counts include full record bodies returned by `airbyte-agent-sdk`.
+- Agent MCP token counts include the MCP response after `select_fields` narrows the returned fields.
+- Native MCP token counts include the recorded native MCP tool response, preserving its connector-specific shape.
 
 ## Payload Bytes
 
@@ -46,21 +46,21 @@ Bytes and tokens can diverge because tokenization is model-specific, while byte 
 
 Timing is path-specific:
 
-- Agent Engine SDK/API uses client-side wall clock around the SDK call.
-- Agent Engine MCP uses `execution_metadata.execution_time_ms` from the MCP response.
-- Claude cloud MCP timing is not captured by the harness. Claude replay rows show `0` latency and should be read as unmeasured, not instant.
+- Agent SDK uses client-side wall clock around the SDK call.
+- Agent MCP uses `execution_metadata.execution_time_ms` from the MCP response.
+- Native MCP timing is not captured by the harness. Native MCP replay rows show `0` latency and should be read as unmeasured, not instant.
 
 ## Record-Replay Paths
 
-`ae-mcp` and `claude` are record-replay paths. Their recordings live in `assets/recordings/`.
+`agent-mcp` and `native-mcp` are record-replay paths. Their recordings live in `assets/recordings/`.
 
-The validation command checks that required replay files exist and that Agent Engine MCP recordings are not stale:
+The validation command checks that required replay files exist and that Agent MCP recordings are not stale:
 
 ```bash
-uv run agent-bench validate --connectors linear,granola --paths claude,ae-mcp
+uv run agent-bench validate --connectors linear,granola --paths native-mcp,agent-mcp
 ```
 
-Agent Engine MCP recordings must include:
+Agent MCP recordings must include:
 
 - `mcp__airbyte-agent__execute`
 - `select_fields`
@@ -72,14 +72,14 @@ Agent Engine MCP recordings must include:
 Markdown and chart exports are blocked when:
 
 - required replay recordings are missing,
-- Agent Engine MCP recordings are stale or missing `select_fields`,
+- Agent MCP recordings are stale or missing `select_fields`,
 - any benchmark cell errors or is skipped,
-- Agent Engine SDK and Agent Engine MCP record counts differ for the same task.
+- Agent SDK and Agent MCP record counts differ for the same task.
 
 The April 24 artifact is intentionally an interim Linear+Granola export because Slack search was not ready.
 
 ## Reproducibility Caveat
 
-The SDK/API path is live. It can drift when the underlying connector data changes. The April 24 scorecard committed under `artifacts/2026-04-24/scorecard.md` is the frozen launch artifact for the 66,587 SDK/API token total.
+The SDK path is live. It can drift when the underlying connector data changes. The April 24 scorecard committed under `artifacts/2026-04-24/scorecard.md` is the frozen launch artifact for the 66,587 SDK token total.
 
-As of the April 27, 2026 verification run, Linear+Granola completed successfully but the live SDK/API token total was 53,000 because current Linear payloads had changed. Agent Engine MCP and Claude MCP replay totals remained 5,229 and 13,628.
+As of the April 27, 2026 verification run, Linear+Granola completed successfully but the live SDK token total was 53,000 because current Linear payloads had changed. Agent MCP and Native MCP replay totals remained 5,229 and 13,628.

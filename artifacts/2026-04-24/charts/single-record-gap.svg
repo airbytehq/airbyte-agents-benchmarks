@@ -1152,7 +1152,7 @@ z
 " style="fill: #3b82f6"/>
     </g>
     <g id="text_13">
-     <!-- AE SDK -->
+     <!-- Agent SDK -->
      <g transform="translate(352.653125 49.430437) scale(0.1 -0.1)">
       <defs>
        <path id="DejaVuSans-44" d="M 1259 4147 
@@ -1206,7 +1206,7 @@ z
 " style="fill: #10b981"/>
     </g>
     <g id="text_14">
-     <!-- AE MCP -->
+     <!-- Agent MCP -->
      <g transform="translate(352.653125 64.108563) scale(0.1 -0.1)">
       <defs>
        <path id="DejaVuSans-4d" d="M 628 4666 
@@ -1285,7 +1285,7 @@ z
 " style="fill: #f59e0b"/>
     </g>
     <g id="text_15">
-     <!-- Claude MCP -->
+     <!-- Native MCP -->
      <g transform="translate(352.653125 78.786687) scale(0.1 -0.1)">
       <use xlink:href="#DejaVuSans-43"/>
       <use xlink:href="#DejaVuSans-6c" transform="translate(69.824219 0)"/>

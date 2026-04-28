@@ -1,12 +1,12 @@
-"""Path B: Airbyte Platform MCP (hosted proxy at mcp.airbyte.ai).
+"""Path B: Agent MCP (hosted proxy at mcp.airbyte.ai).
 
-Invoked via `mcp__airbyte-agent__execute` in the Claude Code runtime. Same
+Invoked via `mcp__airbyte-agent__execute` in an MCP client runtime. Same
 record-replay model as Path A — this path produces an invocation plan and
 reads recorded responses from disk at bench time.
 
 Difference from Path C (SDK): Path B exercises the hosted MCP proxy, so the
-wall-clock latency captures an extra HTTP hop (proxy → Agent Engine API).
-Path C talks to Agent Engine directly from the Python process.
+wall-clock latency captures an extra HTTP hop (proxy → Agent REST API).
+Path C talks to Airbyte Agents directly from the Python process.
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from typing import Any, AsyncIterator
 
 from agent_bench.config import LiveConfig
 from agent_bench.metrics import BenchmarkResult, StepResult, count_tokens
-from agent_bench.paths.claude_mcp import ToolCallSpec, TaskPlan, _count_records
-from agent_bench.paths.agent_engine_sdk import _DISPATCH as _SDK_DISPATCH, _translate
+from agent_bench.paths.native_mcp import ToolCallSpec, TaskPlan, _count_records
+from agent_bench.paths.agent_sdk import _DISPATCH as _SDK_DISPATCH, _translate
 from agent_bench.scenarios.loader import Scenario, Task
 
 
@@ -37,11 +37,11 @@ def _entity_select_fields(connector: str, entity: str) -> list[str]:
     return mapping.get((connector, entity), ["id"])
 
 
-class AgentEngineMCPPath:
+class AgentMCPPath:
     """Record-replay path for the Airbyte Platform MCP proxy."""
 
-    name = "Agent Engine MCP"
-    short_name = "ae-mcp"
+    name = "Agent MCP"
+    short_name = "agent-mcp"
 
     def __init__(self, config: LiveConfig, recordings_dir: FSPath) -> None:
         self._config = config
@@ -80,7 +80,7 @@ class AgentEngineMCPPath:
 
         if not rec_path.exists():
             result.status = "skipped"
-            result.error = f"No recording at {rec_path} — run `agent-bench record --paths ae-mcp` first."
+            result.error = f"No recording at {rec_path} — run `agent-bench record --paths agent-mcp` first."
             step = StepResult(
                 label=f"{task.action} {task.entity} [no recording]",
                 latency_ms=0,
@@ -97,7 +97,7 @@ class AgentEngineMCPPath:
 
         for idx, call in enumerate(recording):
             resp = call.get("response")
-            # Agent Engine MCP returns {"results": [{connector_id, success, result, error}]}
+            # Agent MCP returns {"results": [{connector_id, success, result, error}]}
             # Pull the inner result for metric computation when present.
             inner = _extract_inner(resp)
             payload = json.dumps(inner, default=str)

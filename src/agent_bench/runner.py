@@ -9,9 +9,9 @@ from typing import Iterable
 
 from agent_bench.config import LiveConfig
 from agent_bench.metrics import BenchmarkResult
-from agent_bench.paths.agent_engine_mcp import AgentEngineMCPPath
-from agent_bench.paths.agent_engine_sdk import AgentEngineSDKPath
-from agent_bench.paths.claude_mcp import ClaudeMCPPath
+from agent_bench.paths.agent_mcp import AgentMCPPath
+from agent_bench.paths.agent_sdk import AgentSDKPath
+from agent_bench.paths.native_mcp import NativeMCPPath
 from agent_bench.scenarios.loader import Scenario, Task, load_scenario
 
 
@@ -52,12 +52,12 @@ def _build_paths(
 ) -> list:
     paths = []
     for slug in path_slugs:
-        if slug == "ae-sdk":
-            paths.append(AgentEngineSDKPath(config, connector_name))
-        elif slug == "ae-mcp":
-            paths.append(AgentEngineMCPPath(config, recordings_dir / "ae-mcp"))
-        elif slug == "claude":
-            paths.append(ClaudeMCPPath(recordings_dir / "claude"))
+        if slug == "agent-sdk":
+            paths.append(AgentSDKPath(config, connector_name))
+        elif slug == "agent-mcp":
+            paths.append(AgentMCPPath(config, recordings_dir / "agent-mcp"))
+        elif slug == "native-mcp":
+            paths.append(NativeMCPPath(recordings_dir / "native-mcp"))
         else:
             raise ValueError(f"Unknown path slug: {slug}")
     return paths
@@ -128,7 +128,7 @@ async def run_all(
         requested_paths=list(path_slugs),
     )
     required_connectors = [load_scenario(n).connector for n in scenario_names]
-    # Only the SDK path requires live creds; if ae-sdk isn't in path_slugs,
+    # Only the SDK path requires live creds; if agent-sdk isn't in path_slugs,
     # we can run with an empty config, but config is cheap so always load.
     config = LiveConfig.from_env(required_connectors=required_connectors)
     for name in scenario_names:

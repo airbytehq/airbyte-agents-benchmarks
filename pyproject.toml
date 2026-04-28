@@ -1,7 +1,7 @@
 [project]
 name = "agent-bench"
 version = "0.2.0"
-description = "Three-way benchmark: airbyte-agent-sdk vs Claude cloud MCPs vs Airbyte Platform MCP for AI agent data access"
+description = "Three-way benchmark: Agent SDK vs Native MCP vs Agent MCP for AI agent data access"
 requires-python = ">=3.11"
 dependencies = [
     "rich>=13.0",

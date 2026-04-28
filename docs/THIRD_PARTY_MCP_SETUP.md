@@ -1,8 +1,8 @@
 # Third-Party MCP Servers: Installation and Configuration
 
-This document explains how to install and configure the native MCP servers provided by Linear, Granola, and Slack. These are the third-party alternatives the benchmark compares Agent Engine against.
+This document explains how to install and configure the native MCP servers provided by Linear, Granola, and Slack. These are the third-party alternatives the benchmark compares Airbyte Agents against.
 
-The benchmark's `claude` path uses recordings captured from these providers' MCP tools. If you want to capture fresh recordings or independently verify the tool call shapes, you need access to these servers.
+The benchmark's `native-mcp` path uses recordings captured from these providers' MCP tools. To capture fresh recordings or independently verify tool call shapes, you need access to these servers.
 
 ## Overview
 
@@ -121,9 +121,9 @@ Additional tools (not used by this benchmark):
 
 Notable behavior:
 
-- `query_granola_meetings` returns a synthesized answer, not raw records. This is a fundamentally different response shape from Agent Engine MCP, which returns typed JSON.
+- `query_granola_meetings` returns a synthesized answer, not raw records. This is a fundamentally different response shape from Agent MCP, which returns typed JSON.
 - `list_meetings` has no limit parameter. It returns all meetings in the queried time range.
-- `get_meeting_transcript` requires a meeting UUID. Agent Engine note IDs (`not_...`) are not UUIDs and need translation.
+- `get_meeting_transcript` requires a meeting UUID. Airbyte Agents note IDs (`not_...`) are not UUIDs and need translation.
 - Free-plan users are limited to notes from the last 30 days.
 - Rate limits average approximately 100 requests per minute across all tools.
 
@@ -216,11 +216,11 @@ Slack also provides a hosted remote MCP server at `https://mcp.slack.com/mcp` (S
 
 ### Replaying Committed Recordings
 
-You do not need to install any third-party MCP server to replay existing recordings. The committed recordings at `assets/recordings/claude/` are self-contained JSON files that the harness reads directly:
+You do not need to install any third-party MCP server to replay existing recordings. The committed recordings at `assets/recordings/native-mcp/` are self-contained JSON files that the harness reads directly:
 
 ```bash
-uv run agent-bench run --connectors linear,granola --paths claude
-uv run agent-bench validate --connectors linear,granola --paths claude
+uv run agent-bench run --connectors linear,granola --paths native-mcp
+uv run agent-bench validate --connectors linear,granola --paths native-mcp
 ```
 
 ### Capturing Fresh Recordings
@@ -233,7 +233,7 @@ To capture new recordings, you need the relevant MCP server configured and acces
 
 ```bash
 uv run python scripts/record_response.py \
-  --path claude \
+  --path native-mcp \
   --scenario linear \
   --action search \
   --tool mcp__claude_ai_Linear__list_issues \
@@ -243,7 +243,7 @@ uv run python scripts/record_response.py \
   --reset
 ```
 
-For `claude` path recordings, `--wall-ms` is required. Use `0` if you are not measuring latency (this is the convention in this benchmark since Claude-side latency is not captured).
+For `native-mcp` path recordings, `--wall-ms` is required. Use `0` if you are not measuring latency (this is the convention in this benchmark since native MCP latency is not captured).
 
 The `--tool` and `--args` values must match the tool call shapes shown in the Available Tools tables above.
 
@@ -266,9 +266,9 @@ Some tasks (e.g., Slack list) produce multiple calls per recording file. Use `--
 
 ---
 
-## Comparison With Agent Engine MCP
+## Comparison With Agent MCP
 
-| Dimension | Third-Party MCP | Agent Engine MCP (`ae-mcp`) |
+| Dimension | Third-Party MCP | Agent MCP (`agent-mcp`) |
 |---|---|---|
 | Servers | One per service (Linear, Granola, Slack) | Unified `mcp__airbyte-agent__execute` |
 | Auth | Per-service (OAuth or bot tokens) | Single Airbyte Cloud OAuth credential set |
