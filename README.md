@@ -1,107 +1,72 @@
 # Agent Engine Launch Benchmark
 
-Private handoff package for the Agent Engine Context Store launch benchmark.
+A three-way benchmark comparing how AI agents access business data through Airbyte's Agent Engine. The harness measures token cost, payload size, and latency across three paths for the same tasks.
 
-The benchmark compares three paths:
+| Path | Slug | Description |
+|---|---|---|
+| Agent Engine SDK/API | `ae-sdk` | Live `airbyte-agent-sdk` calls returning full typed records |
+| Agent Engine MCP | `ae-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
+| Claude cloud MCP | `claude` | Record-replay of Anthropic-hosted connector MCP tool responses |
 
-- `ae-sdk`: live `airbyte-agent-sdk` calls against Agent Engine.
-- `ae-mcp`: record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields`.
-- `claude`: record-replay of Claude cloud MCP tool responses.
+Each connector scenario runs three tasks: **search**, **get** (single record by ID), and **list** (paginated bulk fetch).
 
-The planned scenarios are Slack, Linear, and Granola, each with search, get, and list tasks. The current reproducible artifact is an interim Linear+Granola scorecard with 18 of 27 cells complete.
-
-## Contents
-
-- `src/agent_bench/`: benchmark harness and CLI.
-- `tests/`: unit tests for scenarios, validation, and scorecard rendering.
-- `scripts/record_response.py`: helper for saving replay recordings.
-- `assets/recordings/`: current Linear and Granola replay recordings.
-- `artifacts/2026-04-24/`: scorecard, charts, and supporting deck artifact.
-- `docs/METHODOLOGY.md`: measurement details.
-- `docs/RESULTS.md`: current numbers and safe claims.
-- `docs/CTO_BRIEF.md`: executive-facing summary and caveats.
-- `docs/SLACK_STATUS.md`: Slack blocker and completion path.
-- `docs/REPRODUCTION.md`: step-by-step reproduction guide with troubleshooting.
+The current reproducible artifact is an interim Linear + Granola scorecard with 18 of 27 cells complete. Slack is excluded until Context Store search is ready (see `docs/SLACK_STATUS.md`).
 
 ## Quick Start (No Credentials)
 
-The replay paths are fully deterministic from committed recordings. You can validate the benchmark without any API credentials:
+The `claude` replay path can be validated and run using only the committed recordings, with no API access or environment variables required.
 
 ```bash
+git clone https://github.com/airbytehq/airbyte-agent-engine-launch-benchmark.git
+cd airbyte-agent-engine-launch-benchmark
 uv sync
 uv run pytest -q
-uv run agent-bench run --connectors linear,granola --paths ae-mcp,claude --export-markdown results.md
-```
-
-See `docs/REPRODUCTION.md` for the full reproduction guide, including live SDK setup and troubleshooting.
-
-## Setup
-
-```bash
-cp .env.example .env
-# Fill AIRBYTE_ORGANIZATION_ID, AIRBYTE_CLIENT_ID, AIRBYTE_CLIENT_SECRET,
-# LINEAR_CONNECTOR_ID, GRANOLA_CONNECTOR_ID, SLACK_CONNECTOR_ID.
-
-uv run agent-bench list
-```
-
-Required environment variables:
-
-- `AIRBYTE_ORGANIZATION_ID`
-- `AIRBYTE_CLIENT_ID`
-- `AIRBYTE_CLIENT_SECRET`
-- `SLACK_CONNECTOR_ID`
-- `LINEAR_CONNECTOR_ID`
-- `GRANOLA_CONNECTOR_ID`
-
-## Validation
-
-```bash
-uv run pytest -q
-uv run agent-bench validate --connectors linear,granola --paths claude,ae-mcp
-```
-
-Expected validation result:
-
-```text
-recordings ok
-```
-
-## Reproduce Current Scope
-
-```bash
 uv run agent-bench run \
   --connectors linear,granola \
-  --paths all \
-  --export-markdown artifacts/2026-04-24/scorecard.md \
-  --export-charts artifacts/2026-04-24/charts
+  --paths ae-mcp,claude \
+  --export-markdown results.md
 ```
 
-Committed April 24 artifact totals:
+> **Note:** Validating `ae-mcp` recordings requires env vars because the validator checks `connector_id` consistency with your configured environment. If you only want to inspect the replay data without credentials, validate the `claude` path alone or read the recordings directly.
 
-- Agent Engine MCP: `5,229`
-- SDK/API path: `66,587`
-- Claude MCP: `13,628`
-- Agent Engine MCP vs SDK/API: `12.7x` fewer tokens
-- Agent Engine MCP vs Claude MCP: `2.6x` fewer tokens
+See [docs/REPRODUCTION.md](docs/REPRODUCTION.md) for the full reproduction guide, including live SDK setup, credential acquisition, and troubleshooting.
 
-The Agent Engine SDK/API path is live. Re-running can change SDK/API totals as source data changes. The committed April 24 scorecard is the frozen launch artifact; the replay paths (`ae-mcp` and `claude`) are deterministic from `assets/recordings/`.
+## Headline Results (April 24 Artifact)
 
-## Full 27-Cell Export
+Agent Engine MCP used **12.7x fewer tokens** than the SDK/API path and **2.6x fewer tokens** than Claude cloud MCP across the included Linear + Granola cells.
 
-Full export is intentionally blocked until Slack search and Slack MCP/Claude recordings are ready:
+See [docs/RESULTS.md](docs/RESULTS.md) for the full numbers, connector-level breakdowns, and safe claims.
 
-```bash
-uv run agent-bench run \
-  --connectors all \
-  --paths all \
-  --export-markdown artifacts/2026-04-24/final-scorecard.md \
-  --export-charts artifacts/2026-04-24/final-charts
+## Repository Contents
+
+| Path | Description |
+|---|---|
+| `src/agent_bench/` | Benchmark harness and CLI |
+| `src/agent_bench/scenarios/*.yaml` | Scenario definitions (Linear, Granola, Slack) |
+| `tests/` | Unit tests for scenarios, validation, and scorecard rendering |
+| `scripts/record_response.py` | Helper for saving replay recordings |
+| `assets/recordings/` | Committed Linear and Granola replay recordings |
+| `artifacts/2026-04-24/` | Scorecard, charts, and supporting deck artifact |
+| `docs/REPRODUCTION.md` | Step-by-step reproduction guide with troubleshooting |
+| `docs/METHODOLOGY.md` | Measurement details and design choices |
+| `docs/RESULTS.md` | Current numbers and safe claims |
+| `docs/CTO_BRIEF.md` | Executive-facing summary and caveats |
+| `docs/SLACK_STATUS.md` | Slack blocker and completion path |
+
+## CLI Reference
+
+```text
+agent-bench list       List available benchmark scenarios
+agent-bench plan       Print MCP tool-call specs for record-replay paths
+agent-bench run        Run the benchmark across selected connectors and paths
+agent-bench validate   Validate replay recordings before exporting
 ```
 
-See `docs/SLACK_STATUS.md` before running or publishing the full scorecard.
+All commands accept `--connectors` and `--paths` filters. Use `--help` on any command for full options.
 
-## Recording Plan
+Export is blocked when recordings or cells have issues. See [docs/METHODOLOGY.md](docs/METHODOLOGY.md#export-gates) for the full list of export gates.
+
+## Recording New Responses
 
 ```bash
 uv run agent-bench plan --connectors all --paths claude,ae-mcp
@@ -123,3 +88,11 @@ uv run python scripts/record_response.py \
 ```
 
 For Agent Engine MCP, `--wall-ms` can be omitted when the response contains `execution_metadata.execution_time_ms`.
+
+## Further Reading
+
+- [Reproduction Guide](docs/REPRODUCTION.md) — end-to-end walkthrough from clone to results
+- [Methodology](docs/METHODOLOGY.md) — measurement design, token counting, timing
+- [Results](docs/RESULTS.md) — current numbers, safe claims, and caveats
+- [CTO Brief](docs/CTO_BRIEF.md) — executive-facing summary
+- [Slack Status](docs/SLACK_STATUS.md) — Slack blocker and completion path

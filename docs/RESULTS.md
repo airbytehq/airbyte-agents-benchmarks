@@ -63,31 +63,8 @@ Do not claim yet:
 
 ## Reproduction
 
-```bash
-cp .env.example .env
-# Fill AIRBYTE_ORGANIZATION_ID, AIRBYTE_CLIENT_ID, AIRBYTE_CLIENT_SECRET,
-# LINEAR_CONNECTOR_ID, GRANOLA_CONNECTOR_ID, SLACK_CONNECTOR_ID.
-
-uv run pytest -q
-uv run agent-bench validate --connectors linear,granola --paths claude,ae-mcp
-
-uv run agent-bench run \
-  --connectors linear,granola \
-  --paths all \
-  --export-markdown artifacts/2026-04-24/scorecard.md \
-  --export-charts artifacts/2026-04-24/charts
-```
+See [REPRODUCTION.md](REPRODUCTION.md) for the full step-by-step walkthrough, from clone to validated results.
 
 The committed April 24 scorecard is the frozen artifact for the headline `66,587` SDK/API token total. The SDK/API path is live, so re-running the command can produce a different SDK/API total when connector data changes. The replay paths are deterministic from `assets/recordings/`.
 
 On April 27, 2026, a live Linear+Granola verification run completed successfully with replay totals unchanged (`5,229` Agent Engine MCP tokens and `13,628` Claude MCP tokens), while the live SDK/API total was `53,000` tokens.
-
-Full 27-cell export remains blocked until Slack search and Slack MCP/Claude recordings are ready:
-
-```bash
-uv run agent-bench run \
-  --connectors all \
-  --paths all \
-  --export-markdown artifacts/2026-04-24/final-scorecard.md \
-  --export-charts artifacts/2026-04-24/final-charts
-```
