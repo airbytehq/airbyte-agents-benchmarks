@@ -10,12 +10,12 @@ from agent_bench.runner import Cell, RunReport
 
 
 PATH_LABEL = {
-    "ae-sdk": "Agent Engine SDK",
-    "ae-mcp": "Agent Engine MCP",
-    "claude": "Claude cloud MCP",
+    "agent-sdk": "Agent SDK",
+    "agent-mcp": "Agent MCP",
+    "native-mcp": "Native MCP",
 }
 
-PATH_ORDER = ["ae-sdk", "ae-mcp", "claude"]
+PATH_ORDER = ["agent-sdk", "agent-mcp", "native-mcp"]
 
 
 def render_scorecard(report: RunReport, path: Path) -> None:
@@ -30,10 +30,10 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     expected_final_cells = 27
     is_interim = bool(missing_final) or included_cells != expected_final_cells
 
-    lines.append("# Agent Engine Launch Benchmark - April 22, 2026")
+    lines.append("# Airbyte Agents Launch Benchmark - April 22, 2026")
     lines.append("")
     lines.append(f"**Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d')}  ")
-    lines.append("**Paths compared:** Agent Engine SDK vs Agent Engine MCP vs Claude cloud MCP  ")
+    lines.append("**Paths compared:** Agent SDK vs Agent MCP vs Native MCP  ")
     lines.append(f"**Connectors:** {', '.join(connectors)}  ")
     lines.append(f"**Cells included:** {included_cells}/{expected_final_cells}")
     if is_interim:
@@ -53,20 +53,20 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     lines.append("")
     lines.append("| Path | Transport | Timing |")
     lines.append("|---|---|---|")
-    lines.append("| **Agent Engine SDK** | `airbyte-agent-sdk` Python package → Agent Engine API | Client wall-clock |")
-    lines.append("| **Agent Engine MCP** | Hosted MCP proxy (`mcp.airbyte.ai`) → Agent Engine API | `execution_metadata.execution_time_ms` from the MCP response |")
-    lines.append("| **Claude cloud MCP** | Anthropic-hosted MCP (`mcp__claude_ai_*`) → vendor API | **Not captured.** Claude Code tool-call latency is not accessible from the harness; latency reported as 0 and should be read as \"unmeasured in this run\" (see March 3 scorecard for timed reference) |")
+    lines.append("| **Agent SDK** | `airbyte-agent-sdk` Python package → Agent REST API | Client wall-clock |")
+    lines.append("| **Agent MCP** | Hosted MCP proxy (`mcp.airbyte.ai`) → Agent REST API | `execution_metadata.execution_time_ms` from the MCP response |")
+    lines.append("| **Native MCP** | Vendor-native MCP servers (`mcp__claude_ai_*`) → vendor API | **Not captured.** MCP client tool-call latency is not accessible from the harness; latency reported as 0 and should be read as \"unmeasured in this run\" (see March 3 scorecard for timed reference) |")
     lines.append("")
     lines.append("Metrics:")
     lines.append("- **Records** — count in the response")
     lines.append("- **Tokens** — cl100k (tiktoken) on the raw response payload the agent consumes")
     lines.append("- **Bytes** — UTF-8 length of JSON-encoded response")
-    lines.append("- **API calls** - tool invocations per task. In the included Linear list task, Claude returns 25 records while Agent Engine returns 50 records in one call.")
+    lines.append("- **API calls** - tool invocations per task. In the included Linear list task, native MCP returns 25 records while Airbyte Agents returns 50 records in one call.")
     lines.append("- **Single-record-fetch cost** — tokens + calls to retrieve one record by ID (task 2 only)")
     lines.append("")
     lines.append("Notes:")
-    lines.append("- Agent Engine MCP and SDK are both read-throughs of the same Agent Engine API — the MCP adds HTTP proxy overhead. `execution_time_ms` from the MCP response reflects Agent Engine server-side processing; client-side wall-clock (SDK path) includes both network round-trips and SDK deserialization.")
-    lines.append("- Claude cloud MCP connectors return varying shapes: Slack returns markdown-like text, Linear returns structured JSON, Granola returns an aggregated string for list_meetings and a natural-language synthesis for query_granola_meetings.")
+    lines.append("- Agent MCP and SDK are both read-throughs of the same Agent REST API — the MCP adds HTTP proxy overhead. `execution_time_ms` from the MCP response reflects server-side processing; client-side wall-clock (SDK path) includes both network round-trips and SDK deserialization.")
+    lines.append("- Native MCP connectors return varying shapes: Slack returns markdown-like text, Linear returns structured JSON, Granola returns an aggregated string for list_meetings and a natural-language synthesis for query_granola_meetings.")
     lines.append("")
 
     for connector in sorted({c.scenario.connector for c in report.cells}):
@@ -94,24 +94,24 @@ def render_scorecard(report: RunReport, path: Path) -> None:
 def _exec_summary(report: RunReport, is_interim: bool = False) -> str:
     # Highlight the headline numbers for the intro paragraph.
     totals = _path_totals(report)
-    sdk = totals.get("ae-sdk", _zero_totals())
-    mcp = totals.get("ae-mcp", _zero_totals())
-    claude = totals.get("claude", _zero_totals())
+    sdk = totals.get("agent-sdk", _zero_totals())
+    mcp = totals.get("agent-mcp", _zero_totals())
+    native = totals.get("native-mcp", _zero_totals())
 
     ratio_mcp_vs_sdk = (sdk["tokens"] / max(mcp["tokens"], 1)) if mcp["tokens"] else None
-    ratio_claude_vs_mcp = (claude["tokens"] / max(mcp["tokens"], 1)) if mcp["tokens"] else None
+    ratio_native_vs_mcp = (native["tokens"] / max(mcp["tokens"], 1)) if mcp["tokens"] else None
     prefix = "Interim TL;DR" if is_interim else "TL;DR"
 
     lines = [
-        f"**{prefix}.** Across the three benchmark tasks on each included connector, Agent Engine with `select_fields` "
+        f"**{prefix}.** Across the three benchmark tasks on each included connector, Airbyte Agents with `select_fields` "
         f"returns roughly **{ratio_mcp_vs_sdk:.1f}× fewer tokens** than the full SDK payload and ships the "
-        f"same structured records. It also uses **{ratio_claude_vs_mcp:.1f}× fewer tokens** than Claude cloud MCPs "
-        "on the included cells. Compared to Claude cloud MCPs, Agent Engine matches or beats on "
+        f"same structured records. It also uses **{ratio_native_vs_mcp:.1f}× fewer tokens** than native vendor MCPs "
+        "on the included cells. Compared to native vendor MCPs, Airbyte Agents matches or beats on "
         "record count, single-record-fetch cost, and bulk-list capability - and crucially preserves typed "
-        "JSON (vs Claude MCP's mixed JSON, text, and markdown-like shapes) so agents can filter, "
+        "JSON (vs native MCP's mixed JSON, text, and markdown-like shapes) so agents can filter, "
         "sort, and join programmatically."
-        if ratio_mcp_vs_sdk and ratio_claude_vs_mcp
-        else "**TL;DR.** Agent Engine delivers narrower, structured responses vs Claude cloud MCPs across Linear and Granola."
+        if ratio_mcp_vs_sdk and ratio_native_vs_mcp
+        else "**TL;DR.** Airbyte Agents delivers narrower, structured responses vs native vendor MCPs across Linear and Granola."
     ]
     return "\n".join(lines)
 
@@ -205,17 +205,17 @@ def _aggregate_table(report: RunReport) -> str:
 
 def _verdict(report: RunReport) -> str:
     totals = _path_totals(report)
-    sdk_tokens = totals.get("ae-sdk", _zero_totals())["tokens"]
-    mcp_tokens = totals.get("ae-mcp", _zero_totals())["tokens"]
-    claude_tokens = totals.get("claude", _zero_totals())["tokens"]
+    sdk_tokens = totals.get("agent-sdk", _zero_totals())["tokens"]
+    mcp_tokens = totals.get("agent-mcp", _zero_totals())["tokens"]
+    native_tokens = totals.get("native-mcp", _zero_totals())["tokens"]
     lines = [
-        "- **Agent Engine MCP** (with `select_fields`) is the narrowest path — {:.1f}× fewer tokens than the full SDK, {:.1f}× fewer than Claude cloud MCP.".format(
+        "- **Agent MCP** (with `select_fields`) is the narrowest path — {:.1f}× fewer tokens than the full SDK, {:.1f}× fewer than Native MCP.".format(
             sdk_tokens / max(mcp_tokens, 1) if mcp_tokens else 0,
-            claude_tokens / max(mcp_tokens, 1) if mcp_tokens else 0,
+            native_tokens / max(mcp_tokens, 1) if mcp_tokens else 0,
         ),
-        "- **Agent Engine SDK** returns full typed records — useful when agents need all fields, e.g. for multi-field joins.",
-        "- **Claude cloud MCP** is structurally narrower in some cases, but gives up queryability (structured filters) and returns inconsistent shapes across connectors (JSON, text, and markdown-like responses). In the included Linear list task, Claude returns 25 records while Agent Engine returns 50 records in one call.",
+        "- **Agent SDK** returns full typed records — useful when agents need all fields, e.g. for multi-field joins.",
+        "- **Native MCP** is structurally narrower in some cases, but gives up queryability (structured filters) and returns inconsistent shapes across connectors (JSON, text, and markdown-like responses). In the included Linear list task, native MCP returns 25 records while Airbyte Agents returns 50 records in one call.",
         "",
-        "**For marketing:** Agent Engine MCP + SDK deliver narrower, structured, queryable data in one call. Claude cloud MCP requires pagination, returns mixed shapes, and lacks filter operators.",
+        "**For marketing:** Agent MCP + SDK deliver narrower, structured, queryable data in one call. Native MCP requires pagination, returns mixed shapes, and lacks filter operators.",
     ]
     return "\n".join(lines)

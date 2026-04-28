@@ -1,8 +1,8 @@
-"""Save a single Claude-Code MCP tool call response as a benchmark recording.
+"""Save a single MCP tool call response as a benchmark recording.
 
 Usage:
     uv run python scripts/record_response.py \
-        --path claude \
+        --path native-mcp \
         --scenario slack \
         --action search \
         --tool mcp__claude_ai_Slack__slack_search_channels \
@@ -24,7 +24,7 @@ import json
 import sys
 from pathlib import Path
 
-from agent_bench.paths.agent_engine_mcp import extract_execution_time_ms
+from agent_bench.paths.agent_mcp import extract_execution_time_ms
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -33,12 +33,12 @@ RECORDINGS_ROOT = REPO_ROOT / "assets" / "recordings"
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path", required=True, choices=["claude", "ae-mcp"])
+    parser.add_argument("--path", required=True, choices=["native-mcp", "agent-mcp"])
     parser.add_argument("--scenario", required=True)
     parser.add_argument("--action", required=True)
     parser.add_argument("--tool", required=True)
     parser.add_argument("--args", required=True, help="JSON string of tool args")
-    parser.add_argument("--wall-ms", type=float, help="Wall-clock ms. For ae-mcp, omitted means use execution_metadata.execution_time_ms.")
+    parser.add_argument("--wall-ms", type=float, help="Wall-clock ms. For agent-mcp, omitted means use execution_metadata.execution_time_ms.")
     parser.add_argument("--response-file", required=True, help="Path to a file with the raw response JSON")
     parser.add_argument("--reset", action="store_true", help="Overwrite any existing recording for this task")
     opts = parser.parse_args()
@@ -52,11 +52,11 @@ def main() -> int:
 
     wall_ms = opts.wall_ms
     if wall_ms is None:
-        if opts.path != "ae-mcp":
-            parser.error("--wall-ms is required for non-ae-mcp recordings")
+        if opts.path != "agent-mcp":
+            parser.error("--wall-ms is required for non-agent-mcp recordings")
         wall_ms = extract_execution_time_ms(response)
         if wall_ms is None:
-            parser.error("could not find execution_metadata.execution_time_ms in the ae-mcp response")
+            parser.error("could not find execution_metadata.execution_time_ms in the agent-mcp response")
 
     existing: list = []
     if out_path.exists() and not opts.reset:

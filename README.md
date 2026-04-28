@@ -1,12 +1,12 @@
-# Agent Engine Launch Benchmark
+# Airbyte Agents Launch Benchmark
 
-A three-way benchmark comparing how AI agents access business data through Airbyte's Agent Engine. The harness measures token cost, payload size, and latency across three paths for the same tasks.
+A three-way benchmark comparing how AI agents access business data through Airbyte Agents. The harness measures token cost, payload size, and latency across three paths for the same tasks.
 
 | Path | Slug | Description |
 |---|---|---|
-| Agent Engine SDK/API | `ae-sdk` | Live `airbyte-agent-sdk` calls returning full typed records |
-| Agent Engine MCP | `ae-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
-| Claude cloud MCP | `claude` | Record-replay of Anthropic-hosted connector MCP tool responses |
+| Agent SDK | `agent-sdk` | Live `airbyte-agent-sdk` calls returning full typed records |
+| Agent MCP | `agent-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
+| Native MCP | `native-mcp` | Record-replay of vendor-native MCP server responses |
 
 Each connector scenario runs three tasks: **search**, **get** (single record by ID), and **list** (paginated bulk fetch).
 
@@ -14,7 +14,7 @@ The current reproducible artifact is an interim Linear + Granola scorecard with 
 
 ## Quick Start (No Credentials)
 
-The `claude` replay path can be validated and run using only the committed recordings, with no API access or environment variables required.
+The `native-mcp` replay path can be validated and run using only the committed recordings, with no API access or environment variables required.
 
 ```bash
 git clone https://github.com/airbytehq/airbyte-agent-engine-launch-benchmark.git
@@ -23,17 +23,17 @@ uv sync
 uv run pytest -q
 uv run agent-bench run \
   --connectors linear,granola \
-  --paths ae-mcp,claude \
+  --paths agent-mcp,native-mcp \
   --export-markdown results.md
 ```
 
-> **Note:** Validating `ae-mcp` recordings requires env vars because the validator checks `connector_id` consistency with your configured environment. If you only want to inspect the replay data without credentials, validate the `claude` path alone or read the recordings directly.
+> **Note:** Validating `agent-mcp` recordings requires env vars because the validator checks `connector_id` consistency with your configured environment. If you only want to inspect the replay data without credentials, validate the `native-mcp` path alone or read the recordings directly.
 
 See [docs/REPRODUCTION.md](docs/REPRODUCTION.md) for the full reproduction guide, including live SDK setup, credential acquisition, and troubleshooting.
 
 ## Headline Results (April 24 Artifact)
 
-Agent Engine MCP used **12.7x fewer tokens** than the SDK/API path and **2.6x fewer tokens** than Claude cloud MCP across the included Linear + Granola cells.
+Agent MCP used **12.7x fewer tokens** than the SDK path and **2.6x fewer tokens** than native vendor MCPs across the included Linear + Granola cells.
 
 See [docs/RESULTS.md](docs/RESULTS.md) for the full numbers, connector-level breakdowns, and safe claims.
 
@@ -70,16 +70,16 @@ Export is blocked when recordings or cells have issues. See [docs/METHODOLOGY.md
 ## Recording New Responses
 
 ```bash
-uv run agent-bench plan --connectors all --paths claude,ae-mcp
+uv run agent-bench plan --connectors all --paths native-mcp,agent-mcp
 ```
 
-For each Agent Engine MCP connector, call `mcp__airbyte-agent__describe_connector` once before recording the planned `mcp__airbyte-agent__execute` call. Every execute item must include `select_fields`.
+For each Agent MCP connector, call `mcp__airbyte-agent__describe_connector` once before recording the planned `mcp__airbyte-agent__execute` call. Every execute item must include `select_fields`.
 
 Save MCP responses with:
 
 ```bash
 uv run python scripts/record_response.py \
-  --path ae-mcp \
+  --path agent-mcp \
   --scenario linear \
   --action search \
   --tool mcp__airbyte-agent__execute \
@@ -88,7 +88,7 @@ uv run python scripts/record_response.py \
   --reset
 ```
 
-For Agent Engine MCP, `--wall-ms` can be omitted when the response contains `execution_metadata.execution_time_ms`.
+For Agent MCP, `--wall-ms` can be omitted when the response contains `execution_metadata.execution_time_ms`.
 
 ## Further Reading
 

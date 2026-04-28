@@ -1,6 +1,6 @@
 # Reproducing the Benchmark
 
-This guide walks through reproducing the Agent Engine launch benchmark results from scratch. It covers three tiers of reproduction, from no credentials required to full live runs.
+This guide walks through reproducing the Airbyte Agents launch benchmark results from scratch. It covers three tiers of reproduction, from no credentials required to full live runs.
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ All 5 tests should pass.
 ### Validate recordings
 
 ```bash
-uv run agent-bench validate --connectors linear,granola --paths claude,ae-mcp
+uv run agent-bench validate --connectors linear,granola --paths native-mcp,agent-mcp
 ```
 
 Expected output: `recordings ok`
@@ -47,7 +47,7 @@ Expected output: `recordings ok`
 ```bash
 uv run agent-bench run \
   --connectors linear,granola \
-  --paths ae-mcp,claude \
+  --paths agent-mcp,native-mcp \
   --export-markdown results.md
 ```
 
@@ -55,14 +55,14 @@ Expected token totals (deterministic from recordings):
 
 | Path | Linear | Granola | Total |
 |---|---:|---:|---:|
-| Agent Engine MCP | 3,744 | 1,485 | 5,229 |
-| Claude cloud MCP | 8,510 | 5,118 | 13,628 |
+| Agent MCP | 3,744 | 1,485 | 5,229 |
+| Native MCP | 8,510 | 5,118 | 13,628 |
 
 These match the committed April 24 artifact exactly.
 
 ## Tier 2: Live SDK Path (Requires Credentials)
 
-The Agent Engine SDK path makes live API calls. You need Airbyte Cloud credentials.
+The Agent SDK path makes live API calls. You need Airbyte Cloud credentials.
 
 ### Credential setup
 
@@ -91,10 +91,10 @@ SLACK_CONNECTOR_ID=your-slack-source-uuid
 
 ### Authentication note
 
-The Agent Engine SDK authenticates via `POST https://api.airbyte.ai/api/v1/account/applications/token`. The SDK sends the `X-Organization-Id` header alongside the client credentials. If you see a `401` error with "Client has no organization_admin permissions," verify that:
+The Agent SDK authenticates via `POST https://api.airbyte.ai/api/v1/account/applications/token`. The SDK sends the `X-Organization-Id` header alongside the client credentials. If you see a `401` error with "Client has no organization_admin permissions," verify that:
 
 1. The `AIRBYTE_ORGANIZATION_ID` matches the org your application belongs to.
-2. The application has `organization_admin` permissions on the Agent Engine API.
+2. The application has `organization_admin` permissions on the Agent REST API.
 3. You are using the correct client ID and secret pair for that specific organization.
 
 Some Airbyte Cloud application credentials are scoped to a particular org. The same `client_id`/`client_secret` may fail for one org but succeed for another. The `X-Organization-Id` header must match the org that granted the application its permissions.
@@ -103,10 +103,10 @@ Some Airbyte Cloud application credentials are scoped to a particular org. The s
 
 ```bash
 # Single connector
-uv run agent-bench run --connectors linear --paths ae-sdk
+uv run agent-bench run --connectors linear --paths agent-sdk
 
 # Multiple connectors
-uv run agent-bench run --connectors linear,slack --paths ae-sdk
+uv run agent-bench run --connectors linear,slack --paths agent-sdk
 ```
 
 ### Run all paths for a connector
@@ -115,13 +115,13 @@ uv run agent-bench run --connectors linear,slack --paths ae-sdk
 uv run agent-bench run --connectors linear --paths all --export-markdown linear-results.md
 ```
 
-This runs ae-sdk (live), ae-mcp (replay), and claude (replay) side by side.
+This runs agent-sdk (live), agent-mcp (replay), and native-mcp (replay) side by side.
 
 ### Interpreting live results
 
 The SDK path is live, so token counts will vary as the underlying data changes. The committed April 24 artifact recorded 66,587 total SDK tokens for Linear and Granola. A verification run on April 27 showed 53,000 tokens because the Linear issue data had changed. This is expected behavior, not a test failure.
 
-The replay paths (ae-mcp and claude) are deterministic. Their token totals should always match the committed artifact (5,229 and 13,628 for Linear and Granola).
+The replay paths (agent-mcp and native-mcp) are deterministic. Their token totals should always match the committed artifact (5,229 and 13,628 for Linear and Granola).
 
 ## Tier 3: Full Benchmark
 
@@ -129,7 +129,7 @@ The full benchmark covers all connectors, tasks, and paths. Use `agent-bench lis
 
 ### Current status
 
-| Connector | ae-sdk | ae-mcp | claude |
+| Connector | agent-sdk | agent-mcp | native-mcp |
 |---|---|---|---|
 | Linear | Available | Recordings committed | Recordings committed |
 | Granola | Requires Granola connector in your org | Recordings committed | Recordings committed |
@@ -144,10 +144,10 @@ Slack replay recordings are not yet committed. The Slack search task was returni
 uv run agent-bench run --connectors linear --paths all
 
 # Granola: replay only (no SDK unless you have a Granola connector)
-uv run agent-bench run --connectors granola --paths ae-mcp,claude
+uv run agent-bench run --connectors granola --paths agent-mcp,native-mcp
 
 # Slack: SDK only (requires Slack connector in your org)
-uv run agent-bench run --connectors slack --paths ae-sdk
+uv run agent-bench run --connectors slack --paths agent-sdk
 ```
 
 ### Full export
@@ -194,7 +194,7 @@ The export gate prevents incomplete scorecards. Run with specific `--connectors`
 ```bash
 uv run agent-bench run \
   --connectors linear,granola \
-  --paths ae-mcp,claude \
+  --paths agent-mcp,native-mcp \
   --export-markdown partial-results.md
 ```
 

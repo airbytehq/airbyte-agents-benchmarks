@@ -1,7 +1,7 @@
-"""Path C: Agent Engine SDK (airbyte-agent-sdk).
+"""Path C: Agent SDK (airbyte-agent-sdk).
 
-Uses `from airbyte_agent_sdk import connect` to hit the Airbyte Cloud
-Agent Engine API directly from this Python process. Dispatches each
+Uses `from airbyte_agent_sdk import connect` to hit the Airbyte Agents
+REST API directly from this Python process. Dispatches each
 task's canonical action to the connector's `execute(entity, action, params)`
 method, translating connector-specific param names where required.
 """
@@ -40,11 +40,11 @@ _DISPATCH: dict[str, dict[str, Any]] = {
 }
 
 
-class AgentEngineSDKPath:
-    """Path C — talks to Agent Engine from the Python process via the SDK."""
+class AgentSDKPath:
+    """Path C — talks to Airbyte Agents from the Python process via the SDK."""
 
-    name = "Agent Engine SDK"
-    short_name = "ae-sdk"
+    name = "Agent SDK"
+    short_name = "agent-sdk"
 
     def __init__(self, config: LiveConfig, connector_name: str) -> None:
         self._config = config

@@ -12,7 +12,7 @@ Current local connector ID verified on April 27, 2026:
 
 Observed live behavior:
 
-- `get` and `list` can pass through the Agent Engine SDK path.
+- `get` and `list` can pass through the Agent SDK path.
 - `search` may return HTTP 503 while Context Store preview builds.
 - The 503 is a readiness blocker, not currently treated as a harness bug.
 
@@ -26,7 +26,7 @@ The scenario target used by the harness is:
 Use this command to verify the live SDK path:
 
 ```bash
-uv run agent-bench run --connectors slack --paths ae-sdk
+uv run agent-bench run --connectors slack --paths agent-sdk
 ```
 
 Current expected state:
@@ -38,12 +38,12 @@ Current expected state:
 ## Steps To Finish Slack
 
 1. Re-run the Slack SDK smoke test and confirm search no longer returns HTTP 503.
-2. Capture fresh Agent Engine MCP recordings for Slack search, get, and list.
-3. Capture fresh Claude cloud MCP recordings for Slack search, get, and list.
+2. Capture fresh Agent MCP recordings for Slack search, get, and list.
+3. Capture fresh native MCP recordings for Slack search, get, and list.
 4. Validate all replay paths:
 
 ```bash
-uv run agent-bench validate --connectors all --paths claude,ae-mcp
+uv run agent-bench validate --connectors all --paths native-mcp,agent-mcp
 ```
 
 5. Run the full 27-cell export:

@@ -1,12 +1,13 @@
-"""Path A: Claude cloud MCPs.
+"""Path A: Native MCP servers.
 
 These MCP tools (`mcp__claude_ai_Slack__*`, `mcp__claude_ai_Linear__*`,
-`mcp__claude_ai_Granola__*`) are invoked by the Claude Code runtime, not by
-Python code. So this path is built around a "record once, replay" model:
+`mcp__claude_ai_Granola__*`) are provided by each SaaS vendor and invoked via
+an MCP client (e.g. Claude Code or Cursor), not by Python code. So this path is built
+around a "record once, replay" model:
 
   1. Call `tool_specs(task, scenario)` to get the exact tool+args the
      benchmark would invoke for a task.
-  2. Execute those tool calls from Claude Code (driver/harness), saving
+  2. Execute those tool calls from an MCP client (driver/harness), saving
      `{tool, args, wall_clock_ms, response}` to a per-task JSON file.
   3. `run_task` reads the recording and computes StepResult metrics.
 
@@ -74,7 +75,7 @@ def _slack_search(task: Task) -> TaskPlan:
 
 @_register("slack", "get")
 def _slack_get(task: Task) -> TaskPlan:
-    # No direct get-channel-by-ID in Claude MCP — fall back to search.
+    # No direct get-channel-by-ID in native MCP — fall back to search.
     hint = task.params.get("name_hint") or task.params["id"]
     return TaskPlan(
         calls=[ToolCallSpec(
@@ -82,7 +83,7 @@ def _slack_get(task: Task) -> TaskPlan:
             args={"query": hint, "limit": 20},
             note="No native get-channel-by-ID; search-then-filter.",
         )],
-        notes=["Claude MCP has no get-channel-by-ID; returns N records, client filters."],
+        notes=["Native MCP has no get-channel-by-ID; returns N records, client filters."],
     )
 
 
@@ -97,7 +98,7 @@ def _slack_list(task: Task) -> TaskPlan:
             args={"query": " ", "limit": 20} | ({"cursor": f"<page{p + 1}-cursor>"} if p else {}),
             note=f"page {p + 1}/{pages}",
         ) for p in range(pages)],
-        notes=[f"Claude MCP caps channel search at 20/page; {pages} calls needed to approach {limit}."],
+        notes=[f"Native MCP caps channel search at 20/page; {pages} calls needed to approach {limit}."],
     )
 
 
@@ -145,21 +146,21 @@ def _granola_search(task: Task) -> TaskPlan:
             args={"query": task.params["keyword"]},
             note="Returns synthesized answer with citations, not raw records.",
         )],
-        notes=["Claude MCP's Granola search returns a synthesized answer (not structured records)."],
+        notes=["Native MCP's Granola search returns a synthesized answer (not structured records)."],
     )
 
 
 @_register("granola", "get")
 def _granola_get(task: Task) -> TaskPlan:
-    # Claude MCP expects a UUID; Agent Engine's note ID (not_…) is not a UUID.
+    # Native MCP expects a UUID; Airbyte Agents' note ID (not_…) is not a UUID.
     # Use a claude_mcp_id override if present; otherwise the recording step
-    # must map the Agent Engine ID to Granola's UUID out-of-band.
+    # must map the Airbyte Agents ID to Granola's UUID out-of-band.
     mid = task.params.get("claude_mcp_id") or task.params["id"]
     return TaskPlan(
         calls=[ToolCallSpec(
             tool="mcp__claude_ai_Granola__get_meeting_transcript",
             args={"meeting_id": mid},
-            note="Takes UUID; Agent Engine note IDs need translation.",
+            note="Takes UUID; Airbyte Agents note IDs need translation.",
         )],
     )
 
@@ -172,17 +173,17 @@ def _granola_list(task: Task) -> TaskPlan:
             args={"time_range": "last_30_days"},
             note="No limit param; returns all meetings in the range.",
         )],
-        notes=["Claude MCP's list_meetings has no limit; record count = whatever the time range yields."],
+        notes=["Native MCP's list_meetings has no limit; record count = whatever the time range yields."],
     )
 
 
 # ---------- Path ----------
 
-class ClaudeMCPPath:
-    """Record-replay path for Claude cloud MCPs."""
+class NativeMCPPath:
+    """Record-replay path for vendor-native MCP servers."""
 
-    name = "Claude MCP"
-    short_name = "claude"
+    name = "Native MCP"
+    short_name = "native-mcp"
 
     def __init__(self, recordings_dir: FSPath) -> None:
         self._recordings_dir = recordings_dir
@@ -190,7 +191,7 @@ class ClaudeMCPPath:
     def plan(self, task: Task, scenario: Scenario) -> TaskPlan:
         key = (scenario.connector, task.action)
         if key not in _DISPATCH:
-            raise ValueError(f"No Claude MCP dispatch for {key}")
+            raise ValueError(f"No Native MCP dispatch for {key}")
         return _DISPATCH[key](task)
 
     def recording_path(self, task: Task, scenario: Scenario) -> FSPath:
@@ -204,7 +205,7 @@ class ClaudeMCPPath:
 
         if not rec_path.exists():
             result.status = "skipped"
-            result.error = f"No recording at {rec_path} — run `agent-bench record --paths claude` first."
+            result.error = f"No recording at {rec_path} — run `agent-bench record --paths native-mcp` first."
             step = StepResult(
                 label=f"{task.action} {task.entity} [no recording]",
                 latency_ms=0,
@@ -249,7 +250,7 @@ class ClaudeMCPPath:
 
 
 def _count_records(response: Any) -> int:
-    """Heuristic record count for an arbitrary Claude MCP response."""
+    """Heuristic record count for an arbitrary native MCP response."""
     if response is None:
         return 0
     if isinstance(response, dict):

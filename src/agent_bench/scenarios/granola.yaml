@@ -4,7 +4,7 @@ connector: granola
 connector_id_env: GRANOLA_CONNECTOR_ID
 description: >
   Granola head-to-head. Strong single-record-fetch angle (transcript by ID)
-  where Claude MCP requires separate tool call; SDK/MCP return the full note.
+  where native MCP requires separate tool call; SDK/MCP return the full note.
 
 tasks:
   - label: "Search notes by keyword"

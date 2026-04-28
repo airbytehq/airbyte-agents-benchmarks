@@ -8,14 +8,14 @@ from pathlib import Path
 from typing import Literal
 
 from agent_bench.config import LiveConfig
-from agent_bench.paths.agent_engine_mcp import (
-    AgentEngineMCPPath,
+from agent_bench.paths.agent_mcp import (
+    AgentMCPPath,
     extract_execution_time_ms,
 )
 from agent_bench.scenarios.loader import Task, load_scenario
 
 
-RECORD_REPLAY_PATHS = {"ae-mcp", "claude"}
+RECORD_REPLAY_PATHS = {"agent-mcp", "native-mcp"}
 
 
 @dataclass
@@ -60,10 +60,10 @@ def validate_recordings(
                     issues.append(_issue("error", slug, scenario.name, task, "recording must be a non-empty list"))
                     continue
 
-                if slug == "ae-mcp":
-                    issues.extend(_validate_ae_mcp_recording(recording, scenario.name, task, recordings_dir, config))
-                elif slug == "claude":
-                    issues.extend(_validate_claude_recording(recording, scenario.name, task))
+                if slug == "agent-mcp":
+                    issues.extend(_validate_agent_mcp_recording(recording, scenario.name, task, recordings_dir, config))
+                elif slug == "native-mcp":
+                    issues.extend(_validate_native_mcp_recording(recording, scenario.name, task))
 
     return issues
 
@@ -72,7 +72,7 @@ def blocking_issues(issues: list[RecordingIssue]) -> list[RecordingIssue]:
     return [issue for issue in issues if issue.level == "error"]
 
 
-def _validate_claude_recording(
+def _validate_native_mcp_recording(
     recording: list[object],
     scenario_name: str,
     task: Task,
@@ -80,15 +80,15 @@ def _validate_claude_recording(
     issues: list[RecordingIssue] = []
     for idx, call in enumerate(recording):
         if not isinstance(call, dict):
-            issues.append(_issue("error", "claude", scenario_name, task, f"call {idx + 1} must be an object"))
+            issues.append(_issue("error", "native-mcp", scenario_name, task, f"call {idx + 1} must be an object"))
             continue
-        issues.extend(_validate_common_call(call, "claude", scenario_name, task, idx))
+        issues.extend(_validate_common_call(call, "native-mcp", scenario_name, task, idx))
         if "wall_clock_ms" not in call:
-            issues.append(_issue("warning", "claude", scenario_name, task, f"call {idx + 1} has no wall_clock_ms; Claude latency is treated as unmeasured"))
+            issues.append(_issue("warning", "native-mcp", scenario_name, task, f"call {idx + 1} has no wall_clock_ms; native MCP latency is treated as unmeasured"))
     return issues
 
 
-def _validate_ae_mcp_recording(
+def _validate_agent_mcp_recording(
     recording: list[object],
     scenario_name: str,
     task: Task,
@@ -99,44 +99,44 @@ def _validate_ae_mcp_recording(
     scenario = load_scenario(scenario_name)
     expected_items = None
     if config is not None:
-        expected_plan = AgentEngineMCPPath(config, recordings_dir / "ae-mcp").plan(task, scenario)
+        expected_plan = AgentMCPPath(config, recordings_dir / "agent-mcp").plan(task, scenario)
         expected_items = expected_plan.calls[0].args["items"]
 
     for idx, call in enumerate(recording):
         if not isinstance(call, dict):
-            issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} must be an object"))
+            issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} must be an object"))
             continue
-        issues.extend(_validate_common_call(call, "ae-mcp", scenario_name, task, idx))
+        issues.extend(_validate_common_call(call, "agent-mcp", scenario_name, task, idx))
 
         if call.get("tool") != "mcp__airbyte-agent__execute":
-            issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} tool must be mcp__airbyte-agent__execute"))
+            issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} tool must be mcp__airbyte-agent__execute"))
 
         args = call.get("args")
         items = args.get("items") if isinstance(args, dict) else None
         if not isinstance(items, list) or not items:
-            issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} args.items must be a non-empty list"))
+            issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} args.items must be a non-empty list"))
             continue
 
         for item_idx, item in enumerate(items):
             if not isinstance(item, dict):
-                issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} item {item_idx + 1} must be an object"))
+                issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} item {item_idx + 1} must be an object"))
                 continue
             if not item.get("select_fields"):
-                issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} item {item_idx + 1} is stale: missing mandatory select_fields"))
+                issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} item {item_idx + 1} is stale: missing mandatory select_fields"))
             if expected_items is not None and item_idx < len(expected_items):
                 expected = expected_items[item_idx]
                 for key in ("connector_id", "entity", "action", "params", "select_fields"):
                     if item.get(key) != expected.get(key):
-                        issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} item {item_idx + 1} {key} differs from planner"))
+                        issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} item {item_idx + 1} {key} differs from planner"))
 
         extracted = extract_execution_time_ms(call.get("response"))
         wall_clock_ms = call.get("wall_clock_ms")
         if extracted is None:
-            issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} response has no execution_metadata.execution_time_ms"))
+            issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} response has no execution_metadata.execution_time_ms"))
         elif not isinstance(wall_clock_ms, int | float):
-            issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} wall_clock_ms must be set from execution_metadata.execution_time_ms"))
+            issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} wall_clock_ms must be set from execution_metadata.execution_time_ms"))
         elif abs(float(wall_clock_ms) - extracted) > 1:
-            issues.append(_issue("error", "ae-mcp", scenario_name, task, f"call {idx + 1} wall_clock_ms {wall_clock_ms} does not match execution metadata {extracted:.0f}"))
+            issues.append(_issue("error", "agent-mcp", scenario_name, task, f"call {idx + 1} wall_clock_ms {wall_clock_ms} does not match execution metadata {extracted:.0f}"))
 
     return issues
 

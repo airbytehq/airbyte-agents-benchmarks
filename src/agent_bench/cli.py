@@ -1,4 +1,4 @@
-"""Typer CLI for the three-path Agent Engine benchmark."""
+"""Typer CLI for the three-path Airbyte Agents benchmark."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from rich.table import Table
 
 app = typer.Typer(
     name="agent-bench",
-    help="Three-way benchmark: Agent Engine SDK vs Airbyte Platform MCP vs Claude cloud MCPs.",
+    help="Three-way benchmark: Agent SDK vs Agent MCP vs Native MCP.",
     add_completion=False,
     invoke_without_command=False,
 )
@@ -20,7 +20,7 @@ console = Console()
 
 
 _ALL_CONNECTORS = ["slack", "linear", "granola"]
-_ALL_PATHS = ["ae-sdk", "ae-mcp", "claude"]
+_ALL_PATHS = ["agent-sdk", "agent-mcp", "native-mcp"]
 
 _DEFAULT_RECORDINGS = FSPath(__file__).parent.parent.parent / "assets" / "recordings"
 
@@ -53,12 +53,12 @@ def list_scenarios() -> None:
 @app.command()
 def plan(
     connectors: str = typer.Option("all", "--connectors"),
-    paths: str = typer.Option("claude,ae-mcp", "--paths", help="Record-replay paths to plan"),
+    paths: str = typer.Option("native-mcp,agent-mcp", "--paths", help="Record-replay paths to plan"),
 ) -> None:
-    """Print the MCP tool-call specs that record-replay paths (claude/ae-mcp) would invoke."""
+    """Print the MCP tool-call specs that record-replay paths (native-mcp/agent-mcp) would invoke."""
     from agent_bench.config import LiveConfig
-    from agent_bench.paths.agent_engine_mcp import AgentEngineMCPPath
-    from agent_bench.paths.claude_mcp import ClaudeMCPPath
+    from agent_bench.paths.agent_mcp import AgentMCPPath
+    from agent_bench.paths.native_mcp import NativeMCPPath
     from agent_bench.scenarios.loader import load_scenario
 
     connector_list = _resolve_connectors(connectors)
@@ -73,18 +73,18 @@ def plan(
     for name in connector_list:
         sc = load_scenario(name)
         console.print(f"\n[bold]== {sc.name.upper()} ==[/bold]")
-        if "ae-mcp" in path_list:
+        if "agent-mcp" in path_list:
             connector_id = config.connector_ids[sc.connector]
-            console.print("  [magenta]ae-mcp setup[/magenta]:")
+            console.print("  [magenta]agent-mcp setup[/magenta]:")
             console.print("      [1] mcp__airbyte-agent__describe_connector")
             console.print(f"          args: {json.dumps({'connector_id': connector_id})}")
         for task in sc.tasks:
             console.print(f"\n  [cyan]{task.action}[/cyan] {task.entity} — {task.label}")
             for slug in path_list:
-                if slug == "claude":
-                    path = ClaudeMCPPath(_DEFAULT_RECORDINGS / "claude")
-                elif slug == "ae-mcp":
-                    path = AgentEngineMCPPath(config, _DEFAULT_RECORDINGS / "ae-mcp")
+                if slug == "native-mcp":
+                    path = NativeMCPPath(_DEFAULT_RECORDINGS / "native-mcp")
+                elif slug == "agent-mcp":
+                    path = AgentMCPPath(config, _DEFAULT_RECORDINGS / "agent-mcp")
                 else:
                     continue
                 tplan = path.plan(task, sc)
@@ -118,7 +118,7 @@ def run(
     export_requested = bool(export_markdown or export_charts or export_stats)
     if export_requested:
         config = None
-        if "ae-mcp" in path_list:
+        if "agent-mcp" in path_list:
             try:
                 config = LiveConfig.from_env(required_connectors=connector_list)
             except EnvironmentError as e:
@@ -159,9 +159,9 @@ def run(
             )
         raise typer.Exit(1)
 
-    consistency_issues = _ae_sdk_mcp_consistency_issues(report)
+    consistency_issues = _agent_sdk_mcp_consistency_issues(report)
     if export_requested and consistency_issues:
-        console.print("\n[red]Export blocked: Agent Engine SDK/MCP record counts differ.[/red]")
+        console.print("\n[red]Export blocked: Agent SDK/MCP record counts differ.[/red]")
         for issue in consistency_issues:
             console.print(f"  [red]{issue}[/red]")
         raise typer.Exit(1)
@@ -184,7 +184,7 @@ def run(
 @app.command()
 def validate(
     connectors: str = typer.Option("all", "--connectors"),
-    paths: str = typer.Option("claude,ae-mcp", "--paths", help="Record-replay paths to validate"),
+    paths: str = typer.Option("native-mcp,agent-mcp", "--paths", help="Record-replay paths to validate"),
     recordings_dir: FSPath = typer.Option(_DEFAULT_RECORDINGS, "--recordings-dir"),
     strict: bool = typer.Option(False, "--strict", help="Treat warnings as failures"),
 ) -> None:
@@ -195,7 +195,7 @@ def validate(
     connector_list = _resolve_connectors(connectors)
     path_list = _resolve_paths(paths)
     config = None
-    if "ae-mcp" in path_list:
+    if "agent-mcp" in path_list:
         try:
             config = LiveConfig.from_env(required_connectors=connector_list)
         except EnvironmentError as e:
@@ -259,24 +259,24 @@ def _short_error(value: str, limit: int = 180) -> str:
     return value[: limit - 3] + "..."
 
 
-def _ae_sdk_mcp_consistency_issues(report) -> list[str]:
+def _agent_sdk_mcp_consistency_issues(report) -> list[str]:
     groups: dict[tuple[str, str], dict[str, object]] = {}
     for cell in report.cells:
-        if cell.path_short in {"ae-sdk", "ae-mcp"}:
+        if cell.path_short in {"agent-sdk", "agent-mcp"}:
             groups.setdefault((cell.scenario.name, cell.task.action), {})[cell.path_short] = cell
 
     issues: list[str] = []
     for (scenario, action), by_path in groups.items():
-        sdk = by_path.get("ae-sdk")
-        mcp = by_path.get("ae-mcp")
+        sdk = by_path.get("agent-sdk")
+        mcp = by_path.get("agent-mcp")
         if not sdk or not mcp:
             continue
         if sdk.result.status != "ok" or mcp.result.status != "ok":
             continue
         if sdk.result.total_records != mcp.result.total_records:
             issues.append(
-                f"{scenario}/{action}: ae-sdk records={sdk.result.total_records}, "
-                f"ae-mcp records={mcp.result.total_records}"
+                f"{scenario}/{action}: agent-sdk records={sdk.result.total_records}, "
+                f"agent-mcp records={mcp.result.total_records}"
             )
     return issues
 

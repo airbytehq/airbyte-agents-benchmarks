@@ -25,18 +25,18 @@ Linear + Granola, all three tasks, all three paths:
 
 | Path | Tasks OK | Tokens |
 |---|---:|---:|
-| Agent Engine SDK/API | 6 | 66,587 |
-| Agent Engine MCP | 6 | 5,229 |
-| Claude cloud MCP | 6 | 13,628 |
+| Agent SDK | 6 | 66,587 |
+| Agent MCP | 6 | 5,229 |
+| Native MCP | 6 | 13,628 |
 
 Headline ratios:
 
-- Agent Engine MCP used `12.7x` fewer tokens than the SDK/API path.
-- Agent Engine MCP used `2.6x` fewer tokens than Claude cloud MCP.
+- Agent MCP used `12.7x` fewer tokens than the SDK path.
+- Agent MCP used `2.6x` fewer tokens than native vendor MCPs.
 
 ## Connector-Level Results
 
-| Connector | Agent Engine SDK/API tokens | Agent Engine MCP tokens | Claude cloud MCP tokens | MCP vs SDK/API |
+| Connector | Agent SDK tokens | Agent MCP tokens | Native MCP tokens | MCP vs SDK |
 |---|---:|---:|---:|---:|
 | Granola | 14,874 | 1,485 | 5,118 | 10.0x fewer |
 | Linear | 51,713 | 3,744 | 8,510 | 13.8x fewer |
@@ -47,24 +47,24 @@ Important caveat for deck/chart language: Linear's roughly `14x` claim is the ov
 
 Safe to say:
 
-- Agent Engine MCP with `select_fields` is the narrowest measured path in the current 18-cell result set.
-- Agent Engine SDK/API returns full typed records, useful when an agent needs all fields.
-- Agent Engine MCP preserves typed JSON while narrowing payload shape.
-- Claude cloud MCP output shapes vary by connector. In the included cells, they are mixed JSON, text, and markdown-like responses.
-- In the included Linear list task, Agent Engine returns 50 records in one call while Claude cloud MCP returns 25 records.
+- Agent MCP with `select_fields` is the narrowest measured path in the current 18-cell result set.
+- Agent SDK returns full typed records, useful when an agent needs all fields.
+- Agent MCP preserves typed JSON while narrowing payload shape.
+- Native MCP output shapes vary by connector. In the included cells, they are mixed JSON, text, and markdown-like responses.
+- In the included Linear list task, Airbyte Agents returns 50 records in one call while native MCP returns 25 records.
 
 Do not claim yet:
 
 - That the benchmark is final across all Slack, Linear, and Granola cells.
 - That Slack search is healthy.
-- That Claude MCP latency is measured by this harness.
-- That Claude MCP outputs are always markdown or prose.
+- That native MCP latency is measured by this harness.
+- That native MCP outputs are always markdown or prose.
 - That "50 records in one call" applies to every connector in the benchmark.
 
 ## Reproduction
 
 See [REPRODUCTION.md](REPRODUCTION.md) for the full step-by-step walkthrough, from clone to validated results.
 
-The committed April 24 scorecard is the frozen artifact for the headline `66,587` SDK/API token total. The SDK/API path is live, so re-running the command can produce a different SDK/API total when connector data changes. The replay paths are deterministic from `assets/recordings/`.
+The committed April 24 scorecard is the frozen artifact for the headline `66,587` SDK token total. The SDK path is live, so re-running the command can produce a different SDK total when connector data changes. The replay paths are deterministic from `assets/recordings/`.
 
-On April 27, 2026, a live Linear+Granola verification run completed successfully with replay totals unchanged (`5,229` Agent Engine MCP tokens and `13,628` Claude MCP tokens), while the live SDK/API total was `53,000` tokens.
+On April 27, 2026, a live Linear+Granola verification run completed successfully with replay totals unchanged (`5,229` Agent MCP tokens and `13,628` Native MCP tokens), while the live SDK total was `53,000` tokens.

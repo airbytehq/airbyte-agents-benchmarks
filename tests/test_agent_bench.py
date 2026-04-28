@@ -6,8 +6,8 @@ import json
 from agent_bench.config import LiveConfig
 from agent_bench.export.scorecard import render_scorecard
 from agent_bench.metrics import BenchmarkResult, StepResult
-from agent_bench.paths.agent_engine_mcp import AgentEngineMCPPath
-from agent_bench.paths.claude_mcp import ClaudeMCPPath
+from agent_bench.paths.agent_mcp import AgentMCPPath
+from agent_bench.paths.native_mcp import NativeMCPPath
 from agent_bench.recordings import validate_recordings
 from agent_bench.runner import Cell, RunReport
 from agent_bench.scenarios.loader import load_scenario
@@ -34,10 +34,10 @@ def test_path_planning_uses_connector_specific_shapes(tmp_path) -> None:
 
     granola = load_scenario("granola")
     granola_get = next(task for task in granola.tasks if task.action == "get")
-    ae_plan = AgentEngineMCPPath(config, tmp_path).plan(granola_get, granola)
-    ae_item = ae_plan.calls[0].args["items"][0]
-    assert ae_item["params"] == {"note_id": "not_ES3idLqBAmN9L1"}
-    assert ae_item["select_fields"] == [
+    mcp_plan = AgentMCPPath(config, tmp_path).plan(granola_get, granola)
+    mcp_item = mcp_plan.calls[0].args["items"][0]
+    assert mcp_item["params"] == {"note_id": "not_ES3idLqBAmN9L1"}
+    assert mcp_item["select_fields"] == [
         "id",
         "title",
         "created_at",
@@ -45,16 +45,16 @@ def test_path_planning_uses_connector_specific_shapes(tmp_path) -> None:
         "attendees",
         "summary_text",
     ]
-    assert "describe_connector" in ae_plan.notes[0]
+    assert "describe_connector" in mcp_plan.notes[0]
 
-    claude_plan = ClaudeMCPPath(tmp_path).plan(granola_get, granola)
-    assert claude_plan.calls[0].args["meeting_id"] == "96457d50-5ed1-4d81-a2fc-f43c2b93530d"
+    native_plan = NativeMCPPath(tmp_path).plan(granola_get, granola)
+    assert native_plan.calls[0].args["meeting_id"] == "96457d50-5ed1-4d81-a2fc-f43c2b93530d"
 
 
-def test_ae_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None:
+def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None:
     scenario = load_scenario("linear")
     task = next(task for task in scenario.tasks if task.action == "get")
-    rec_dir = tmp_path / "recordings" / "ae-mcp" / "linear"
+    rec_dir = tmp_path / "recordings" / "agent-mcp" / "linear"
     rec_dir.mkdir(parents=True)
     (rec_dir / "get.json").write_text(json.dumps([{
         "tool": "mcp__airbyte-agent__execute",
@@ -74,7 +74,7 @@ def test_ae_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None:
         }]},
     }]))
 
-    path = AgentEngineMCPPath(_config(), tmp_path / "recordings" / "ae-mcp")
+    path = AgentMCPPath(_config(), tmp_path / "recordings" / "agent-mcp")
     result = _run_path(path, task, scenario)
     assert result.status == "ok"
     assert result.total_latency_ms == 123
@@ -83,8 +83,8 @@ def test_ae_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None:
     assert result.single_record_tokens > 0
 
 
-def test_validation_flags_stale_ae_mcp_recordings(tmp_path) -> None:
-    rec_dir = tmp_path / "ae-mcp" / "linear"
+def test_validation_flags_stale_agent_mcp_recordings(tmp_path) -> None:
+    rec_dir = tmp_path / "agent-mcp" / "linear"
     rec_dir.mkdir(parents=True)
     (rec_dir / "get.json").write_text(json.dumps([{
         "tool": "mcp__airbyte-agent__execute",
@@ -104,7 +104,7 @@ def test_validation_flags_stale_ae_mcp_recordings(tmp_path) -> None:
         }]},
     }]))
 
-    issues = validate_recordings(["linear"], ["ae-mcp"], tmp_path, _config())
+    issues = validate_recordings(["linear"], ["agent-mcp"], tmp_path, _config())
     messages = [issue.message for issue in issues]
     assert any("missing mandatory select_fields" in message for message in messages)
 
@@ -114,12 +114,12 @@ def test_scorecard_renders_interim_ratios(tmp_path) -> None:
     task = scenario.tasks[0]
     report = RunReport(
         cells=[
-            _cell(scenario, task, "Agent Engine SDK", "ae-sdk", 400),
-            _cell(scenario, task, "Agent Engine MCP", "ae-mcp", 100),
-            _cell(scenario, task, "Claude MCP", "claude", 300),
+            _cell(scenario, task, "Agent SDK", "agent-sdk", 400),
+            _cell(scenario, task, "Agent MCP", "agent-mcp", 100),
+            _cell(scenario, task, "Native MCP", "native-mcp", 300),
         ],
         requested_scenarios=["linear"],
-        requested_paths=["ae-sdk", "ae-mcp", "claude"],
+        requested_paths=["agent-sdk", "agent-mcp", "native-mcp"],
     )
 
     out = tmp_path / "scorecard.md"
@@ -130,7 +130,7 @@ def test_scorecard_renders_interim_ratios(tmp_path) -> None:
     assert "3.0× fewer tokens" in text
 
 
-def _run_path(path: AgentEngineMCPPath, task, scenario) -> BenchmarkResult:
+def _run_path(path: AgentMCPPath, task, scenario) -> BenchmarkResult:
     async def collect() -> BenchmarkResult:
         result = None
         async for _step, current in path.run_task(task, scenario):
