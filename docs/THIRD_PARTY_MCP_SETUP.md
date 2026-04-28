@@ -104,18 +104,20 @@ There is no API key or service account access method for Granola MCP. Each user 
 
 ### Available Tools
 
-| Benchmark Task | Tool | Description |
-|---|---|---|
-| search | `query_granola_meetings` | Chat-style query; returns a synthesized natural-language answer, not structured records |
-| get | `get_meeting_transcript` | Returns meeting ID, title, and full raw transcript (paid plans only) |
-| list | `list_meetings` | Returns meeting ID, title, date, and attendees; no limit parameter |
+The benchmark's `claude` path records and replays the Claude Code tool names below. The underlying Granola MCP server tool names are included for reference.
+
+| Benchmark Task | MCP Server Tool | Claude Code Tool | Description |
+|---|---|---|---|
+| search | `query_granola_meetings` | `mcp__claude_ai_Granola__query_granola_meetings` | Chat-style query; returns a synthesized natural-language answer, not structured records |
+| get | `get_meeting_transcript` | `mcp__claude_ai_Granola__get_meeting_transcript` | Returns meeting ID, title, and full raw transcript (paid plans only) |
+| list | `list_meetings` | `mcp__claude_ai_Granola__list_meetings` | Returns meeting ID, title, date, and attendees; no limit parameter |
 
 Additional tools (not used by this benchmark):
 
-| Tool | Description |
-|---|---|
-| `list_meeting_folders` | List folders you are a member of (paid plans only) |
-| `get_meetings` | Search through meeting content including notes and attendees |
+| MCP Server Tool | Claude Code Tool | Description |
+|---|---|---|
+| `list_meeting_folders` | `mcp__claude_ai_Granola__list_meeting_folders` | List folders you are a member of (paid plans only) |
+| `get_meetings` | `mcp__claude_ai_Granola__get_meetings` | Search through meeting content including notes and attendees |
 
 Notable behavior:
 
@@ -185,21 +187,23 @@ Optionally add `SLACK_CHANNEL_IDS` (comma-separated) to restrict which channels 
 
 ### Available Tools
 
-| Tool | Description |
-|---|---|
-| `slack_list_channels` | List public or pre-defined channels (max 200 per page) |
-| `slack_post_message` | Post a message to a channel |
-| `slack_reply_to_thread` | Reply to a message thread |
-| `slack_add_reaction` | Add an emoji reaction |
-| `slack_get_channel_history` | Get recent messages from a channel |
-| `slack_get_thread_replies` | Get all replies in a thread |
-| `slack_get_users` | List workspace users (max 200 per page) |
-| `slack_get_user_profile` | Get detailed profile for a user |
+The Slack MCP server exposes server-native tool names that differ from the Claude Code tool names used by the benchmark harness. For `--tool`, use the benchmark-facing Claude Code names.
+
+| MCP Server Tool | Claude Code / Benchmark Tool | Description |
+|---|---|---|
+| `slack_search_channels` | `mcp__claude_ai_Slack__slack_search_channels` | Search channels by name; the benchmark uses this for search, get, and list tasks |
+| `slack_post_message` | `mcp__claude_ai_Slack__slack_post_message` | Post a message to a channel |
+| `slack_reply_to_thread` | `mcp__claude_ai_Slack__slack_reply_to_thread` | Reply to a message thread |
+| `slack_add_reaction` | `mcp__claude_ai_Slack__slack_add_reaction` | Add an emoji reaction |
+| `slack_get_channel_history` | `mcp__claude_ai_Slack__slack_get_channel_history` | Get recent messages from a channel |
+| `slack_get_thread_replies` | `mcp__claude_ai_Slack__slack_get_thread_replies` | Get all replies in a thread |
+| `slack_get_users` | `mcp__claude_ai_Slack__slack_get_users` | List workspace users (max 200 per page) |
+| `slack_get_user_profile` | `mcp__claude_ai_Slack__slack_get_user_profile` | Get detailed profile for a user |
 
 The benchmark uses channel-oriented read tools. Notable limitations:
 
-- There is no `get-channel-by-ID` tool. The benchmark falls back to searching channels by name.
-- `slack_list_channels` returns max 200 results per page with cursor-based pagination.
+- There is no dedicated get-channel-by-ID tool. The benchmark falls back to `mcp__claude_ai_Slack__slack_search_channels` for all channel operations (search, get, and list).
+- The search API caps at 20 results per page. The benchmark's list task issues multiple 20-result search calls to approximate a bulk list.
 - The Slack MCP server is subject to Slack API rate limits (Tier 2: 20+ per minute for search, Tier 3: 50+ per minute for history).
 
 ### Alternative: Slack's Official Remote MCP
