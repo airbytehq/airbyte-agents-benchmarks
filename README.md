@@ -1,4 +1,4 @@
-# Airbyte Agents Launch Benchmark
+# Airbyte Agents Benchmarks
 
 A three-way benchmark comparing how AI agents access business data through Airbyte Agents. The harness measures token cost, payload size, and latency across three paths for the same tasks.
 
@@ -17,8 +17,8 @@ The current reproducible artifact is an interim Linear + Granola scorecard with 
 The `native-mcp` replay path can be validated and run using only the committed recordings, with no API access or environment variables required.
 
 ```bash
-git clone https://github.com/airbytehq/airbyte-agent-engine-launch-benchmark.git
-cd airbyte-agent-engine-launch-benchmark
+git clone https://github.com/airbytehq/airbyte-agents-benchmarks.git
+cd airbyte-agents-benchmarks
 uv sync
 uv run pytest -q
 uv run agent-bench run \
