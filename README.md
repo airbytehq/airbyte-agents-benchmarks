@@ -21,6 +21,19 @@ The planned scenarios are Slack, Linear, and Granola, each with search, get, and
 - `docs/RESULTS.md`: current numbers and safe claims.
 - `docs/CTO_BRIEF.md`: executive-facing summary and caveats.
 - `docs/SLACK_STATUS.md`: Slack blocker and completion path.
+- `docs/REPRODUCTION.md`: step-by-step reproduction guide with troubleshooting.
+
+## Quick Start (No Credentials)
+
+The replay paths are fully deterministic from committed recordings. You can validate the benchmark without any API credentials:
+
+```bash
+uv sync
+uv run pytest -q
+uv run agent-bench run --connectors linear,granola --paths ae-mcp,claude --export-markdown results.md
+```
+
+See `docs/REPRODUCTION.md` for the full reproduction guide, including live SDK setup and troubleshooting.
 
 ## Setup
 

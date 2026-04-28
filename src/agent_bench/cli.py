@@ -104,6 +104,7 @@ def run(
     paths: str = typer.Option("all", "--paths"),
     export_markdown: FSPath | None = typer.Option(None, "--export-markdown"),
     export_charts: FSPath | None = typer.Option(None, "--export-charts"),
+    export_stats: FSPath | None = typer.Option(None, "--export-stats", help="Directory for per-cell stats JSON files"),
     recordings_dir: FSPath = typer.Option(_DEFAULT_RECORDINGS, "--recordings-dir"),
 ) -> None:
     """Run the benchmark across the selected connectors and paths."""
@@ -114,7 +115,7 @@ def run(
     connector_list = _resolve_connectors(connectors)
     path_list = _resolve_paths(paths)
 
-    export_requested = bool(export_markdown or export_charts)
+    export_requested = bool(export_markdown or export_charts or export_stats)
     if export_requested:
         config = None
         if "ae-mcp" in path_list:
@@ -173,6 +174,11 @@ def run(
         from agent_bench.export.charts import render_charts
         render_charts(report, export_charts)
         console.print(f"[green]charts →[/green] {export_charts}")
+    if export_stats:
+        from agent_bench.export.stats import write_cell_stats
+        for cell in report.cells:
+            out = write_cell_stats(FSPath(export_stats), cell)
+            console.print(f"[green]stats →[/green] {out}")
 
 
 @app.command()
