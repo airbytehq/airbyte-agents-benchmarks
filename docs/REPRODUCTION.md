@@ -11,8 +11,8 @@ This guide walks through reproducing the Airbyte Agents launch benchmark results
 Clone and install:
 
 ```bash
-git clone https://github.com/airbytehq/airbyte-agent-engine-launch-benchmark.git
-cd airbyte-agent-engine-launch-benchmark
+git clone https://github.com/airbytehq/airbyte-agents-benchmarks.git
+cd airbyte-agents-benchmarks
 uv sync
 ```
 
