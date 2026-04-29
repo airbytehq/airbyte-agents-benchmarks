@@ -121,8 +121,8 @@ def _exec_summary(report: RunReport, is_interim: bool = False) -> str:
     return "\n".join(lines)
 
 
-def _path_totals(report: RunReport) -> dict[str, dict[str, float]]:
-    totals: dict[str, dict[str, float]] = {}
+def _path_totals(report: RunReport) -> dict[str, dict[str, float | None]]:
+    totals: dict[str, dict[str, float | None]] = {}
     for cell in report.cells:
         slot = totals.setdefault(cell.path_short, _zero_totals())
         if cell.result.status != "ok":
