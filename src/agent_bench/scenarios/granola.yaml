@@ -3,8 +3,10 @@ title: "Granola — 3-task head-to-head"
 connector: granola
 connector_id_env: GRANOLA_CONNECTOR_ID
 description: >
-  Granola head-to-head. Strong single-record-fetch angle (transcript by ID)
-  where native MCP requires separate tool call; SDK/MCP return the full note.
+  Granola head-to-head across three tasks. Both native MCP and Agent MCP
+  get tasks now request the full transcript for a fair comparison.
+  The Agent MCP recording must be re-captured after adding transcript
+  to select_fields.
 
 tasks:
   - label: "Search notes by keyword"
@@ -14,7 +16,7 @@ tasks:
     params:
       keyword: "context store"
       limit: 1
-  - label: "Get single note by ID (with transcript)"
+  - label: "Get single note by ID"
     action: get
     entity: notes
     metric_focus: single_record_fetch

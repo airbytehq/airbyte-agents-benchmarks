@@ -29,7 +29,7 @@ def cell_to_stats(cell: Cell) -> dict:
         "status": r.status,
         "tokens": r.total_tokens,
         "payload_bytes": r.total_payload_bytes,
-        "latency_ms": round(r.total_latency_ms, 1),
+        "latency_ms": round(r.total_latency_ms, 1) if r.total_latency_ms is not None else None,
         "records": r.total_records,
         "api_calls": r.api_calls,
     }

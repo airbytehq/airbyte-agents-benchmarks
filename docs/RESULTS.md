@@ -31,8 +31,8 @@ Linear + Granola, all three tasks, all three paths:
 
 Headline ratios:
 
-- Agent MCP used `12.7x` fewer tokens than the REST Baseline path.
-- Agent MCP used `2.6x` fewer tokens than native vendor MCPs.
+- Agent MCP used `12.7x` fewer tokens than the REST Baseline path. **Caveat:** this ratio primarily reflects field projection (`select_fields` narrows to 6-10 fields vs the REST Baseline's full record), not transport or protocol differences.
+- Agent MCP used `2.6x` fewer tokens than native vendor MCPs. **Caveat:** some cells are not semantically equivalent (see Known Issues below).
 
 ## Connector-Level Results
 
@@ -47,19 +47,29 @@ Important caveat for deck/chart language: Linear's roughly `14x` claim is the ov
 
 Safe to say:
 
-- Agent MCP with `select_fields` is the narrowest measured path in the current 18-cell result set.
-- The REST Baseline returns the full typed records from the provider's REST API — the same data an agent would see calling the provider directly. Useful when an agent needs all fields.
-- Agent MCP preserves typed JSON while narrowing payload shape.
+- Agent MCP with `select_fields` returns narrower payloads than the full REST Baseline response. In the current benchmark, selecting 6-10 fields instead of 30-50+ fields reduces token count significantly.
+- Field projection (`select_fields`) is the primary driver of token reduction between Agent MCP and the REST Baseline.
+- Agent MCP preserves typed JSON while narrowing payload shape, enabling downstream programmatic filtering and joins.
 - Native MCP output shapes vary by connector. In the included cells, they are mixed JSON, text, and markdown-like responses.
 - In the included Linear list task, Airbyte Agents returns 50 records in one call while native MCP returns 25 records.
 
 Do not claim yet:
 
+- That the REST Baseline-vs-MCP token ratio reflects protocol efficiency (it primarily reflects field projection).
 - That the benchmark is final across all Slack, Linear, and Granola cells.
 - That Slack search is healthy.
 - That native MCP latency is measured by this harness.
 - That native MCP outputs are always markdown or prose.
 - That "50 records in one call" applies to every connector in the benchmark.
+
+## Known Issues
+
+The following issues affect the current result set and should be resolved before external publication:
+
+1. **Linear list recording is synthetic.** The Agent MCP Linear list recording uses placeholder IDs (`issue-00` through `issue-49`) with hourly timestamps and missing fields. Real API data would produce higher token counts.
+2. **Granola get task is not semantically equivalent.** The native MCP path fetches the full meeting transcript; the Agent MCP path returns `transcript: null`. This inflates the native MCP token count relative to Agent MCP for this task.
+3. **Granola native-MCP search is an empty-state response.** The recording is a conversational "I don't have any data" message, not a real search result.
+4. **Linear search results contain stringified objects.** The `state`, `team`, and `labels` fields are serialized as `"{}"` strings instead of proper objects, suggesting a context store serialization issue.
 
 ## Reproduction
 
