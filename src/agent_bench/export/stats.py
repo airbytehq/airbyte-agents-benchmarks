@@ -13,7 +13,7 @@ from pathlib import Path
 
 from agent_bench.runner import Cell
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def cell_to_stats(cell: Cell) -> dict:
