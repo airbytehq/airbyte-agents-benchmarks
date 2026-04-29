@@ -32,7 +32,7 @@ def _entity_select_fields(connector: str, entity: str) -> list[str]:
     mapping: dict[tuple[str, str], list[str]] = {
         ("slack", "channels"): ["id", "name", "num_members", "is_archived", "is_private", "created", "updated", "topic", "purpose"],
         ("linear", "issues"): ["id", "identifier", "title", "state", "priority", "assignee", "createdAt", "updatedAt", "team", "labels"],
-        ("granola", "notes"): ["id", "title", "created_at", "updated_at", "attendees", "summary_text"],
+        ("granola", "notes"): ["id", "title", "created_at", "updated_at", "attendees", "summary_text", "transcript"],
     }
     return mapping.get((connector, entity), ["id"])
 
@@ -83,7 +83,7 @@ class AgentMCPPath:
             result.error = f"No recording at {rec_path} — run `agent-bench record --paths agent-mcp` first."
             step = StepResult(
                 label=f"{task.action} {task.entity} [no recording]",
-                latency_ms=0,
+                latency_ms=None,
                 payload_bytes=0,
                 tokens=0,
                 records=0,
@@ -166,9 +166,12 @@ def extract_execution_time_ms(resp: Any) -> float | None:
     return sum(values)
 
 
-def _recorded_wall_clock_ms(call: dict[str, Any], resp: Any) -> float:
+def _recorded_wall_clock_ms(call: dict[str, Any], resp: Any) -> float | None:
+    """Return timing ms from a recording entry, or `None` if unmeasured."""
     raw = call.get("wall_clock_ms")
     if isinstance(raw, int | float) and raw > 0:
         return float(raw)
     extracted = extract_execution_time_ms(resp)
-    return float(extracted or 0)
+    if extracted is not None and extracted > 0:
+        return float(extracted)
+    return None

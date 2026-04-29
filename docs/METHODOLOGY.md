@@ -36,6 +36,8 @@ This means:
 - Agent MCP token counts include the MCP response after `select_fields` narrows the returned fields.
 - Native MCP token counts include the recorded native MCP tool response, preserving its connector-specific shape.
 
+**Important:** The SDK path returns all fields (30-50+ per record) while the Agent MCP path applies `select_fields` to return only 6-10 fields. Token ratios between these paths therefore primarily reflect the effect of field projection, not transport or protocol differences. A fair protocol comparison requires applying equivalent field projection on the SDK side.
+
 ## Payload Bytes
 
 Payload bytes are measured as the UTF-8 byte length of the JSON-encoded response payload. This gives a transport-adjacent size comparison alongside the token count.
@@ -91,3 +93,4 @@ The `agent-sdk` path measures the token cost of consuming the provider's full RE
 The SDK path is live. It can drift when the underlying connector data changes. The April 24 scorecard committed under `artifacts/2026-04-24/scorecard.md` is the frozen launch artifact for the 66,587 SDK token total.
 
 As of the April 27, 2026 verification run, Linear+Granola completed successfully but the live SDK token total was 53,000 because current Linear payloads had changed. Agent MCP and Native MCP replay totals remained 5,229 and 13,628.
+

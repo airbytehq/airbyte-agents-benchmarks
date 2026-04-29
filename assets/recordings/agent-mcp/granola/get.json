@@ -16,7 +16,8 @@
             "created_at",
             "updated_at",
             "attendees",
-            "summary_text"
+            "summary_text",
+            "transcript"
           ]
         }
       ]

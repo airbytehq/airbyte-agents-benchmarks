@@ -137,7 +137,7 @@ def run(
         line = (
             f"  [{status_color}]{r.status:7}[/{status_color}] "
             f"{cell.scenario.name}/{cell.task.action} × {cell.path_short:6} "
-            f"— {r.total_latency_ms:6.0f}ms, {r.total_records:3d} rec, "
+            f"— {r.total_records:3d} rec, "
             f"{r.total_tokens:6d} tok, {r.api_calls} call"
         )
         if r.error:
@@ -221,7 +221,6 @@ def _render_matrix(report) -> None:
         table.add_column("Task", no_wrap=True)
         table.add_column("Path", no_wrap=True)
         table.add_column("Status", no_wrap=True)
-        table.add_column("Latency", justify="right")
         table.add_column("Records", justify="right")
         table.add_column("Tokens", justify="right")
         table.add_column("Calls", justify="right")
@@ -233,7 +232,6 @@ def _render_matrix(report) -> None:
                 c.task.label,
                 c.path_short,
                 f"[{color}]{c.result.status}[/{color}]",
-                f"{c.result.total_latency_ms:.0f}ms",
                 f"{c.result.total_records}",
                 f"{c.result.total_tokens}",
                 f"{c.result.api_calls}",

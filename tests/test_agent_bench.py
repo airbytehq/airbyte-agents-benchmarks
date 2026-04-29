@@ -44,6 +44,7 @@ def test_path_planning_uses_connector_specific_shapes(tmp_path) -> None:
         "updated_at",
         "attendees",
         "summary_text",
+        "transcript",
     ]
     assert "describe_connector" in mcp_plan.notes[0]
 

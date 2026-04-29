@@ -15,7 +15,7 @@ class StepResult:
     """Result of a single API step."""
 
     label: str
-    latency_ms: float
+    latency_ms: float | None
     payload_bytes: int
     tokens: int
     records: int = 0
@@ -38,8 +38,12 @@ class BenchmarkResult:
     error: str | None = None
 
     @property
-    def total_latency_ms(self) -> float:
-        return sum(s.latency_ms for s in self.steps)
+    def total_latency_ms(self) -> float | None:
+        """Sum of step latencies, or `None` if no step has a measured value."""
+        measured = [s.latency_ms for s in self.steps if s.latency_ms is not None]
+        if not measured:
+            return None
+        return sum(measured)
 
     @property
     def total_payload_bytes(self) -> int:
@@ -97,6 +101,8 @@ def format_bytes(n: int) -> str:
     return f"{n:,} bytes"
 
 
-def format_latency(ms: float) -> str:
-    """Format latency in ms with comma separator."""
+def format_latency(ms: float | None) -> str:
+    """Format latency in ms with comma separator, or `—` if unmeasured."""
+    if ms is None:
+        return "—"
     return f"{ms:,.0f}ms"

@@ -208,7 +208,7 @@ class NativeMCPPath:
             result.error = f"No recording at {rec_path} — run `agent-bench record --paths native-mcp` first."
             step = StepResult(
                 label=f"{task.action} {task.entity} [no recording]",
-                latency_ms=0,
+                latency_ms=None,
                 payload_bytes=0,
                 tokens=0,
                 records=0,
@@ -232,7 +232,7 @@ class NativeMCPPath:
             total_records += records
             step = StepResult(
                 label=f"{call.get('tool', '?')} (call {idx + 1}/{len(recording)})",
-                latency_ms=float(call.get("wall_clock_ms", 0)),
+                latency_ms=_parse_wall_clock(call),
                 payload_bytes=len(payload.encode()),
                 tokens=tokens,
                 records=records,
@@ -247,6 +247,14 @@ class NativeMCPPath:
 
     async def close(self) -> None:
         pass
+
+
+def _parse_wall_clock(call: dict[str, Any]) -> float | None:
+    """Return wall-clock ms from a recording entry, or `None` if unmeasured."""
+    raw = call.get("wall_clock_ms")
+    if isinstance(raw, int | float) and raw > 0:
+        return float(raw)
+    return None
 
 
 def _count_records(response: Any) -> int:
