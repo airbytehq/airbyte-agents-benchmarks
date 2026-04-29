@@ -15,7 +15,7 @@ class BenchmarkPath(Protocol):
     instance ID). The runner iterates over tasks and calls `run_task`.
     """
 
-    name: str  # human-readable ("Agent SDK" | "Agent MCP" | "Native MCP")
+    name: str  # human-readable ("REST Baseline (via SDK)" | "Agent MCP" | "Native MCP")
     short_name: str  # CLI slug ("agent-sdk" | "agent-mcp" | "native-mcp")
 
     async def run_task(

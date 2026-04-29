@@ -114,7 +114,7 @@ def test_scorecard_renders_interim_ratios(tmp_path) -> None:
     task = scenario.tasks[0]
     report = RunReport(
         cells=[
-            _cell(scenario, task, "Agent SDK", "agent-sdk", 400),
+            _cell(scenario, task, "REST Baseline (via SDK)", "agent-sdk", 400),
             _cell(scenario, task, "Agent MCP", "agent-mcp", 100),
             _cell(scenario, task, "Native MCP", "native-mcp", 300),
         ],

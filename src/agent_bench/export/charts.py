@@ -8,7 +8,7 @@ from agent_bench.runner import RunReport
 
 
 PATH_ORDER = ["agent-sdk", "agent-mcp", "native-mcp"]
-PATH_LABEL = {"agent-sdk": "Agent SDK", "agent-mcp": "Agent MCP", "native-mcp": "Native MCP"}
+PATH_LABEL = {"agent-sdk": "REST Baseline (via SDK)", "agent-mcp": "Agent MCP", "native-mcp": "Native MCP"}
 PATH_COLOR = {"agent-sdk": "#3b82f6", "agent-mcp": "#10b981", "native-mcp": "#f59e0b"}
 
 

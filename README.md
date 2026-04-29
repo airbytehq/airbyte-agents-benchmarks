@@ -4,7 +4,7 @@ A three-way benchmark comparing how AI agents access business data through Airby
 
 | Path | Slug | Description |
 |---|---|---|
-| Agent SDK | `agent-sdk` | Live `airbyte-agent-sdk` calls returning full typed records |
+| REST Baseline (via SDK) | `agent-sdk` | Token cost of consuming the provider's full REST API response. The Airbyte connector fetches records from the third-party provider and passes them through unmodified — token counts are equivalent to calling the provider directly. See [Methodology](docs/METHODOLOGY.md#agent-sdk-as-rest-baseline). |
 | Agent MCP | `agent-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
 | Native MCP | `native-mcp` | Record-replay of vendor-native MCP server responses |
 
@@ -33,7 +33,7 @@ See [docs/REPRODUCTION.md](docs/REPRODUCTION.md) for the full reproduction guide
 
 ## Headline Results (April 24 Artifact)
 
-Agent MCP used **12.7x fewer tokens** than the SDK path and **2.6x fewer tokens** than native vendor MCPs across the included Linear + Granola cells.
+Agent MCP used **12.7x fewer tokens** than the REST Baseline and **2.6x fewer tokens** than native vendor MCPs across the included Linear + Granola cells.
 
 See [docs/RESULTS.md](docs/RESULTS.md) for the full numbers, connector-level breakdowns, and safe claims.
 

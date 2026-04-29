@@ -1,9 +1,15 @@
-"""Path C: Agent SDK (airbyte-agent-sdk).
+"""Path C: REST Baseline (via airbyte-agent-sdk).
 
-Uses `from airbyte_agent_sdk import connect` to hit the Airbyte Agents
-REST API directly from this Python process. Dispatches each
-task's canonical action to the connector's `execute(entity, action, params)`
-method, translating connector-specific param names where required.
+Measures the token cost of consuming the third-party provider's full
+REST API response. The Airbyte connector fetches records from the
+provider (Linear, Granola, Slack) and passes them through unmodified.
+The SDK adds auth management and Python deserialization but does not
+transform, cache, or compress the response payload. Token counts are
+equivalent to what an agent would see calling the provider directly.
+
+Dispatches each task's canonical action to the connector's
+`execute(entity, action, params)` method, translating connector-specific
+param names where required.
 """
 
 from __future__ import annotations
@@ -43,7 +49,7 @@ _DISPATCH: dict[str, dict[str, Any]] = {
 class AgentSDKPath:
     """Path C — talks to Airbyte Agents from the Python process via the SDK."""
 
-    name = "Agent SDK"
+    name = "REST Baseline (via SDK)"
     short_name = "agent-sdk"
 
     def __init__(self, config: LiveConfig, connector_name: str) -> None:

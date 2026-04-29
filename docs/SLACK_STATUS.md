@@ -12,7 +12,7 @@ Current local connector ID verified on April 27, 2026:
 
 Observed live behavior:
 
-- `get` and `list` can pass through the Agent SDK path.
+- `get` and `list` can pass through the REST Baseline (via SDK) path.
 - `search` may return HTTP 503 while Context Store preview builds.
 - The 503 is a readiness blocker, not currently treated as a harness bug.
 

@@ -17,12 +17,12 @@ The harness is the source of truth. The deck is included for context only and sh
 Across Linear and Granola, Agent MCP with `select_fields` used:
 
 - `5,229` tokens total,
-- `12.7x` fewer tokens than the SDK path (`66,587` tokens),
+- `12.7x` fewer tokens than the REST Baseline path (`66,587` tokens),
 - `2.6x` fewer tokens than native vendor MCPs (`13,628` tokens).
 
 The current result includes 18 of 27 planned cells. Slack is intentionally excluded from the scorecard until search readiness and replay recordings are complete.
 
-The April 24 scorecard is the frozen launch artifact for these headline numbers. The SDK path runs live and can drift as connector data changes; an April 27 verification run completed but produced a lower live SDK total (`53,000` tokens). The replay totals for Agent MCP and Native MCP remained unchanged.
+The April 24 scorecard is the frozen launch artifact for these headline numbers. The REST Baseline path runs live and can drift as connector data changes; an April 27 verification run completed but produced a lower live Baseline total (`53,000` tokens). The replay totals for Agent MCP and Native MCP remained unchanged.
 
 ## Why This Matters
 
@@ -31,7 +31,7 @@ The benchmark demonstrates that Airbyte Agents can give agents structured, query
 The important distinction is not simply "shorter output." The stronger claim is:
 
 - Agent MCP narrows payloads with explicit field selection.
-- Agent SDK remains available when an agent needs complete records.
+- The REST Baseline (via SDK) shows the token cost of consuming the provider's full REST API response — useful when agents need complete records.
 - Both paths preserve typed records for filtering, sorting, joins, and follow-up actions.
 
 Native MCP responses are useful but inconsistent across connectors. In this result set, they include mixed JSON, text, and markdown-like shapes. That makes programmatic downstream work harder to generalize.
@@ -40,7 +40,7 @@ Native MCP responses are useful but inconsistent across connectors. In this resu
 
 Safe:
 
-- "In the current Linear+Granola benchmark, Agent MCP used 12.7x fewer tokens than the SDK path."
+- "In the current Linear+Granola benchmark, Agent MCP used 12.7x fewer tokens than the REST Baseline."
 - "Agent MCP used 2.6x fewer tokens than native vendor MCPs on the included cells."
 - "Agent MCP preserves typed JSON while narrowing payload fields."
 - "Linear's roughly 14x token reduction is an overall connector-level result across search, get, and list."
