@@ -139,6 +139,36 @@ def _run_path(path: AgentMCPPath, task, scenario) -> BenchmarkResult:
     return asyncio.run(collect())
 
 
+def test_salesforce_list_translates_to_soql() -> None:
+    """SOQL translation produces the expected query with LIMIT."""
+    from agent_bench.paths.agent_sdk import _translate, _DISPATCH
+
+    scenario = load_scenario("salesforce-list")
+    task = scenario.task
+    dispatch = _DISPATCH["salesforce"]
+    action, params = _translate(task, dispatch)
+    assert action == "list"
+    assert "q" in params
+    assert params["q"].startswith("SELECT Id, Name, Type, Industry FROM Account")
+    assert "LIMIT" in params["q"]
+
+
+def test_salesforce_list_without_soql_raises() -> None:
+    """A Salesforce entity without a list_soql template raises ValueError."""
+    import pytest
+
+    from agent_bench.paths.agent_sdk import _translate
+    from agent_bench.scenarios.loader import Task
+
+    task = Task(label="test", action="list", entity="unknown_entity", metric_focus="bulk_list", params={"limit": 10})
+    dispatch = {
+        "list_limit_key": "q",
+        "list_soql": {},
+    }
+    with pytest.raises(ValueError, match="requires a list_soql template"):
+        _translate(task, dispatch)
+
+
 def _config() -> LiveConfig:
     return LiveConfig(
         organization_id="org-id",

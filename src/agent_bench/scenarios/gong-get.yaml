@@ -1,0 +1,15 @@
+name: gong-get
+title: "Gong — Get single call by ID"
+connector: gong
+connector_id_env: GONG_CONNECTOR_ID
+description: >
+  Fetch a single Gong call by ID. An agent summarising a specific
+  meeting needs the title and duration, not every metadata field.
+
+task:
+  label: "Get single call by ID"
+  action: get
+  entity: calls
+  metric_focus: single_record_fetch
+  params:
+    id: "1005803797056190704"

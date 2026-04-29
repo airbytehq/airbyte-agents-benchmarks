@@ -36,6 +36,9 @@ def _entity_select_fields(connector: str, entity: str) -> list[str]:
         ("slack", "channels"): ["id", "name", "num_members", "is_archived", "is_private", "created", "updated", "topic", "purpose"],
         ("linear", "issues"): ["id", "identifier", "title", "state", "priority", "createdAt", "updatedAt", "team", "labels"],
         ("granola", "notes"): ["id", "title", "created_at", "updated_at", "attendees", "summary_text", "transcript"],
+        ("gong", "calls"): ["id", "title", "scheduled", "duration"],
+        ("salesforce", "accounts"): ["Id", "Name", "Type", "Industry"],
+        ("zendesk", "tickets"): ["id", "subject", "status", "priority"],
     }
     return mapping.get((connector, entity), ["id"])
 

@@ -37,7 +37,7 @@ All 5 tests should pass.
 ### Validate recordings
 
 ```bash
-uv run agent-bench validate --scenarios linear,granola --paths native-mcp,agent-mcp
+uv run agent-bench validate --scenarios linear,slack,gong,salesforce,zendesk --paths agent-mcp
 ```
 
 Expected output: `recordings ok`
@@ -46,19 +46,12 @@ Expected output: `recordings ok`
 
 ```bash
 uv run agent-bench run \
-  --scenarios linear,granola \
-  --paths agent-mcp,native-mcp \
+  --scenarios linear,slack,gong,salesforce,zendesk \
+  --paths agent-mcp \
   --export-markdown results.md
 ```
 
-Expected token totals (deterministic from recordings):
-
-| Path | Linear | Granola | Total |
-|---|---:|---:|---:|
-| Agent MCP | 3,744 | 1,485 | 5,229 |
-| Native MCP | 8,510 | 5,118 | 13,628 |
-
-These match the committed April 24 artifact exactly.
+Token totals are deterministic from the committed recordings. Native-mcp recordings are only available for Linear and Granola (April 24 artifact).
 
 ## Tier 2: Live SDK Path (Requires Credentials)
 
@@ -85,8 +78,10 @@ AIRBYTE_ORGANIZATION_ID=your-org-uuid
 AIRBYTE_CLIENT_ID=your-client-id
 AIRBYTE_CLIENT_SECRET=your-client-secret
 LINEAR_CONNECTOR_ID=your-linear-source-uuid
-GRANOLA_CONNECTOR_ID=your-granola-source-uuid
 SLACK_CONNECTOR_ID=your-slack-source-uuid
+GONG_CONNECTOR_ID=your-gong-source-uuid
+SALESFORCE_CONNECTOR_ID=your-salesforce-source-uuid
+ZENDESK_CONNECTOR_ID=your-zendesk-source-uuid
 ```
 
 ### Authentication note
@@ -105,8 +100,8 @@ Some Airbyte Cloud application credentials are scoped to a particular org. The s
 # Single connector
 uv run agent-bench run --scenarios linear --paths agent-sdk
 
-# Multiple connectors
-uv run agent-bench run --scenarios linear,slack --paths agent-sdk
+# All five connectors
+uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths agent-sdk
 ```
 
 ### Run all paths for a connector
@@ -119,9 +114,9 @@ This runs agent-sdk (live), agent-mcp (replay), and native-mcp (replay) side by 
 
 ### Interpreting live results
 
-The REST Baseline path is live, so token counts will vary as the underlying data changes. The committed April 24 artifact recorded 66,587 total Baseline tokens for Linear and Granola. A verification run on April 27 showed 53,000 tokens because the Linear issue data had changed. This is expected behavior, not a test failure.
+The REST Baseline path is live, so token counts will vary as the underlying data changes. This is expected behavior, not a test failure.
 
-The replay paths (agent-mcp and native-mcp) are deterministic. Their token totals should always match the committed artifact (5,229 and 13,628 for Linear and Granola).
+The replay paths (agent-mcp and native-mcp) are deterministic. Their token totals should always match the committed recordings.
 
 ## Tier 3: Full Benchmark
 
@@ -131,11 +126,12 @@ The full benchmark covers all connectors, tasks, and paths. Use `agent-bench lis
 
 | Connector | agent-sdk | agent-mcp | native-mcp |
 |---|---|---|---|
-| Linear | Available | Recordings committed | Recordings committed |
-| Granola | Requires Granola connector in your org | Recordings committed | Recordings committed |
-| Slack | Available | No recordings yet | No recordings yet |
-
-Slack replay recordings are not yet committed. The Slack search task was returning HTTP 503 from the Context Store during the recording window. See `docs/SLACK_STATUS.md` for the completion path.
+| Linear | Available | Recordings committed | April 24 recordings |
+| Slack | Available | Recordings committed | Not yet recorded |
+| Gong | Available | Recordings committed | Not yet recorded |
+| Salesforce | Available | Recordings committed | Not yet recorded |
+| Zendesk | Available | Recordings committed | Not yet recorded |
+| Granola | Tombstoned | April 24 only | April 24 recordings |
 
 ### Running what is available
 
@@ -143,11 +139,11 @@ Slack replay recordings are not yet committed. The Slack search task was returni
 # Linear: all paths
 uv run agent-bench run --scenarios linear --paths all
 
-# Granola: replay only (no SDK unless you have a Granola connector)
-uv run agent-bench run --scenarios granola --paths agent-mcp,native-mcp
+# All five connectors, agent-mcp replay
+uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths agent-mcp
 
-# Slack: SDK only (requires Slack connector in your org)
-uv run agent-bench run --scenarios slack --paths agent-sdk
+# All five connectors, live SDK
+uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths agent-sdk
 ```
 
 ### Full export
@@ -158,8 +154,8 @@ The full export command is intentionally gated. It will fail if any replay recor
 uv run agent-bench run \
   --scenarios all \
   --paths all \
-  --export-markdown artifacts/2026-04-24/final-scorecard.md \
-  --export-charts artifacts/2026-04-24/final-charts
+  --export-markdown artifacts/YYYY-MM-DD/final-scorecard.md \
+  --export-charts artifacts/YYYY-MM-DD/final-charts
 ```
 
 ## Troubleshooting
@@ -176,12 +172,12 @@ The application credentials do not have `organization_admin` scope on the target
 
 The requested replay file does not exist. Either:
 
-- You are running a scenario or path whose recordings have not been committed yet (Slack).
+- You are running a scenario or path whose recordings have not been committed yet.
 - The artifacts directory was not included in your clone. Run `git status` to verify.
 
 ### REST Baseline token counts differ from the artifact
 
-This is expected. The REST Baseline path is live and returns current data. The committed artifact reflects data as of April 24, 2026. Replay paths are the stable reference for comparison.
+This is expected. The REST Baseline path is live and returns current data. Replay paths are the stable reference for comparison.
 
 ### HTTP 503 on Slack search
 
@@ -193,8 +189,8 @@ The export gate prevents incomplete scorecards. Run with specific `--scenarios` 
 
 ```bash
 uv run agent-bench run \
-  --scenarios linear,granola \
-  --paths agent-mcp,native-mcp \
+  --scenarios linear,slack,gong \
+  --paths agent-mcp \
   --export-markdown partial-results.md
 ```
 

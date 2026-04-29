@@ -1,0 +1,16 @@
+name: salesforce-search
+title: "Salesforce — Search accounts by keyword"
+connector: salesforce
+connector_id_env: SALESFORCE_CONNECTOR_ID
+description: >
+  Search Salesforce accounts matching a keyword. An agent answering
+  "which accounts are prospects?" needs name and type, not the full
+  200+ field Account object.
+
+task:
+  label: "Search accounts by keyword"
+  action: search
+  entity: accounts
+  metric_focus: narrow_context
+  params:
+    keyword: "airbyte"
