@@ -23,6 +23,12 @@ console = Console()
 
 _ALL_PATHS = ["agent-sdk", "agent-mcp", "native-mcp"]
 
+PATH_LABEL = {
+    "agent-sdk": "REST Baseline (via SDK)",
+    "agent-mcp": "Agent MCP",
+    "native-mcp": "Native MCP",
+}
+
 _DEFAULT_ARTIFACTS = FSPath(__file__).parent.parent.parent / "artifacts"
 
 
@@ -258,6 +264,44 @@ def validate(
     if errors or (strict and issues):
         raise typer.Exit(1)
     console.print("[green]recordings ok[/green]")
+
+
+@app.command()
+def compare(
+    artifacts_dir: FSPath = typer.Option(_DEFAULT_ARTIFACTS, "--artifacts-dir"),
+    date: str | None = typer.Option(None, "--date", help="Artifact date folder (e.g. 2026-04-29). Defaults to latest."),
+    left: str = typer.Option("agent-mcp", "--left", help="Left path slug for comparison"),
+    right: str = typer.Option("native-mcp", "--right", help="Right path slug for comparison"),
+    output: FSPath | None = typer.Option(None, "--output", "-o", help="Write markdown report to this file"),
+) -> None:
+    """Generate a markdown comparison report from recording-stats.json files.
+
+    Compares token efficiency between two paths (default: agent-mcp vs native-mcp).
+    Falls back to deriving stats from recording.json if stats files are absent.
+    """
+    from agent_bench.export.comparison import generate_comparison_report
+
+    dated_dir = _resolve_artifacts_dir(artifacts_dir, date)
+    if not dated_dir.is_dir():
+        console.print(f"[red]Artifacts directory not found: {dated_dir}[/red]")
+        raise typer.Exit(1)
+
+    left_label = PATH_LABEL.get(left, left)
+    right_label = PATH_LABEL.get(right, right)
+
+    report = generate_comparison_report(
+        artifacts_dir=dated_dir,
+        left_path=left,
+        right_path=right,
+        left_label=left_label,
+        right_label=right_label,
+        output_path=output,
+    )
+
+    if output:
+        console.print(f"[green]report →[/green] {output}")
+    else:
+        console.print(report)
 
 
 def _render_matrix(report) -> None:
