@@ -132,6 +132,7 @@ def run(
     paths: str = typer.Option("all", "--paths"),
     artifacts_dir: FSPath = typer.Option(_DEFAULT_ARTIFACTS, "--artifacts-dir"),
     date: str | None = typer.Option(None, "--date", help="Artifact date folder (e.g. 2026-04-24). Defaults to latest."),
+    mode: str = typer.Option("live", "--mode", help="Execution mode: 'live' (default) makes real API calls, 'replay' uses recorded responses."),
     export_markdown: FSPath | None = typer.Option(None, "--export-markdown"),
     export_charts: FSPath | None = typer.Option(None, "--export-charts"),
     export_stats: bool = typer.Option(False, "--export-stats", help="Write recording-stats.json alongside recordings"),
@@ -142,9 +143,17 @@ def run(
     from agent_bench.runner import run_all
     from agent_bench.scenarios.loader import load_scenario
 
+    if mode not in ("live", "replay"):
+        console.print(f"[red]Invalid mode {mode!r}. Must be 'live' or 'replay'.[/red]")
+        raise typer.Exit(1)
+
     scenario_list = _resolve_scenarios(scenarios)
     path_list = _resolve_paths(paths)
     dated_dir = _resolve_artifacts_dir(artifacts_dir, date)
+
+    if mode == "live" and "native-mcp" in path_list:
+        console.print("[red]native-mcp does not support live mode (requires vendor MCP servers). Use --mode replay or remove native-mcp from --paths.[/red]")
+        raise typer.Exit(1)
 
     export_requested = bool(export_markdown or export_charts or export_stats)
     if export_requested:
@@ -176,9 +185,9 @@ def run(
             line += f" — {_short_error(r.error)}"
         console.print(line)
 
-    console.print(f"[bold]Running:[/bold] {scenario_list} × {path_list}")
+    console.print(f"[bold]Running:[/bold] {scenario_list} × {path_list} [dim](mode={mode})[/dim]")
     console.print(f"[dim]Artifacts dir: {dated_dir}[/dim]\n")
-    report = asyncio.run(run_all(scenario_list, path_list, dated_dir, on_cell=on_cell))
+    report = asyncio.run(run_all(scenario_list, path_list, dated_dir, on_cell=on_cell, mode=mode))
 
     _render_matrix(report)
 
