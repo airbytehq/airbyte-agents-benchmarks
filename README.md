@@ -8,9 +8,9 @@ A three-way benchmark comparing how AI agents access business data through Airby
 | Agent MCP | `agent-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
 | Native MCP | `native-mcp` | Record-replay of vendor-native MCP server responses |
 
-Each connector has named scenarios (e.g., `linear-search`, `granola-get`, `slack-list`).
+Each connector has named scenarios (e.g., `linear-search`, `gong-get`, `salesforce-list`).
 
-The current reproducible artifact is an interim Linear + Granola scorecard. Slack is excluded until Context Store search is ready (see `docs/SLACK_STATUS.md`).
+The benchmark currently covers five connectors: Linear, Slack, Gong, Salesforce, and Zendesk. Granola recordings from April 24 are preserved but the connector is tombstoned.
 
 ## Quick Start (No Credentials)
 
@@ -22,8 +22,8 @@ cd airbyte-agents-benchmarks
 uv sync
 uv run pytest -q
 uv run agent-bench run \
-  --scenarios linear,granola \
-  --paths agent-mcp,native-mcp \
+  --scenarios linear,slack,gong,salesforce,zendesk \
+  --paths agent-mcp \
   --export-markdown results.md
 ```
 
@@ -31,11 +31,16 @@ uv run agent-bench run \
 
 See [docs/REPRODUCTION.md](docs/REPRODUCTION.md) for the full reproduction guide, including live SDK setup, credential acquisition, and troubleshooting.
 
-## Headline Results (April 24 Artifact)
+## Connectors
 
-Agent MCP used **12.7x fewer tokens** than the REST Baseline and **2.6x fewer tokens** than native vendor MCPs across the included Linear + Granola cells.
-
-See [docs/RESULTS.md](docs/RESULTS.md) for the full numbers, connector-level breakdowns, and safe claims.
+| Connector | agent-mcp | native-mcp | agent-sdk |
+|---|---|---|---|
+| Linear | Recordings committed | April 24 recordings | Live |
+| Slack | Recordings committed | Not yet recorded | Live |
+| Gong | Recordings committed | Not yet recorded | Live |
+| Salesforce | Recordings committed | Not yet recorded | Live |
+| Zendesk | Recordings committed | Not yet recorded | Live |
+| Granola | April 24 only (tombstoned) | April 24 recordings | Tombstoned |
 
 ## Repository Contents
 
@@ -45,7 +50,7 @@ See [docs/RESULTS.md](docs/RESULTS.md) for the full numbers, connector-level bre
 | `src/agent_bench/scenarios/*.yaml` | Scenario definitions (one YAML per scenario, e.g. `linear-search.yaml`) |
 | `tests/` | Unit tests for scenarios, validation, and scorecard rendering |
 | `scripts/record_response.py` | Helper for saving replay recordings |
-| `artifacts/2026-04-24/` | Recordings, scorecard, charts, and supporting deck artifact |
+| `artifacts/YYYY-MM-DD/` | Recordings, scorecard, charts, and supporting deck artifact |
 | `docs/REPRODUCTION.md` | Step-by-step reproduction guide with troubleshooting |
 | `docs/METHODOLOGY.md` | Measurement details and design choices |
 | `docs/RESULTS.md` | Current numbers and safe claims |
@@ -59,7 +64,7 @@ Each benchmark run produces immutable artifacts under a dated directory:
 
 ```
 artifacts/
-  2026-04-24/
+  YYYY-MM-DD/
     linear-search-scenario/
       agent-mcp/
         recording.json
@@ -67,7 +72,7 @@ artifacts/
       native-mcp/
         recording.json
         recording-stats.json
-    granola-get-scenario/
+    gong-get-scenario/
       ...
     benchmark-result-report.md
     charts/

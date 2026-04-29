@@ -1,0 +1,15 @@
+name: zendesk-get
+title: "Zendesk — Get single ticket by ID"
+connector: zendesk
+connector_id_env: ZENDESK_CONNECTOR_ID
+description: >
+  Fetch a single Zendesk ticket by ID. Tickets carry 50+ fields;
+  an agent checking status needs only a few.
+
+task:
+  label: "Get single ticket by ID"
+  action: get
+  entity: tickets
+  metric_focus: single_record_fetch
+  params:
+    id: "6885"

@@ -234,8 +234,7 @@ To capture new recordings, you need the relevant MCP server configured and acces
 ```bash
 uv run python scripts/record_response.py \
   --path native-mcp \
-  --scenario linear \
-  --action search \
+  --scenario linear-search \
   --tool mcp__claude_ai_Linear__list_issues \
   --args '{"query": "context store", "limit": 10}' \
   --wall-ms 0 \

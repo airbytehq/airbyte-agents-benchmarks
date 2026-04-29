@@ -1,0 +1,15 @@
+name: salesforce-get
+title: "Salesforce — Get single account by ID"
+connector: salesforce
+connector_id_env: SALESFORCE_CONNECTOR_ID
+description: >
+  Fetch a single Salesforce account by ID. Salesforce Account objects
+  have 200+ fields; an agent only needs a handful to answer a question.
+
+task:
+  label: "Get single account by ID"
+  action: get
+  entity: accounts
+  metric_focus: single_record_fetch
+  params:
+    id: "0015e00000FMsFhAAL"

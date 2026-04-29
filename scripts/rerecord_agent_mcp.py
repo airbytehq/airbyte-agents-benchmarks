@@ -41,6 +41,9 @@ SELECT_FIELDS: dict[tuple[str, str], list[str]] = {
         "id", "title", "created_at", "updated_at",
         "attendees", "summary_text", "transcript",
     ],
+    ("gong", "calls"): ["id", "title", "scheduled", "duration"],
+    ("salesforce", "accounts"): ["Id", "Name", "Type", "Industry"],
+    ("zendesk", "tickets"): ["id", "subject", "status", "priority"],
 }
 
 # SDK-compatible translation (mirrors agent_sdk._DISPATCH + _translate)
@@ -60,6 +63,22 @@ DISPATCH: dict[str, dict[str, Any]] = {
         "get_key": {"notes": "note_id"},
         "list_limit_key": "page_size",
     },
+    "gong": {
+        "search_field": {"calls": "title"},
+        "get_key": {"calls": "id"},
+        "list_limit_key": "limit",
+    },
+    "salesforce": {
+        "search_field": {"accounts": "Name"},
+        "get_key": {"accounts": "id"},
+        "list_limit_key": "q",
+        "list_soql": {"accounts": "SELECT Id, Name, Type, Industry FROM Account"},
+    },
+    "zendesk": {
+        "search_field": {"tickets": "subject"},
+        "get_key": {"tickets": "ticket_id"},
+        "list_limit_key": "limit",
+    },
 }
 
 
@@ -75,8 +94,18 @@ def translate(action: str, entity: str, params: dict, dispatch: dict) -> tuple[s
         key = dispatch["get_key"].get(entity)
         return "get", {key: params["id"]}
     if action == "list":
+        soql_templates = dispatch.get("list_soql", {})
+        soql = soql_templates.get(entity)
+        limit = int(params.get("limit", 50))
+        if soql:
+            return "list", {"q": f"{soql} LIMIT {limit}"}
         limit_key = dispatch["list_limit_key"]
-        return "list", {limit_key: int(params.get("limit", 50))}
+        if limit_key == "q" and not soql:
+            raise ValueError(
+                f"Entity {entity!r} requires a list_soql template "
+                f"but none is defined in DISPATCH."
+            )
+        return "list", {limit_key: limit}
     raise ValueError(f"Unknown action: {action}")
 
 
@@ -175,7 +204,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--connectors",
-        default="linear,granola,slack",
+        default="linear,slack,gong,salesforce,zendesk",
         help="Comma-separated connectors to re-record.",
     )
     parser.add_argument(

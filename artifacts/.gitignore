@@ -1,0 +1,5 @@
+# Recording files contain live API responses that may include
+# non-public data (client names, internal ticket subjects, etc.).
+# Keep locally for running benchmarks; do not commit.
+**/recording.json
+**/recording-stats.json
