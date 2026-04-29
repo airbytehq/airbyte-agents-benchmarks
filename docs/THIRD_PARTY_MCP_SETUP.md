@@ -216,11 +216,11 @@ Slack also provides a hosted remote MCP server at `https://mcp.slack.com/mcp` (S
 
 ### Replaying Committed Recordings
 
-You do not need to install any third-party MCP server to replay existing recordings. The committed recordings at `assets/recordings/native-mcp/` are self-contained JSON files that the harness reads directly:
+You do not need to install any third-party MCP server to replay existing recordings. The committed recordings at `artifacts/2026-04-24/{scenario}-scenario/native-mcp/recording.json` are self-contained JSON files that the harness reads directly:
 
 ```bash
-uv run agent-bench run --connectors linear,granola --paths native-mcp
-uv run agent-bench validate --connectors linear,granola --paths native-mcp
+uv run agent-bench run --scenarios linear,granola --paths native-mcp
+uv run agent-bench validate --scenarios linear,granola --paths native-mcp
 ```
 
 ### Capturing Fresh Recordings

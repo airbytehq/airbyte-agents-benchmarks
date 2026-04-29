@@ -1,0 +1,15 @@
+name: slack-search
+title: "Slack — Search channels by keyword"
+connector: slack
+connector_id_env: SLACK_CONNECTOR_ID
+description: >
+  Search Slack channels by keyword. Native MCP uses
+  slack_search_channels with a 20-result page cap.
+
+task:
+  label: "Search channels by keyword"
+  action: search
+  entity: channels
+  metric_focus: narrow_context
+  params:
+    keyword: "agent"

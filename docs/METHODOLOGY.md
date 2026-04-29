@@ -12,19 +12,15 @@ The benchmark compares three ways an agent can fetch the same business data:
 
 ## Scenario Shape
 
-Each connector has three tasks:
+Each connector has three named scenarios, one per task type:
 
-| Task | Purpose |
+| Action | Purpose |
 |---|---|
 | `search` | Find records by a keyword or filter |
 | `get` | Fetch one known record by ID |
 | `list` | Fetch a page of records |
 
-The current scenarios live in `src/agent_bench/scenarios/`:
-
-- `linear.yaml`
-- `granola.yaml`
-- `slack.yaml`
+Scenarios are named `{connector}-{action}` (e.g., `linear-search`, `granola-get`) and stored as YAML files in `src/agent_bench/scenarios/`.
 
 ## Token Counting
 
@@ -54,12 +50,12 @@ Timing is path-specific:
 
 ## Record-Replay Paths
 
-`agent-mcp` and `native-mcp` are record-replay paths. Their recordings live in `assets/recordings/`.
+`agent-mcp` and `native-mcp` are record-replay paths. Their recordings live in `artifacts/{date}/{scenario}-scenario/{path}/recording.json`.
 
 The validation command checks that required replay files exist and that Agent MCP recordings are not stale:
 
 ```bash
-uv run agent-bench validate --connectors linear,granola --paths native-mcp,agent-mcp
+uv run agent-bench validate --scenarios linear,granola --paths native-mcp,agent-mcp
 ```
 
 Agent MCP recordings must include:

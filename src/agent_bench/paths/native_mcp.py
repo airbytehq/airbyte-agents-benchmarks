@@ -195,7 +195,7 @@ class NativeMCPPath:
         return _DISPATCH[key](task)
 
     def recording_path(self, task: Task, scenario: Scenario) -> FSPath:
-        return self._recordings_dir / scenario.connector / f"{task.action}.json"
+        return self._recordings_dir / "recording.json"
 
     async def run_task(
         self, task: Task, scenario: Scenario

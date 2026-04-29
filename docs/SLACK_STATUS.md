@@ -26,7 +26,7 @@ The scenario target used by the harness is:
 Use this command to verify the live SDK path:
 
 ```bash
-uv run agent-bench run --connectors slack --paths agent-sdk
+uv run agent-bench run --scenarios slack --paths agent-sdk
 ```
 
 Current expected state:
@@ -43,14 +43,14 @@ Current expected state:
 4. Validate all replay paths:
 
 ```bash
-uv run agent-bench validate --connectors all --paths native-mcp,agent-mcp
+uv run agent-bench validate --scenarios all --paths native-mcp,agent-mcp
 ```
 
 5. Run the full 27-cell export:
 
 ```bash
 uv run agent-bench run \
-  --connectors all \
+  --scenarios all \
   --paths all \
   --export-markdown artifacts/2026-04-24/final-scorecard.md \
   --export-charts artifacts/2026-04-24/final-charts

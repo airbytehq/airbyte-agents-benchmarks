@@ -75,6 +75,6 @@ The following issues affect the current result set and should be resolved before
 
 See [REPRODUCTION.md](REPRODUCTION.md) for the full step-by-step walkthrough, from clone to validated results.
 
-The committed April 24 scorecard is the frozen artifact for the headline `66,587` REST Baseline token total. The REST Baseline path is live, so re-running the command can produce a different total when connector data changes. The replay paths are deterministic from `assets/recordings/`.
+The committed April 24 scorecard is the frozen artifact for the headline `66,587` REST Baseline token total. The REST Baseline path is live, so re-running the command can produce a different total when connector data changes. The replay paths are deterministic from the committed recordings in `artifacts/2026-04-24/`.
 
 On April 27, 2026, a live Linear+Granola verification run completed successfully with replay totals unchanged (`5,229` Agent MCP tokens and `13,628` Native MCP tokens), while the live REST Baseline total was `53,000` tokens.

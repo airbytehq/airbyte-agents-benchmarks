@@ -14,27 +14,25 @@ from agent_bench.scenarios.loader import load_scenario
 
 
 def test_scenario_targets_match_launch_plan() -> None:
-    slack = load_scenario("slack")
-    slack_get = next(task for task in slack.tasks if task.action == "get")
-    assert slack_get.params["id"] == "C02TD5CB7PZ"
-    assert slack_get.params["name_hint"] == "feedback_survey_results"
+    slack_get = load_scenario("slack-get")
+    assert slack_get.task.params["id"] == "C02TD5CB7PZ"
+    assert slack_get.task.params["name_hint"] == "feedback_survey_results"
 
-    granola = load_scenario("granola")
-    granola_search = next(task for task in granola.tasks if task.action == "search")
-    granola_get = next(task for task in granola.tasks if task.action == "get")
-    granola_list = next(task for task in granola.tasks if task.action == "list")
-    assert granola_search.params["limit"] == 1
-    assert granola_get.params["id"] == "not_ES3idLqBAmN9L1"
-    assert granola_get.params["claude_mcp_id"] == "96457d50-5ed1-4d81-a2fc-f43c2b93530d"
-    assert granola_list.params["limit"] == 25
+    granola_search = load_scenario("granola-search")
+    granola_get = load_scenario("granola-get")
+    granola_list = load_scenario("granola-list")
+    assert granola_search.task.params["limit"] == 1
+    assert granola_get.task.params["id"] == "not_ES3idLqBAmN9L1"
+    assert granola_get.task.params["claude_mcp_id"] == "96457d50-5ed1-4d81-a2fc-f43c2b93530d"
+    assert granola_list.task.params["limit"] == 25
 
 
 def test_path_planning_uses_connector_specific_shapes(tmp_path) -> None:
     config = _config()
 
-    granola = load_scenario("granola")
-    granola_get = next(task for task in granola.tasks if task.action == "get")
-    mcp_plan = AgentMCPPath(config, tmp_path).plan(granola_get, granola)
+    scenario = load_scenario("granola-get")
+    task = scenario.task
+    mcp_plan = AgentMCPPath(config, tmp_path).plan(task, scenario)
     mcp_item = mcp_plan.calls[0].args["items"][0]
     assert mcp_item["params"] == {"note_id": "not_ES3idLqBAmN9L1"}
     assert mcp_item["select_fields"] == [
@@ -48,16 +46,16 @@ def test_path_planning_uses_connector_specific_shapes(tmp_path) -> None:
     ]
     assert "describe_connector" in mcp_plan.notes[0]
 
-    native_plan = NativeMCPPath(tmp_path).plan(granola_get, granola)
+    native_plan = NativeMCPPath(tmp_path).plan(task, scenario)
     assert native_plan.calls[0].args["meeting_id"] == "96457d50-5ed1-4d81-a2fc-f43c2b93530d"
 
 
 def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None:
-    scenario = load_scenario("linear")
-    task = next(task for task in scenario.tasks if task.action == "get")
-    rec_dir = tmp_path / "recordings" / "agent-mcp" / "linear"
-    rec_dir.mkdir(parents=True)
-    (rec_dir / "get.json").write_text(json.dumps([{
+    scenario = load_scenario("linear-get")
+    task = scenario.task
+    rec_dir = tmp_path
+    rec_dir.mkdir(parents=True, exist_ok=True)
+    (rec_dir / "recording.json").write_text(json.dumps([{
         "tool": "mcp__airbyte-agent__execute",
         "args": {"items": [{
             "connector_id": "linear-id",
@@ -75,7 +73,7 @@ def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None
         }]},
     }]))
 
-    path = AgentMCPPath(_config(), tmp_path / "recordings" / "agent-mcp")
+    path = AgentMCPPath(_config(), rec_dir)
     result = _run_path(path, task, scenario)
     assert result.status == "ok"
     assert result.total_latency_ms == 123
@@ -85,9 +83,9 @@ def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None
 
 
 def test_validation_flags_stale_agent_mcp_recordings(tmp_path) -> None:
-    rec_dir = tmp_path / "agent-mcp" / "linear"
+    rec_dir = tmp_path / "linear-get-scenario" / "agent-mcp"
     rec_dir.mkdir(parents=True)
-    (rec_dir / "get.json").write_text(json.dumps([{
+    (rec_dir / "recording.json").write_text(json.dumps([{
         "tool": "mcp__airbyte-agent__execute",
         "args": {"items": [{
             "connector_id": "linear-id",
@@ -105,21 +103,20 @@ def test_validation_flags_stale_agent_mcp_recordings(tmp_path) -> None:
         }]},
     }]))
 
-    issues = validate_recordings(["linear"], ["agent-mcp"], tmp_path, _config())
+    issues = validate_recordings(["linear-get"], ["agent-mcp"], tmp_path, _config())
     messages = [issue.message for issue in issues]
     assert any("missing mandatory select_fields" in message for message in messages)
 
 
 def test_scorecard_renders_interim_ratios(tmp_path) -> None:
-    scenario = load_scenario("linear")
-    task = scenario.tasks[0]
+    scenario = load_scenario("linear-search")
     report = RunReport(
         cells=[
-            _cell(scenario, task, "REST Baseline (via SDK)", "agent-sdk", 400),
-            _cell(scenario, task, "Agent MCP", "agent-mcp", 100),
-            _cell(scenario, task, "Native MCP", "native-mcp", 300),
+            _cell(scenario, "REST Baseline (via SDK)", "agent-sdk", 400),
+            _cell(scenario, "Agent MCP", "agent-mcp", 100),
+            _cell(scenario, "Native MCP", "native-mcp", 300),
         ],
-        requested_scenarios=["linear"],
+        requested_scenarios=["linear-search"],
         requested_paths=["agent-sdk", "agent-mcp", "native-mcp"],
     )
 
@@ -155,7 +152,7 @@ def _config() -> LiveConfig:
     )
 
 
-def _cell(scenario, task, path_name: str, path_short: str, tokens: int) -> Cell:
+def _cell(scenario, path_name: str, path_short: str, tokens: int) -> Cell:
     result = BenchmarkResult(path_name=path_name)
     result.steps.append(StepResult(
         label="step",
@@ -167,7 +164,6 @@ def _cell(scenario, task, path_name: str, path_short: str, tokens: int) -> Cell:
     result.total_records = 1
     return Cell(
         scenario=scenario,
-        task=task,
         path_name=path_name,
         path_short=path_short,
         result=result,
