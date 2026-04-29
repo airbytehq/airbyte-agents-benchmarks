@@ -64,6 +64,6 @@ Avoid:
 4. Add an "SDK with projection" path to isolate the field-projection effect from protocol differences.
 5. Slack Context Store search must stop returning HTTP 503.
 6. Slack `agent-mcp` and `native-mcp` recordings must be captured for search, get, and list.
-7. `uv run agent-bench validate --connectors all --paths native-mcp,agent-mcp` must pass.
-8. Full export must run with `--connectors all --paths all`.
+7. `uv run agent-bench validate --scenarios all --paths native-mcp,agent-mcp` must pass.
+8. Full export must run with `--scenarios all --paths all`.
 9. Final scorecard and charts should be reviewed for any connector-specific caveats before publication.

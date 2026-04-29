@@ -1,0 +1,172 @@
+[
+  {
+    "tool": "mcp__airbyte-agent__execute",
+    "args": {
+      "items": [
+        {
+          "connector_id": "c3a0a79a-86f0-4d30-8369-20367739bae3",
+          "entity": "issues",
+          "action": "context_store_search",
+          "params": {
+            "query": {
+              "filter": {
+                "fuzzy": {
+                  "title": "context store"
+                }
+              }
+            },
+            "limit": 10
+          },
+          "select_fields": [
+            "id",
+            "identifier",
+            "title",
+            "state",
+            "priority",
+            "createdAt",
+            "updatedAt",
+            "team",
+            "labels"
+          ]
+        }
+      ]
+    },
+    "wall_clock_ms": 1743.0,
+    "response": {
+      "results": [
+        {
+          "connector_id": "c3a0a79a-86f0-4d30-8369-20367739bae3",
+          "success": true,
+          "result": {
+            "status": "success",
+            "result": {
+              "data": [
+                {
+                  "id": "dfeeb7b3-a51c-4e22-b4a8-43ad39a22ecb",
+                  "identifier": "AGENTIC-1287",
+                  "title": "Update preview context store build lookback behavior",
+                  "state": "{}",
+                  "priority": 0.0,
+                  "createdAt": "2026-04-28T20:58:46.916Z",
+                  "updatedAt": "2026-04-28T20:58:46.916Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "0889c1d5-8e89-40c2-b2bd-d259d6d66af7",
+                  "identifier": "AGENTIC-1203",
+                  "title": "Context store sync status indicators in the UI",
+                  "state": "{}",
+                  "priority": 2.0,
+                  "createdAt": "2026-04-24T17:30:51.929Z",
+                  "updatedAt": "2026-04-28T18:31:07.387Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "ec35367b-70f6-4e36-9773-ef9df960a393",
+                  "identifier": "AGENTIC-1258",
+                  "title": "Slack & Linear connectors: entities listed in x-airbyte-context-store but missing runtime list operations",
+                  "state": "{}",
+                  "priority": 0.0,
+                  "createdAt": "2026-04-28T00:04:39.087Z",
+                  "updatedAt": "2026-04-28T02:14:13.961Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "b9f36251-c54e-4902-aaa7-75f367059557",
+                  "identifier": "AGENTIC-712",
+                  "title": "Context store search fails on array-valued properties",
+                  "state": "{}",
+                  "priority": 1.0,
+                  "createdAt": "2026-04-04T06:21:01.048Z",
+                  "updatedAt": "2026-04-28T01:50:00.688Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "0c7347a7-069d-4944-863b-706d9291fb7d",
+                  "identifier": "AGENTIC-713",
+                  "title": "Context store search intermittently returns zero results or repeated failures",
+                  "state": "{}",
+                  "priority": 2.0,
+                  "createdAt": "2026-04-04T06:21:01.138Z",
+                  "updatedAt": "2026-04-28T01:49:54.710Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "359c9f9e-4a9e-48c3-9813-2976c393eb7e",
+                  "identifier": "HYD-13",
+                  "title": "Github connector missing Context Store availability schemas",
+                  "state": "{}",
+                  "priority": 2.0,
+                  "createdAt": "2026-04-27T21:15:54.338Z",
+                  "updatedAt": "2026-04-27T22:36:10.707Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "2c1ee2fd-647d-464a-8e21-0faed658fcf2",
+                  "identifier": "AGENTIC-1128",
+                  "title": "Add suggested field for context store entities",
+                  "state": "{}",
+                  "priority": 2.0,
+                  "createdAt": "2026-04-22T20:53:05.358Z",
+                  "updatedAt": "2026-04-27T20:53:05.209Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "6c889318-dd89-4ec1-8a33-13f6bfd42055",
+                  "identifier": "AGENTIC-1116",
+                  "title": "Remove context store toggle from Sonar UI",
+                  "state": "{}",
+                  "priority": 2.0,
+                  "createdAt": "2026-04-22T19:18:15.806Z",
+                  "updatedAt": "2026-04-27T12:39:58.864Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "05422738-2b35-4b1f-b25b-f5ea358b6fa9",
+                  "identifier": "AGENTIC-1165",
+                  "title": "Context store toggle shows wrong initial state",
+                  "state": "{}",
+                  "priority": 0.0,
+                  "createdAt": "2026-04-23T17:12:07.149Z",
+                  "updatedAt": "2026-04-26T18:31:21.736Z",
+                  "team": "{}",
+                  "labels": "{}"
+                },
+                {
+                  "id": "d55184b9-c8c9-4b96-bdeb-4402fa6eeaa0",
+                  "identifier": "AGENTIC-877",
+                  "title": "Add entities, actions, and context store status for connectors in Automation Builder.",
+                  "state": "{}",
+                  "priority": 3.0,
+                  "createdAt": "2026-04-13T18:38:15.529Z",
+                  "updatedAt": "2026-04-24T22:31:15.662Z",
+                  "team": "{}",
+                  "labels": "{}"
+                }
+              ],
+              "meta": {
+                "has_more": true,
+                "cursor": "eyJvZmZzZXQiOiAxMH0=",
+                "took_ms": 1427
+              }
+            },
+            "connector_metadata": null,
+            "execution_metadata": {
+              "connector_instance_id": "source_id:c3a0a79a-86f0-4d30-8369-20367739bae3",
+              "execution_time_ms": 1743
+            }
+          },
+          "error": null
+        }
+      ]
+    }
+  }
+]

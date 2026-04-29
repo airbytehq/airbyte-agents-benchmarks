@@ -1,0 +1,1000 @@
+[
+  {
+    "tool": "mcp__airbyte-agent__execute",
+    "args": {
+      "items": [
+        {
+          "connector_id": "08b41f8a-f0b9-41e4-8406-bb11246e410c",
+          "entity": "channels",
+          "action": "list",
+          "params": {
+            "limit": 50
+          },
+          "select_fields": [
+            "id",
+            "name",
+            "num_members",
+            "is_archived",
+            "is_private",
+            "created",
+            "updated",
+            "topic",
+            "purpose"
+          ]
+        }
+      ]
+    },
+    "wall_clock_ms": 1579.0,
+    "response": {
+      "results": [
+        {
+          "connector_id": "08b41f8a-f0b9-41e4-8406-bb11246e410c",
+          "success": true,
+          "result": {
+            "status": "success",
+            "result": [
+              {
+                "id": "C02TD5CB7PZ",
+                "name": "feedback_survey_results",
+                "num_members": 13,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642036543,
+                "updated": 1755702121472,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Product feedback survey results from Airbyte users",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642036543
+                }
+              },
+              {
+                "id": "C02TF6B66MQ",
+                "name": "new-community-channels",
+                "num_members": 9,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1641864985,
+                "updated": 1777155795145,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TF80SYEN",
+                "name": "public-michel-test",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1641866376,
+                "updated": 1725178112108,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TGFNETFH",
+                "name": "updates-gtm",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642087940,
+                "updated": 1725178112789,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Standup for GTM team",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642087940
+                }
+              },
+              {
+                "id": "C02TH5B9GF6",
+                "name": "hq-general",
+                "num_members": 109,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1641858259,
+                "updated": 1748359423373,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "This is the one channel that will always include everyone. It\u2019s a great spot for announcements and team-wide conversations.",
+                  "creator": "U02U4J56UL8",
+                  "last_set": 1641858259
+                }
+              },
+              {
+                "id": "C02THU23CRM",
+                "name": "community-assistance-team",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642100831,
+                "updated": 1725178113726,
+                "topic": {
+                  "value": "Community Assistance Team channel",
+                  "creator": "U02TQLBLDU4",
+                  "last_set": 1657146309
+                },
+                "purpose": {
+                  "value": "Our docs: <https://www.notion.so/User-Success-Engineer-Team-bd0837799ecb4ccab3dd76b7b9de6f09>",
+                  "creator": "U02TQLBLDU4",
+                  "last_set": 1642601073
+                }
+              },
+              {
+                "id": "C02TL38U5L7",
+                "name": "dev-marketplace-contributions",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642136350,
+                "updated": 1753910868602,
+                "topic": {
+                  "value": "Topics related to the API connectors Developer Experience team",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1652736212
+                },
+                "purpose": {
+                  "value": "Topics related to the API connectors Developer Experience team",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1652736215
+                }
+              },
+              {
+                "id": "C02TM6URC82",
+                "name": "sherif-michel-test2",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1641945740,
+                "updated": 1725178114084,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TM7PUJHH",
+                "name": "sherif-michel-test",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1641945731,
+                "updated": 1725178114068,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TMH9S1M4",
+                "name": "chat-slice-of-life",
+                "num_members": 104,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642048023,
+                "updated": 1748372573682,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TNGCCV6J",
+                "name": "illustrations",
+                "num_members": 9,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642065624,
+                "updated": 1725178115353,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TPH00ZL7",
+                "name": "cloud-envs",
+                "num_members": 32,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642183973,
+                "updated": 1776464462245,
+                "topic": {
+                  "value": "Use this channel to coordinating who is using which cloud dev environment. \u201cClaim\u201d and release your cloud environments here.\n\nSee <https://internal-docs.airbyte.io/Things-To-Know/Cloud-Development-Env... [truncated \u2014 use `get` action with the record id to retrieve the full value]",
+                  "creator": "U02UC3SNJ72",
+                  "last_set": 1656093679
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TPTLTZN2",
+                "name": "press-airbyte",
+                "num_members": 18,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642083195,
+                "updated": 1776193912600,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TR3ZMB7Z",
+                "name": "chat-peloton",
+                "num_members": 10,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642207118,
+                "updated": 1735228856544,
+                "topic": {
+                  "value": "We didn\u2019t come to workout. We came to out work. ",
+                  "creator": "U02U116B8BB",
+                  "last_set": 1642559825
+                },
+                "purpose": {
+                  "value": "#onepeloton",
+                  "creator": "U02U116B8BB",
+                  "last_set": 1642207119
+                }
+              },
+              {
+                "id": "C02TRA2UFHT",
+                "name": "devrel-education",
+                "num_members": 34,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642047908,
+                "updated": 1761237773013,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Conversations around dev relations, education and community initiatives.",
+                  "creator": "U02TQLBE5FW",
+                  "last_set": 1680633285
+                }
+              },
+              {
+                "id": "C02TS6RDANS",
+                "name": "chat-remote-life",
+                "num_members": 91,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642104302,
+                "updated": 1773377822951,
+                "topic": {
+                  "value": "A place to make non-product announcements and share advice on creating a better remote life (tools, tricks, and tips)",
+                  "creator": "U02TNBLE68J",
+                  "last_set": 1642523651
+                },
+                "purpose": {
+                  "value": "A place to share tips &amp; recommendations for a more enjoyable remote life, nonproduct-related announcements, and updates on our whereabouts (e.g. OOO reminders)",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642104303
+                }
+              },
+              {
+                "id": "C02TTM9SLMR",
+                "name": "hq-all-hands",
+                "num_members": 105,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642034266,
+                "updated": 1747436198508,
+                "topic": {
+                  "value": "Channel to coordinate the weekly all hands meeting",
+                  "creator": "U02U116B8BB",
+                  "last_set": 1642522223
+                },
+                "purpose": {
+                  "value": "For preparation of the All Hands deck",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642034266
+                }
+              },
+              {
+                "id": "C02TTML5H9Q",
+                "name": "new-activities",
+                "num_members": 15,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642035115,
+                "updated": 1725178117262,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Product usage events (sent through Zapier)",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642035115
+                }
+              },
+              {
+                "id": "C02TUD7GP9B",
+                "name": "updates-people-recruiting-ops",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642089732,
+                "updated": 1725178117167,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TV5VD8N6",
+                "name": "ux-ui-design",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642065160,
+                "updated": 1725178117334,
+                "topic": {
+                  "value": "Topics on UI/UX design",
+                  "creator": "U02U116B8BB",
+                  "last_set": 1642521988
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TVBJHC4V",
+                "name": "user-support-engineering",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642098220,
+                "updated": 1725178117394,
+                "topic": {
+                  "value": "Discuss process/workflows from CAT/TS team.",
+                  "creator": "U035U052D9S",
+                  "last_set": 1658263805
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TXAGM22W",
+                "name": "updates-engineering-product",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642089642,
+                "updated": 1725178117860,
+                "topic": {
+                  "value": "Daily updates. 1. what you did yesterday 2. what you'll do today 3. blockers",
+                  "creator": "U02U116B8BB",
+                  "last_set": 1642522607
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TXQ020QM",
+                "name": "dev-platform",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642136334,
+                "updated": 1764101212700,
+                "topic": {
+                  "value": "Topics related to all things Platform: Compose, Move, Enablement, and ProdEng",
+                  "creator": "U038J3BUW8J",
+                  "last_set": 1678300660
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02TXT37Y3Y",
+                "name": "dev-dx",
+                "num_members": 1,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642188482,
+                "updated": 1734108000591,
+                "topic": {
+                  "value": "Topics related to infrastructure and automation.\n\nGithub Board: <https://github.com/airbytehq/airbyte-cloud/projects/1>",
+                  "creator": "U02TQLBLDU4",
+                  "last_set": 1704387548
+                },
+                "purpose": {
+                  "value": "Can the production engineering team help you with something?\nInfra related questions and so much more.\n\nPlease ask pipeline related issues in <#C046KQF5GBT>",
+                  "creator": "U033PU4NUJY",
+                  "last_set": 1691683817
+                }
+              },
+              {
+                "id": "C02TYDSUM8F",
+                "name": "dev-platform-deploys",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642456188,
+                "updated": 1761768898504,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Topics related to who is deploying to what env, and the deploy\u2019s outcome.\n\nSee <https://github.com/airbytehq/airbyte-cloud/wiki/One-Click-Deploy-(Github-Actions)> for more info on how to deploy.",
+                  "creator": "U02TNCJ5ERH",
+                  "last_set": 1642527521
+                }
+              },
+              {
+                "id": "C02TYE9QL9M",
+                "name": "connector-build-statuses",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642456607,
+                "updated": 1755099990003,
+                "topic": {
+                  "value": "Latest build statuses for connectors. Configured here: <https://github.com/airbytehq/airbyte/blob/master/.github/workflows/build-report.yml>",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1642527098
+                },
+                "purpose": {
+                  "value": "Latest build statuses for connectors. Configured here: <https://github.com/airbytehq/airbyte/blob/master/.github/workflows/build-report.yml>",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1642527101
+                }
+              },
+              {
+                "id": "C02TYEF0TL2",
+                "name": "ask-recruiting",
+                "num_members": 42,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642100048,
+                "updated": 1773327302151,
+                "topic": {
+                  "value": "Topics around recruiting (all departments)",
+                  "creator": "U02U116B8BB",
+                  "last_set": 1642522504
+                },
+                "purpose": {
+                  "value": "Public channel for anyone at Airbyte to ask the Recruiting team questions and get support. Use this space for help with hiring processes, candidate logistics, interview coordination, and general recru... [truncated \u2014 use `get` action with the record id to retrieve the full value]",
+                  "creator": "U08FJMLQ55K",
+                  "last_set": 1767907056
+                }
+              },
+              {
+                "id": "C02TZNX3F5G",
+                "name": "slack-migration",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642114847,
+                "updated": 1725178118673,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Questions or instructions for the slack migration",
+                  "creator": "U02U4J56UL8",
+                  "last_set": 1642116477
+                }
+              },
+              {
+                "id": "C02TZNXKH2P",
+                "name": "updates-user-support",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642114443,
+                "updated": 1725178118561,
+                "topic": {
+                  "value": "TS &amp; USE updates!",
+                  "creator": "U02TKDZH5TP",
+                  "last_set": 1642186422
+                },
+                "purpose": {
+                  "value": "TS &amp; USE's 3 worked on items and 3 working on items",
+                  "creator": "U02TKDZH5TP",
+                  "last_set": 1642114444
+                }
+              },
+              {
+                "id": "C02U1QV0QP6",
+                "name": "updates-community",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642111566,
+                "updated": 1725178119728,
+                "topic": {
+                  "value": "",
+                  "creator": "U02TNCFPQHZ",
+                  "last_set": 1642540100
+                },
+                "purpose": {
+                  "value": "Community team shares 3 things you worked on, 3 things you are working on",
+                  "creator": "U02TNCFPQHZ",
+                  "last_set": 1642540106
+                }
+              },
+              {
+                "id": "C02U2SSHP9S",
+                "name": "dev",
+                "num_members": 68,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642132828,
+                "updated": 1764537730043,
+                "topic": {
+                  "value": "Topics for the whole engineering team",
+                  "creator": "U02U116B8BB",
+                  "last_set": 1642522072
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02U46QK5C3",
+                "name": "oncall",
+                "num_members": 69,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642183957,
+                "updated": 1769123376148,
+                "topic": {
+                  "value": "Topics related to oncall for Cloud.\nask <@U03BNJ24BUK> in <#C03B81518F9> who is on call if you want to know who is on call\n\noncall issues: <https://github.com/orgs/airbytehq/projects/23/views/1>",
+                  "creator": "U047ANT3J84",
+                  "last_set": 1714747427
+                },
+                "purpose": {
+                  "value": "This channel is intended to report incident and start coordination. Join <#C045F3WEJ6A> if you\u2019d like to get automatic notification from monitoring tools\nFor any significant incident, remember to crea... [truncated \u2014 use `get` action with the record id to retrieve the full value]",
+                  "creator": "U0304PEJRFH",
+                  "last_set": 1674673426
+                }
+              },
+              {
+                "id": "C02U5ANMZJN",
+                "name": "jaansen-discussion",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642198270,
+                "updated": 1725178120525,
+                "topic": {
+                  "value": "Coordinating support for Jaansen (a.k.a. Johnson &amp; Johnson)",
+                  "creator": "U02U116B8BB",
+                  "last_set": 1642522325
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02U6CXJQFN",
+                "name": "notes-and-user-feedback",
+                "num_members": 43,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642183300,
+                "updated": 1773252716266,
+                "topic": {
+                  "value": "Share any feedback here that you receive from the Airbyte community (OSS or Cloud)!",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642522716
+                },
+                "purpose": {
+                  "value": "Place to share product feedback with the Airbyte team from any external conversations we have with our community or Cloud users",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642522575
+                }
+              },
+              {
+                "id": "C02U6E0CXEV",
+                "name": "intercom-inbound",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642037178,
+                "updated": 1725178120922,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Notifications of new Intercom conversations",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642037179
+                }
+              },
+              {
+                "id": "C02U6E59LC9",
+                "name": "public-announcements-mirror",
+                "num_members": 12,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642037292,
+                "updated": 1775504524054,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02U6H1RT5F",
+                "name": "gtm",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642039471,
+                "updated": 1732131066345,
+                "topic": {
+                  "value": "Dedicated to Go To Market topics (marketing, growth, sales, CS).",
+                  "creator": "U02UC3T12PJ",
+                  "last_set": 1642522389
+                },
+                "purpose": {
+                  "value": "Go-To-Market topics",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642039471
+                }
+              },
+              {
+                "id": "C02U6H7PE65",
+                "name": "sales-contact-me",
+                "num_members": 34,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642039606,
+                "updated": 1748368751048,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Hand Raisers asking to be contacted by Airbyte (sent by Zapier)",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642039606
+                }
+              },
+              {
+                "id": "C02U9R3AF37",
+                "name": "team-integrate-deprecated",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642449379,
+                "updated": 1775777688409,
+                "topic": {
+                  "value": "API Sources now a part of <#C043JHEEYKG>.  Reach out to us there!",
+                  "creator": "U095T9HLMFD",
+                  "last_set": 1773947139
+                },
+                "purpose": {
+                  "value": "Discussions with the Global Logic connectors contract team",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1645000631
+                }
+              },
+              {
+                "id": "C02U9T94BCM",
+                "name": "sherifarchive1",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642450794,
+                "updated": 1725178121589,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02UCLAQATC",
+                "name": "updates-founders",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642447822,
+                "updated": 1725178122746,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02UCS1GS8H",
+                "name": "chat-wordle",
+                "num_members": 10,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642123692,
+                "updated": 1725178123117,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02UD7L1U3T",
+                "name": "location-sf",
+                "num_members": 85,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642132949,
+                "updated": 1748947370050,
+                "topic": {
+                  "value": "Information and announcements for the San Francisco office",
+                  "creator": "U03DME8B078",
+                  "last_set": 1706853045
+                },
+                "purpose": {
+                  "value": "100 California Street, Suite 1100 San Francisco, CA 94111\n\n<https://www.notion.so/Airbyte-HQ-San-Francisco-Office-6200e02539dd41e9a928dd3baba77c82>",
+                  "creator": "U03DME8B078",
+                  "last_set": 1706853078
+                }
+              },
+              {
+                "id": "C02UF50V9HA",
+                "name": "dev-connectors",
+                "num_members": 28,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642451337,
+                "updated": 1773952681485,
+                "topic": {
+                  "value": "Discussions pertaining to all developers working on Python connectors and the builder",
+                  "creator": "U0397RTD8E4",
+                  "last_set": 1707529274
+                },
+                "purpose": {
+                  "value": "Discussions pertaining to all developers working on connectors teams.",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1642526222
+                }
+              },
+              {
+                "id": "C02UF8XUYRJ",
+                "name": "connectors-sms",
+                "num_members": 69,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642454107,
+                "updated": 1764537907530,
+                "topic": {
+                  "value": "<tel:+1415-707-0428|+1 415-707-0428> via OpenPhone\n\n[DEPRECATED} +1\u202a <tel:(415)623-6785|(415) 623-6785> via <https://clerk.chat/solutions/mfa/>\n\nUsed for accounts that require MFA that need to be acce... [truncated \u2014 use `get` action with the record id to retrieve the full value]",
+                  "creator": "U05KRNTS7GF",
+                  "last_set": 1721995161
+                },
+                "purpose": {
+                  "value": "+1\u202a <tel:(415)623-6785|(415) 623-6785> via <https://clerk.chat/solutions/mfa/>\n\nUsed for accounts that require MFA that need to be accessed by multiple people at Airbyte (e.g. integration test account... [truncated \u2014 use `get` action with the record id to retrieve the full value]",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1642526107
+                }
+              },
+              {
+                "id": "C02UGL8SD3K",
+                "name": "test-channel",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642182408,
+                "updated": 1725178123628,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                }
+              },
+              {
+                "id": "C02UHD3J648",
+                "name": "new-mentions",
+                "num_members": 14,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642034645,
+                "updated": 1725178123739,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "External mentions of Airbyte (sent hrough Zapier)",
+                  "creator": "U02TNBMDUMQ",
+                  "last_set": 1642034645
+                }
+              },
+              {
+                "id": "C02UHHWP0H1",
+                "name": "worknet-octavia",
+                "num_members": 10,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642525617,
+                "updated": 1730854020700,
+                "topic": {
+                  "value": "",
+                  "creator": "",
+                  "last_set": 0
+                },
+                "purpose": {
+                  "value": "Channel with Worknet team to discuss about Octavia bot",
+                  "creator": "U02TQLBLDU4",
+                  "last_set": 1642525618
+                }
+              },
+              {
+                "id": "C02UJ11D3S6",
+                "name": "ask-data",
+                "num_members": 61,
+                "is_archived": false,
+                "is_private": false,
+                "created": 1642529782,
+                "updated": 1764537951875,
+                "topic": {
+                  "value": "Chat with the <!subteam^S03B80BS1P1> team about all the data things\n\nChat with Dot (the data bot) about business data over in <#C06AZD64PDJ>",
+                  "creator": "U03MTK52Z29",
+                  "last_set": 1703028856
+                },
+                "purpose": {
+                  "value": "This is the place to get answers from our data team\nChat about metrics and analysis\nPost here to get your questions about data answered\nPost here to understand how a data team might interact with our ... [truncated \u2014 use `get` action with the record id to retrieve the full value]",
+                  "creator": "U033PU4NUJY",
+                  "last_set": 1678899359
+                }
+              },
+              {
+                "id": "C02UJ6YN3CP",
+                "name": "participative-model",
+                "num_members": 0,
+                "is_archived": true,
+                "is_private": false,
+                "created": 1642721956,
+                "updated": 1725178124172,
+                "topic": {
+                  "value": "Discussions about Airbyte\u2019s participative model <https://airbyte.com/blog/a-new-license-to-future-proof-the-commoditization-of-data-integration>",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1642722012
+                },
+                "purpose": {
+                  "value": "Discussions about Airbyte\u2019s participative model <https://airbyte.com/blog/a-new-license-to-future-proof-the-commoditization-of-data-integration>",
+                  "creator": "U02TFM12THU",
+                  "last_set": 1642722006
+                }
+              }
+            ],
+            "connector_metadata": {
+              "next_cursor": "dGVhbTpDMDJVTFFXSjE4OA=="
+            },
+            "execution_metadata": {
+              "connector_instance_id": "source_id:08b41f8a-f0b9-41e4-8406-bb11246e410c",
+              "execution_time_ms": 1579
+            }
+          },
+          "error": null
+        }
+      ]
+    }
+  }
+]

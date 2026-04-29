@@ -81,6 +81,20 @@ connector-credentials get linear oauth  # Get credentials in dotenv format
 
 This CLI requires Python 3.13+ and is not currently usable in Devin sessions (which run Python 3.12 or 3.13 depending on the project).
 
+## Recording Guidelines
+
+### No PII in recordings
+
+Recordings are committed to the repo and must not contain personally identifiable information. When choosing `select_fields` for a connector, exclude fields that return names, emails, or other PII. For example, prefer `state`, `team`, `labels` over `assignee` (which includes `name` and `email` sub-fields on Linear).
+
+Before committing new recordings, verify with:
+
+```bash
+grep -rE '"email"|"phone"|"address"' artifacts/
+```
+
+If a field is needed for benchmark validity but contains PII, redact it to a placeholder (e.g., `user-1@example.com`) before committing.
+
 ## Existing Documentation
 
 - [docs/REPRODUCTION.md](docs/REPRODUCTION.md) -- end-to-end guide for reproducing benchmark results

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-04-29T03:10:09.207147+00:00",
+  "scenario": "linear-list",
+  "connector": "linear",
+  "path": "agent-mcp",
+  "action": "list",
+  "entity": "issues",
+  "status": "ok",
+  "tokens": 9985,
+  "payload_bytes": 22585,
+  "latency_ms": 1112.0,
+  "records": 50,
+  "api_calls": 1
+}

@@ -3,16 +3,14 @@
 Usage:
     uv run python scripts/record_response.py \
         --path native-mcp \
-        --scenario slack \
-        --action search \
+        --scenario slack-search \
         --tool mcp__claude_ai_Slack__slack_search_channels \
         --args '{"query": "agent", "limit": 20}' \
         --wall-ms 2150 \
         --response-file /tmp/response.json
 
-Appends to assets/recordings/<path>/<scenario>/<action>.json as a list of
-{tool, args, wall_clock_ms, response} objects (some paths fire multiple calls
-per task — Slack list, for instance).
+Writes to artifacts/<date>/<scenario>-scenario/<path>/recording.json as a list
+of {tool, args, wall_clock_ms, response} objects.
 
 Pass --reset to start a fresh recording (drop any prior entries).
 """
@@ -22,20 +20,21 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from agent_bench.paths.agent_mcp import extract_execution_time_ms
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-RECORDINGS_ROOT = REPO_ROOT / "assets" / "recordings"
+ARTIFACTS_ROOT = REPO_ROOT / "artifacts"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", required=True, choices=["native-mcp", "agent-mcp"])
-    parser.add_argument("--scenario", required=True)
-    parser.add_argument("--action", required=True)
+    parser.add_argument("--scenario", required=True, help="Scenario name, e.g. linear-search")
+    parser.add_argument("--date", default=None, help="Artifact date folder (YYYY-MM-DD). Defaults to today UTC.")
     parser.add_argument("--tool", required=True)
     parser.add_argument("--args", required=True, help="JSON string of tool args")
     parser.add_argument("--wall-ms", type=float, help="Wall-clock ms. For agent-mcp, omitted means use execution_metadata.execution_time_ms.")
@@ -43,7 +42,8 @@ def main() -> int:
     parser.add_argument("--reset", action="store_true", help="Overwrite any existing recording for this task")
     opts = parser.parse_args()
 
-    out_path = RECORDINGS_ROOT / opts.path / opts.scenario / f"{opts.action}.json"
+    date_str = opts.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    out_path = ARTIFACTS_ROOT / date_str / f"{opts.scenario}-scenario" / opts.path / "recording.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     args = json.loads(opts.args)

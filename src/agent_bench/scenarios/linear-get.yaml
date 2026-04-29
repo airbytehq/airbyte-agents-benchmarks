@@ -1,0 +1,16 @@
+name: linear-get
+title: "Linear — Get single issue by ID"
+connector: linear
+connector_id_env: LINEAR_CONNECTOR_ID
+description: >
+  Fetch a single Linear issue by ID. Measures single-record-fetch cost
+  across all three paths.
+
+task:
+  label: "Get single issue by ID"
+  action: get
+  entity: issues
+  metric_focus: single_record_fetch
+  params:
+    id: "ec6e00c7-dd96-4875-952c-69ecc33ce06d"
+    identifier: "AGENTIC-338"

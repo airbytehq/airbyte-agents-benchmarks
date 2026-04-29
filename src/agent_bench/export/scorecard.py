@@ -147,7 +147,7 @@ def _per_connector_table(cells: list[Cell]) -> str:
     # Group by task, then emit a row per path
     by_task: dict[str, list[Cell]] = {}
     for c in cells:
-        by_task.setdefault(c.task.label, []).append(c)
+        by_task.setdefault(c.scenario.task.label, []).append(c)
 
     lines = [
         "| Task | Path | Records | Tokens | Bytes | Calls |",

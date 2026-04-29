@@ -15,7 +15,7 @@ Action = Literal["search", "get", "list"]
 
 @dataclass
 class Task:
-    """A single head-to-head task across all paths."""
+    """A head-to-head task across all paths."""
 
     label: str
     action: Action
@@ -26,13 +26,13 @@ class Task:
 
 @dataclass
 class Scenario:
-    """A loaded benchmark scenario (one connector, N tasks)."""
+    """A loaded benchmark scenario."""
 
     name: str
     title: str
     connector: str  # slack | linear | granola
     connector_id_env: str  # env var name holding the connector instance UUID
-    tasks: list[Task] = field(default_factory=list)
+    task: Task
     description: str = ""
 
 
@@ -48,22 +48,21 @@ def load_scenario(name: str) -> Scenario:
         )
     with open(path) as f:
         data = yaml.safe_load(f)
-    tasks = [
-        Task(
-            label=t["label"],
-            action=t["action"],
-            entity=t["entity"],
-            metric_focus=t["metric_focus"],
-            params=t.get("params", {}),
-        )
-        for t in data["tasks"]
-    ]
+
+    task_data = data["task"]
+    task = Task(
+        label=task_data["label"],
+        action=task_data["action"],
+        entity=task_data["entity"],
+        metric_focus=task_data["metric_focus"],
+        params=task_data.get("params", {}),
+    )
     return Scenario(
         name=data["name"],
         title=data["title"],
         connector=data["connector"],
         connector_id_env=data["connector_id_env"],
-        tasks=tasks,
+        task=task,
         description=data.get("description", ""),
     )
 
@@ -71,3 +70,11 @@ def load_scenario(name: str) -> Scenario:
 def list_scenarios() -> list[str]:
     """List all available scenario names."""
     return sorted(p.stem for p in SCENARIOS_DIR.glob("*.yaml"))
+
+
+def scenarios_for_connector(connector: str) -> list[str]:
+    """List scenario names that belong to a given connector."""
+    return [
+        name for name in list_scenarios()
+        if name.startswith(f"{connector}-")
+    ]

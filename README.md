@@ -8,9 +8,9 @@ A three-way benchmark comparing how AI agents access business data through Airby
 | Agent MCP | `agent-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
 | Native MCP | `native-mcp` | Record-replay of vendor-native MCP server responses |
 
-Each connector scenario runs three tasks: **search**, **get** (single record by ID), and **list** (paginated bulk fetch).
+Each connector has named scenarios (e.g., `linear-search`, `granola-get`, `slack-list`).
 
-The current reproducible artifact is an interim Linear + Granola scorecard with 18 of 27 cells complete. Slack is excluded until Context Store search is ready (see `docs/SLACK_STATUS.md`).
+The current reproducible artifact is an interim Linear + Granola scorecard. Slack is excluded until Context Store search is ready (see `docs/SLACK_STATUS.md`).
 
 ## Quick Start (No Credentials)
 
@@ -22,7 +22,7 @@ cd airbyte-agents-benchmarks
 uv sync
 uv run pytest -q
 uv run agent-bench run \
-  --connectors linear,granola \
+  --scenarios linear,granola \
   --paths agent-mcp,native-mcp \
   --export-markdown results.md
 ```
@@ -42,11 +42,10 @@ See [docs/RESULTS.md](docs/RESULTS.md) for the full numbers, connector-level bre
 | Path | Description |
 |---|---|
 | `src/agent_bench/` | Benchmark harness and CLI |
-| `src/agent_bench/scenarios/*.yaml` | Scenario definitions (Linear, Granola, Slack) |
+| `src/agent_bench/scenarios/*.yaml` | Scenario definitions (one YAML per scenario, e.g. `linear-search.yaml`) |
 | `tests/` | Unit tests for scenarios, validation, and scorecard rendering |
 | `scripts/record_response.py` | Helper for saving replay recordings |
-| `assets/recordings/` | Committed Linear and Granola replay recordings |
-| `artifacts/2026-04-24/` | Scorecard, charts, and supporting deck artifact |
+| `artifacts/2026-04-24/` | Recordings, scorecard, charts, and supporting deck artifact |
 | `docs/REPRODUCTION.md` | Step-by-step reproduction guide with troubleshooting |
 | `docs/METHODOLOGY.md` | Measurement details and design choices |
 | `docs/RESULTS.md` | Current numbers and safe claims |
@@ -54,23 +53,45 @@ See [docs/RESULTS.md](docs/RESULTS.md) for the full numbers, connector-level bre
 | `docs/SLACK_STATUS.md` | Slack blocker and completion path |
 | `docs/THIRD_PARTY_MCP_SETUP.md` | Installation and configuration guide for third-party MCP servers (Linear, Granola, Slack) |
 
+## Artifact Layout
+
+Each benchmark run produces immutable artifacts under a dated directory:
+
+```
+artifacts/
+  2026-04-24/
+    linear-search-scenario/
+      agent-mcp/
+        recording.json
+        recording-stats.json
+      native-mcp/
+        recording.json
+        recording-stats.json
+    granola-get-scenario/
+      ...
+    benchmark-result-report.md
+    charts/
+```
+
+A symlink at `latest-benchmark-result-report.md` in the repo root points to the most recent report.
+
 ## CLI Reference
 
 ```text
 agent-bench list       List available benchmark scenarios
 agent-bench plan       Print MCP tool-call specs for record-replay paths
-agent-bench run        Run the benchmark across selected connectors and paths
+agent-bench run        Run the benchmark across selected scenarios and paths
 agent-bench validate   Validate replay recordings before exporting
 ```
 
-All commands accept `--connectors` and `--paths` filters. Use `--help` on any command for full options.
+All commands accept `--scenarios` and `--paths` filters. Pass connector names (e.g. `linear`) to `--scenarios` to select all scenarios for that connector, or pass specific scenario names (e.g. `linear-search,linear-get`). Use `--help` on any command for full options.
 
 Export is blocked when recordings or cells have issues. See [docs/METHODOLOGY.md](docs/METHODOLOGY.md#export-gates) for the full list of export gates.
 
 ## Recording New Responses
 
 ```bash
-uv run agent-bench plan --connectors all --paths native-mcp,agent-mcp
+uv run agent-bench plan --scenarios all --paths native-mcp,agent-mcp
 ```
 
 For each Agent MCP connector, call `mcp__airbyte-agent__describe_connector` once before recording the planned `mcp__airbyte-agent__execute` call. Every execute item must include `select_fields`.
@@ -80,8 +101,7 @@ Save MCP responses with:
 ```bash
 uv run python scripts/record_response.py \
   --path agent-mcp \
-  --scenario linear \
-  --action search \
+  --scenario linear-search \
   --tool mcp__airbyte-agent__execute \
   --args '{"items":[...]}' \
   --response-file /tmp/response.json \

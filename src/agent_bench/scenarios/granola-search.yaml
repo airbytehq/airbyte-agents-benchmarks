@@ -1,0 +1,16 @@
+name: granola-search
+title: "Granola — Search notes by keyword"
+connector: granola
+connector_id_env: GRANOLA_CONNECTOR_ID
+description: >
+  Search Granola notes by keyword. Note that native MCP returns a
+  synthesized natural-language answer, not structured records.
+
+task:
+  label: "Search notes by keyword"
+  action: search
+  entity: notes
+  metric_focus: narrow_context
+  params:
+    keyword: "context store"
+    limit: 1

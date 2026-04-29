@@ -31,7 +31,7 @@ def _entity_select_fields(connector: str, entity: str) -> list[str]:
     """
     mapping: dict[tuple[str, str], list[str]] = {
         ("slack", "channels"): ["id", "name", "num_members", "is_archived", "is_private", "created", "updated", "topic", "purpose"],
-        ("linear", "issues"): ["id", "identifier", "title", "state", "priority", "assignee", "createdAt", "updatedAt", "team", "labels"],
+        ("linear", "issues"): ["id", "identifier", "title", "state", "priority", "createdAt", "updatedAt", "team", "labels"],
         ("granola", "notes"): ["id", "title", "created_at", "updated_at", "attendees", "summary_text", "transcript"],
     }
     return mapping.get((connector, entity), ["id"])
@@ -70,7 +70,7 @@ class AgentMCPPath:
         )
 
     def recording_path(self, task: Task, scenario: Scenario) -> FSPath:
-        return self._recordings_dir / scenario.connector / f"{task.action}.json"
+        return self._recordings_dir / "recording.json"
 
     async def run_task(
         self, task: Task, scenario: Scenario

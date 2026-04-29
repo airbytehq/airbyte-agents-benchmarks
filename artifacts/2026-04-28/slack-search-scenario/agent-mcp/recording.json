@@ -1,0 +1,61 @@
+[
+  {
+    "tool": "mcp__airbyte-agent__execute",
+    "args": {
+      "items": [
+        {
+          "connector_id": "08b41f8a-f0b9-41e4-8406-bb11246e410c",
+          "entity": "channels",
+          "action": "context_store_search",
+          "params": {
+            "query": {
+              "filter": {
+                "fuzzy": {
+                  "name": "agent"
+                }
+              }
+            },
+            "limit": 10
+          },
+          "select_fields": [
+            "id",
+            "name",
+            "num_members",
+            "is_archived",
+            "is_private",
+            "created",
+            "updated",
+            "topic",
+            "purpose"
+          ]
+        }
+      ]
+    },
+    "wall_clock_ms": 330.0,
+    "response": {
+      "results": [
+        {
+          "connector_id": "08b41f8a-f0b9-41e4-8406-bb11246e410c",
+          "success": true,
+          "result": {
+            "status": "success",
+            "result": {
+              "data": [],
+              "meta": {
+                "has_more": false,
+                "cursor": null,
+                "took_ms": null
+              }
+            },
+            "connector_metadata": null,
+            "execution_metadata": {
+              "connector_instance_id": "source_id:08b41f8a-f0b9-41e4-8406-bb11246e410c",
+              "execution_time_ms": 330
+            }
+          },
+          "error": null
+        }
+      ]
+    }
+  }
+]

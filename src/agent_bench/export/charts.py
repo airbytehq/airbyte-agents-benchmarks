@@ -36,7 +36,7 @@ def _cells_by_task(report: RunReport):
     """Yield (task_label, scenario_connector, {path_short: Cell}) for each unique task."""
     groups: dict[tuple[str, str], dict] = {}
     for c in report.cells:
-        key = (c.scenario.connector, c.task.label)
+        key = (c.scenario.connector, c.scenario.task.label)
         groups.setdefault(key, {})[c.path_short] = c
     for (conn, label), by_path in groups.items():
         yield conn, label, by_path
@@ -83,7 +83,7 @@ def _chart_bar_across_tasks(report, out_dir, plt, metric: str, title: str, filen
 
 def _chart_single_record_gap(report, out_dir, plt) -> None:
     """Hero chart: single-record fetch tokens by path × connector."""
-    get_cells = [c for c in report.cells if c.task.action == "get" and c.result.status == "ok"]
+    get_cells = [c for c in report.cells if c.scenario.task.action == "get" and c.result.status == "ok"]
     connectors = sorted({c.scenario.connector for c in get_cells})
     if not connectors:
         return

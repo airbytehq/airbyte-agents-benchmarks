@@ -1,0 +1,16 @@
+name: slack-get
+title: "Slack — Get single channel by ID"
+connector: slack
+connector_id_env: SLACK_CONNECTOR_ID
+description: >
+  Fetch a single Slack channel by ID. Native MCP has no get-channel-by-ID
+  tool, so it falls back to search-then-filter.
+
+task:
+  label: "Get single channel by ID"
+  action: get
+  entity: channels
+  metric_focus: single_record_fetch
+  params:
+    id: "C02TD5CB7PZ"
+    name_hint: "feedback_survey_results"

@@ -1,0 +1,16 @@
+name: granola-get
+title: "Granola — Get single note by ID (with transcript)"
+connector: granola
+connector_id_env: GRANOLA_CONNECTOR_ID
+description: >
+  Fetch a single Granola note by ID including transcript. Native MCP
+  requires a separate tool call (get_meeting_transcript) with a UUID.
+
+task:
+  label: "Get single note by ID (with transcript)"
+  action: get
+  entity: notes
+  metric_focus: single_record_fetch
+  params:
+    id: "not_ES3idLqBAmN9L1"
+    claude_mcp_id: "96457d50-5ed1-4d81-a2fc-f43c2b93530d"

@@ -35,35 +35,39 @@ class RecordingIssue:
 def validate_recordings(
     scenario_names: list[str],
     path_slugs: list[str],
-    recordings_dir: Path,
+    artifacts_dir: Path,
     config: LiveConfig | None = None,
 ) -> list[RecordingIssue]:
-    """Validate all required record-replay files for a planned run."""
+    """Validate all required record-replay files for a planned run.
+
+    `artifacts_dir` is the dated directory, e.g. `artifacts/2026-04-24/`.
+    Recordings live at `{artifacts_dir}/{scenario}-scenario/{slug}/recording.json`.
+    """
     issues: list[RecordingIssue] = []
     selected_replay_paths = [p for p in path_slugs if p in RECORD_REPLAY_PATHS]
-    recordings_dir = Path(recordings_dir)
+    artifacts_dir = Path(artifacts_dir)
 
     for name in scenario_names:
         scenario = load_scenario(name)
-        for task in scenario.tasks:
-            for slug in selected_replay_paths:
-                rec_path = recordings_dir / slug / scenario.connector / f"{task.action}.json"
-                if not rec_path.exists():
-                    issues.append(_issue("error", slug, scenario.name, task, f"missing recording at {rec_path}"))
-                    continue
-                try:
-                    recording = json.loads(rec_path.read_text())
-                except json.JSONDecodeError as exc:
-                    issues.append(_issue("error", slug, scenario.name, task, f"invalid JSON: {exc}"))
-                    continue
-                if not isinstance(recording, list) or not recording:
-                    issues.append(_issue("error", slug, scenario.name, task, "recording must be a non-empty list"))
-                    continue
+        task = scenario.task
+        for slug in selected_replay_paths:
+            rec_path = artifacts_dir / f"{scenario.name}-scenario" / slug / "recording.json"
+            if not rec_path.exists():
+                issues.append(_issue("error", slug, scenario.name, task, f"missing recording at {rec_path}"))
+                continue
+            try:
+                recording = json.loads(rec_path.read_text())
+            except json.JSONDecodeError as exc:
+                issues.append(_issue("error", slug, scenario.name, task, f"invalid JSON: {exc}"))
+                continue
+            if not isinstance(recording, list) or not recording:
+                issues.append(_issue("error", slug, scenario.name, task, "recording must be a non-empty list"))
+                continue
 
-                if slug == "agent-mcp":
-                    issues.extend(_validate_agent_mcp_recording(recording, scenario.name, task, recordings_dir, config))
-                elif slug == "native-mcp":
-                    issues.extend(_validate_native_mcp_recording(recording, scenario.name, task))
+            if slug == "agent-mcp":
+                issues.extend(_validate_agent_mcp_recording(recording, scenario.name, task, artifacts_dir, config))
+            elif slug == "native-mcp":
+                issues.extend(_validate_native_mcp_recording(recording, scenario.name, task))
 
     return issues
 
@@ -92,14 +96,15 @@ def _validate_agent_mcp_recording(
     recording: list[object],
     scenario_name: str,
     task: Task,
-    recordings_dir: Path,
+    artifacts_dir: Path,
     config: LiveConfig | None,
 ) -> list[RecordingIssue]:
     issues: list[RecordingIssue] = []
     scenario = load_scenario(scenario_name)
     expected_items = None
     if config is not None:
-        expected_plan = AgentMCPPath(config, recordings_dir / "agent-mcp").plan(task, scenario)
+        mcp_dir = artifacts_dir / f"{scenario_name}-scenario" / "agent-mcp"
+        expected_plan = AgentMCPPath(config, mcp_dir).plan(task, scenario)
         expected_items = expected_plan.calls[0].args["items"]
 
     for idx, call in enumerate(recording):

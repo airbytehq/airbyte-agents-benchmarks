@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-04-29T00:43:02.396039+00:00",
+  "scenario": "granola-search",
+  "connector": "granola",
+  "path": "native-mcp",
+  "action": "search",
+  "entity": "notes",
+  "status": "ok",
+  "tokens": 92,
+  "payload_bytes": 399,
+  "latency_ms": 0.0,
+  "records": 1,
+  "api_calls": 1
+}
