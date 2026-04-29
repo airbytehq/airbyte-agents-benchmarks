@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path as FSPath
-from typing import Iterable
+from typing import Iterable, Literal
 
 from agent_bench.config import LiveConfig
 from agent_bench.metrics import BenchmarkResult
@@ -46,6 +46,7 @@ def _build_paths(
     connector_name: str,
     artifacts_dir: FSPath,
     scenario_name: str,
+    mode: Literal["live", "replay"] = "live",
 ) -> list:
     paths = []
     scenario_dir = artifacts_dir / f"{scenario_name}-scenario"
@@ -53,8 +54,10 @@ def _build_paths(
         if slug == "agent-sdk":
             paths.append(AgentSDKPath(config, connector_name))
         elif slug == "agent-mcp":
-            paths.append(AgentMCPPath(config, scenario_dir / "agent-mcp"))
+            paths.append(AgentMCPPath(config, scenario_dir / "agent-mcp", mode=mode))
         elif slug == "native-mcp":
+            if mode == "live":
+                raise ValueError("native-mcp does not support live mode. It requires vendor MCP servers not available in this harness. Use --mode replay.")
             paths.append(NativeMCPPath(scenario_dir / "native-mcp"))
         else:
             raise ValueError(f"Unknown path slug: {slug}")
@@ -67,9 +70,10 @@ async def run_scenario(
     config: LiveConfig,
     artifacts_dir: FSPath,
     on_cell: callable = None,
+    mode: Literal["live", "replay"] = "live",
 ) -> list[Cell]:
     cells: list[Cell] = []
-    paths = _build_paths(path_slugs, config, scenario.connector, artifacts_dir, scenario.name)
+    paths = _build_paths(path_slugs, config, scenario.connector, artifacts_dir, scenario.name, mode=mode)
     task = scenario.task
 
     async def _run_path(path):
@@ -120,6 +124,7 @@ async def run_all(
     path_slugs: list[str],
     artifacts_dir: FSPath,
     on_cell: callable = None,
+    mode: Literal["live", "replay"] = "live",
 ) -> RunReport:
     report = RunReport(
         requested_scenarios=list(scenario_names),
@@ -129,6 +134,6 @@ async def run_all(
     config = LiveConfig.from_env(required_connectors=required_connectors)
     for name in scenario_names:
         sc = load_scenario(name)
-        cells = await run_scenario(sc, path_slugs, config, artifacts_dir, on_cell)
+        cells = await run_scenario(sc, path_slugs, config, artifacts_dir, on_cell, mode=mode)
         report.cells.extend(cells)
     return report

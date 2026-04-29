@@ -73,7 +73,7 @@ def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None
         }]},
     }]))
 
-    path = AgentMCPPath(_config(), rec_dir)
+    path = AgentMCPPath(_config(), rec_dir, mode="replay")
     result = _run_path(path, task, scenario)
     assert result.status == "ok"
     assert result.total_latency_ms == 123
