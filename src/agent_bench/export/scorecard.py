@@ -10,7 +10,7 @@ from agent_bench.runner import Cell, RunReport
 
 
 PATH_LABEL = {
-    "agent-sdk": "Agent SDK",
+    "agent-sdk": "REST Baseline (via SDK)",
     "agent-mcp": "Agent MCP",
     "native-mcp": "Native MCP",
 }
@@ -33,7 +33,7 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     lines.append("# Airbyte Agents Launch Benchmark - April 22, 2026")
     lines.append("")
     lines.append(f"**Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d')}  ")
-    lines.append("**Paths compared:** Agent SDK vs Agent MCP vs Native MCP  ")
+    lines.append("**Paths compared:** REST Baseline (via SDK) vs Agent MCP vs Native MCP  ")
     lines.append(f"**Connectors:** {', '.join(connectors)}  ")
     lines.append(f"**Cells included:** {included_cells}/{expected_final_cells}")
     if is_interim:
@@ -53,7 +53,7 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     lines.append("")
     lines.append("| Path | Transport | Timing |")
     lines.append("|---|---|---|")
-    lines.append("| **Agent SDK** | `airbyte-agent-sdk` Python package → Agent REST API | Client wall-clock |")
+    lines.append("| **REST Baseline (via SDK)** | `airbyte-agent-sdk` → Airbyte connector → provider REST API | Client wall-clock |")
     lines.append("| **Agent MCP** | Hosted MCP proxy (`mcp.airbyte.ai`) → Agent REST API | `execution_metadata.execution_time_ms` from the MCP response |")
     lines.append("| **Native MCP** | Vendor-native MCP servers (`mcp__claude_ai_*`) → vendor API | **Not captured.** MCP client tool-call latency is not accessible from the harness; latency reported as 0 and should be read as \"unmeasured in this run\" (see March 3 scorecard for timed reference) |")
     lines.append("")
@@ -65,7 +65,7 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     lines.append("- **Single-record-fetch cost** — tokens + calls to retrieve one record by ID (task 2 only)")
     lines.append("")
     lines.append("Notes:")
-    lines.append("- Agent MCP and SDK are both read-throughs of the same Agent REST API — the MCP adds HTTP proxy overhead. `execution_time_ms` from the MCP response reflects server-side processing; client-side wall-clock (SDK path) includes both network round-trips and SDK deserialization.")
+    lines.append("- The REST Baseline represents the token cost of consuming the provider's full REST API response. The Airbyte connector fetches records from the third-party provider and passes them through unmodified. `execution_time_ms` from the Agent MCP response reflects server-side processing; client-side wall-clock (REST Baseline path) includes network round-trips and SDK deserialization. See [METHODOLOGY.md](docs/METHODOLOGY.md#agent-sdk-as-rest-baseline) for details.")
     lines.append("- Native MCP connectors return varying shapes: Slack returns markdown-like text, Linear returns structured JSON, Granola returns an aggregated string for list_meetings and a natural-language synthesis for query_granola_meetings.")
     lines.append("")
 
@@ -104,7 +104,7 @@ def _exec_summary(report: RunReport, is_interim: bool = False) -> str:
 
     lines = [
         f"**{prefix}.** Across the three benchmark tasks on each included connector, Airbyte Agents with `select_fields` "
-        f"returns roughly **{ratio_mcp_vs_sdk:.1f}× fewer tokens** than the full SDK payload and ships the "
+        f"returns roughly **{ratio_mcp_vs_sdk:.1f}× fewer tokens** than the REST Baseline and ships the "
         f"same structured records. It also uses **{ratio_native_vs_mcp:.1f}× fewer tokens** than native vendor MCPs "
         "on the included cells. Compared to native vendor MCPs, Airbyte Agents matches or beats on "
         "record count, single-record-fetch cost, and bulk-list capability - and crucially preserves typed "
@@ -209,13 +209,13 @@ def _verdict(report: RunReport) -> str:
     mcp_tokens = totals.get("agent-mcp", _zero_totals())["tokens"]
     native_tokens = totals.get("native-mcp", _zero_totals())["tokens"]
     lines = [
-        "- **Agent MCP** (with `select_fields`) is the narrowest path — {:.1f}× fewer tokens than the full SDK, {:.1f}× fewer than Native MCP.".format(
+        "- **Agent MCP** (with `select_fields`) is the narrowest path — {:.1f}× fewer tokens than the REST Baseline, {:.1f}× fewer than Native MCP.".format(
             sdk_tokens / max(mcp_tokens, 1) if mcp_tokens else 0,
             native_tokens / max(mcp_tokens, 1) if mcp_tokens else 0,
         ),
-        "- **Agent SDK** returns full typed records — useful when agents need all fields, e.g. for multi-field joins.",
+        "- **REST Baseline (via SDK)** returns the full typed records from the provider's REST API — the same data an agent would see calling the provider directly. Useful when agents need all fields, e.g. for multi-field joins.",
         "- **Native MCP** is structurally narrower in some cases, but gives up queryability (structured filters) and returns inconsistent shapes across connectors (JSON, text, and markdown-like responses). In the included Linear list task, native MCP returns 25 records while Airbyte Agents returns 50 records in one call.",
         "",
-        "**For marketing:** Agent MCP + SDK deliver narrower, structured, queryable data in one call. Native MCP requires pagination, returns mixed shapes, and lacks filter operators.",
+        "**For marketing:** Agent MCP delivers narrower, structured, queryable data in one call. The REST Baseline shows the unfiltered cost. Native MCP requires pagination, returns mixed shapes, and lacks filter operators.",
     ]
     return "\n".join(lines)

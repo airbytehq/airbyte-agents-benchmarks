@@ -12,7 +12,7 @@ from rich.table import Table
 
 app = typer.Typer(
     name="agent-bench",
-    help="Three-way benchmark: Agent SDK vs Agent MCP vs Native MCP.",
+    help="Three-way benchmark: REST Baseline vs Agent MCP vs Native MCP.",
     add_completion=False,
     invoke_without_command=False,
 )
@@ -161,7 +161,7 @@ def run(
 
     consistency_issues = _agent_sdk_mcp_consistency_issues(report)
     if export_requested and consistency_issues:
-        console.print("\n[red]Export blocked: Agent SDK/MCP record counts differ.[/red]")
+        console.print("\n[red]Export blocked: REST Baseline/MCP record counts differ.[/red]")
         for issue in consistency_issues:
             console.print(f"  [red]{issue}[/red]")
         raise typer.Exit(1)
