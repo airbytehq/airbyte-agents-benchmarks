@@ -59,8 +59,8 @@
 | Step | Server | Tool | Tokens | Records |
 |---:|---|---|---:|---:|
 | 1 | gong | list_calls | 26,084 | 100 |
-| 2 | salesforce | soql_query | 3,091 | 43 |
-| 3 | zendesk | search_tickets | 1,033 | 2 |
+| 2 | salesforce | soqlQuery | 3,091 | 43 |
+| 3 | zendesk | zendeskSearchTickets | 1,033 | 2 |
 
 </details>
 
@@ -94,25 +94,19 @@
 
 | Action | Description | Annotations |
 |---|---|---|
-| get | Fetch a single Salesforce account by ID.<br>Agent requests Id, Name, Type, and Industry.<br>Both paths query the same Salesforce org (airbyte.my.salesforce.com). |  |
+| get | Fetch a single Salesforce account by ID.<br>Agent requests Id, Name, Type, and Industry. |  |
 | list | List Salesforce accounts via SOQL.<br>Agent requests Id, Name, Type, and Industry per record. |  |
+| search | Search Salesforce accounts matching a keyword.<br>Agent requests Id, Name, Type, and Industry per result. |  |
 
 #### Scenario Benchmark Results
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
 | get | 141 | 90 | 1 | 1 | 157% | -57% |  |
-| list | 2,086 | 3,091 | 50 | 43 | 67% | 33% |  |
+| list | 2,086 | 3,791 | 50 | 50 | 55% | 45% |  |
+| search | 515 | 729 | 10 | 10 | 71% | 29% |  |
 
-**Connector total:** Agent MCP uses 70% of Native MCP tokens (30% savings)
-
-#### Benchmarks Not Comparable
-
-These scenarios could not produce a valid comparison between Agent MCP and the vendor's native MCP server.
-
-| Action | Description | Annotations |
-|---|---|---|
-| search | Search Salesforce accounts matching a keyword.<br>Agent requests Id, Name, Type, and Industry per result. | 🛑Native SOSL returned 0 results; agent-mcp returned 10. Comparison invalid. Root causes: (1) Different Salesforce orgs between agent-mcp and native-mcp — no overlapping data (org alignment fix in progress). (2) [SOSL](https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_sosl.htm) relies on a full-text search index with [known indexing delays](https://issues.salesforce.com/issue/a028c00000j5kNRAAY) (up to 15-30 min for new records) and tokenization quirks that can return 0 results even when data exists. If SOSL remains unreliable after org alignment, SOQL `WHERE Name LIKE '%airbyte%'` queries the database directly and bypasses the search index (est. approximately 720 tokens for approximately 10 matching records at approximately 72 tokens/record, based on salesforce-list native-mcp rate). Next step: Modify scenario to use valid query in Vendor MCP. |
+**Connector total:** Agent MCP uses 59% of Native MCP tokens (41% savings)
 
 **Scenario definitions:** [salesforce-get](../../src/agent_bench/scenarios/salesforce-get.yaml) | [salesforce-list](../../src/agent_bench/scenarios/salesforce-list.yaml) | [salesforce-search](../../src/agent_bench/scenarios/salesforce-search.yaml)
 
@@ -175,11 +169,11 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| get | 130 | 511 | 1 | 1 | 25% | 75% | 💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`. |
-| list | 3,600 | 12,088 | 100 | 25 | 30% | 70% | 💎Agent returned more records with fewer tokens. |
-| search | 431 | 1,015 | 10 | 2 | 42% | 58% |  |
+| get | 130 | 514 | 1 | 1 | 25% | 75% | 💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`. |
+| list | 3,600 | 24,626 | 100 | 50 | 15% | 85% | 💎Agent returned more records with fewer tokens. |
+| search | 431 | 1,033 | 10 | 2 | 42% | 58% |  |
 
-**Connector total:** Agent MCP uses 31% of Native MCP tokens (69% savings)
+**Connector total:** Agent MCP uses 16% of Native MCP tokens (84% savings)
 
 **Scenario definitions:** [zendesk-get](../../src/agent_bench/scenarios/zendesk-get.yaml) | [zendesk-list](../../src/agent_bench/scenarios/zendesk-list.yaml) | [zendesk-search](../../src/agent_bench/scenarios/zendesk-search.yaml)
 
@@ -199,6 +193,6 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 | Gong | 6,234 | 52,946 | 12% | 88% |
 | Gong-To-Salesforce-Zendesk | 1,486 | 30,208 | 5% | 95% |
 | Linear | 9,606 | 18,758 | 51% | 49% |
-| Salesforce | 2,227 | 3,181 | 70% | 30% |
+| Salesforce | 2,742 | 4,610 | 59% | 41% |
 | Slack | 6,985 | 13,416 | 52% | 48% |
-| Zendesk | 4,161 | 13,614 | 31% | 69% |
+| Zendesk | 4,161 | 26,173 | 16% | 84% |

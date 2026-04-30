@@ -65,7 +65,7 @@ def test_not_comparable_scenarios() -> None:
     assert slack_search.is_comparable is False
 
     sf_search = load_scenario("salesforce-search")
-    assert sf_search.is_comparable is False
+    assert sf_search.is_comparable is True
 
 
 def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None:

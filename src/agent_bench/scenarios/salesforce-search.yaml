@@ -2,24 +2,9 @@ name: salesforce-search
 title: "Salesforce — Search accounts by keyword"
 connector: salesforce
 connector_id_env: SALESFORCE_CONNECTOR_ID
-is_comparable: false
 description: |
   Search Salesforce accounts matching a keyword.
   Agent requests Id, Name, Type, and Industry per result.
-
-annotations:
-  data_parity: >
-    🛑Native SOSL returned 0 results; agent-mcp returned 10. Comparison invalid.
-    Root causes: (1) Different Salesforce orgs between agent-mcp and native-mcp
-    — no overlapping data (org alignment fix in progress).
-    (2) [SOSL](https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_sosl.htm)
-    relies on a full-text search index with
-    [known indexing delays](https://issues.salesforce.com/issue/a028c00000j5kNRAAY) (up to 15-30 min for new records)
-    and tokenization quirks that can return 0 results even when data exists.
-    If SOSL remains unreliable after org alignment, SOQL `WHERE Name LIKE '%airbyte%'` queries
-    the database directly and bypasses the search index
-    (est. approximately 720 tokens for approximately 10 matching records at approximately 72 tokens/record, based on salesforce-list native-mcp rate).
-    Next step: Modify scenario to use valid query in Vendor MCP.
 
 paths:
   agent-mcp:
@@ -41,6 +26,6 @@ paths:
   native-mcp:
     tool_calls:
       - server: salesforce
-        tool: sosl_search
+        tool: find
         args:
-          query: "airbyte"
+          q: "FIND {airbyte} IN ALL FIELDS RETURNING Account(Id, Name, Type, Industry LIMIT 10)"
