@@ -160,7 +160,7 @@ class AgentMCPPath:
         result.steps.append(step)
         result.total_records = len(records)
 
-        if task.action == "get":
+        if task.metric_focus == "single_record_fetch":
             result.single_record_calls = len(result.steps)
             result.single_record_tokens = tokens
 
@@ -208,7 +208,7 @@ class AgentMCPPath:
             yield step, result
 
         result.total_records = sum(s.records for s in result.steps)
-        if task.action == "get":
+        if task.metric_focus == "single_record_fetch":
             result.single_record_calls = len(result.steps)
             result.single_record_tokens = sum(s.tokens for s in result.steps)
 

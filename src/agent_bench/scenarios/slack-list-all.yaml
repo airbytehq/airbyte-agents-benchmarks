@@ -1,0 +1,37 @@
+name: slack-list-all
+title: "Slack — List all channels"
+connector: slack
+connector_id_env: SLACK_CONNECTOR_ID
+description: |
+  List all non-archived Slack channels in the workspace (approximately 1,085 channels).
+  This represents a realistic "give me everything" use case.
+  Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per record.
+  Both paths exclude archived channels (agent-mcp via exclude_archived param,
+  native-mcp via @modelcontextprotocol/server-slack default behavior).
+  Agent-mcp paginates with limit=1000 per page (3 calls using next_cursor).
+  Native-mcp paginates with limit=100 per page (cursor-based, 21 calls).
+
+  Note: The YAML defines only the first page call. Subsequent pages are recorded
+  dynamically using the next_cursor returned in connector_metadata. The recording
+  script handles pagination automatically.
+
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SLACK_CONNECTOR_ID
+        args:
+          entity: channels
+          action: list
+          params:
+            limit: 1000
+            exclude_archived: true
+          select_fields: [id, name, num_members, is_archived, is_private, created, updated, topic, purpose]
+
+  native-mcp:
+    tool_calls:
+      - server: slack
+        tool: slack_list_channels
+        args:
+          limit: 100

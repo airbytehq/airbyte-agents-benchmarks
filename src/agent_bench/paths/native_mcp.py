@@ -241,7 +241,7 @@ class NativeMCPPath:
             yield step, result
 
         result.total_records = total_records
-        if task.action == "get":
+        if task.metric_focus == "single_record_fetch":
             result.single_record_calls = len(result.steps)
             result.single_record_tokens = total_tokens
 

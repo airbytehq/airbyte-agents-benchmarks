@@ -1,6 +1,6 @@
 name: gong-to-salesforce-zendesk-lookup
 title: "Cross-system: Gong calls on 2026-04-28 → Salesforce + Zendesk lookup"
-connector: gong
+connector: multi_source
 connector_id_env: GONG_CONNECTOR_ID
 description: |
   Multi-step cross-connector workflow: search for Gong calls scheduled

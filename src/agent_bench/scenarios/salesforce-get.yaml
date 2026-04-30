@@ -3,7 +3,7 @@ title: "Salesforce — Get single account by ID"
 connector: salesforce
 connector_id_env: SALESFORCE_CONNECTOR_ID
 description: |
-  Fetch a single Salesforce account by ID.
+  Look up a single Salesforce account by ID.
   Agent requests Id, Name, Type, and Industry.
 
 paths:
@@ -14,9 +14,13 @@ paths:
         connector_id_env: SALESFORCE_CONNECTOR_ID
         args:
           entity: accounts
-          action: get
+          action: context_store_search
           params:
-            id: "0015e00000FMsFhAAL"
+            query:
+              filter:
+                eq:
+                  Id: "0015e00000FMsFhAAL"
+            limit: 1
           select_fields: [Id, Name, Type, Industry]
 
   native-mcp:

@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-30T23:13:22.866291+00:00",
+  "scenario": "slack-list-all",
+  "connector": "slack",
+  "path": "native-mcp",
+  "action": "list-all",
+  "entity": "unknown",
+  "status": "ok",
+  "tokens": 362313,
+  "payload_bytes": 1084580,
+  "latency_ms": null,
+  "records": 1085,
+  "api_calls": 21
+}

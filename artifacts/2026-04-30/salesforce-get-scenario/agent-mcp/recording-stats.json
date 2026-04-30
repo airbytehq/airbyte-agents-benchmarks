@@ -1,14 +1,14 @@
 {
   "schema_version": 2,
-  "run_date": "2026-04-30T16:31:00+00:00",
+  "run_date": "2026-04-30T23:13:22.865149+00:00",
   "scenario": "salesforce-get",
   "connector": "salesforce",
   "path": "agent-mcp",
   "action": "get",
   "entity": "unknown",
   "status": "ok",
-  "tokens": 141,
-  "payload_bytes": 393,
+  "tokens": 178,
+  "payload_bytes": 482,
   "latency_ms": null,
   "records": 1,
   "api_calls": 1

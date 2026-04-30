@@ -3,8 +3,16 @@ title: "Linear — Get single issue by ID"
 connector: linear
 connector_id_env: LINEAR_CONNECTOR_ID
 description: |
-  Fetch a single Linear issue by ID.
+  Look up a single Linear issue by ID.
   Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels.
+
+annotations:
+  workspace_mismatch: >
+    ℹ️ The agent-mcp connector and native Linear MCP are currently connected to different
+    Linear workspaces. Agent-mcp syncs from the AGENTIC workspace (issues prefixed `AGENTIC-`),
+    while the native MCP API key connects to `airbyte-integration-testing` (issues prefixed `AIR-`).
+    Each path fetches a valid single issue from its own workspace; the benchmark measures
+    token overhead, not data identity.
 
 paths:
   agent-mcp:
@@ -14,9 +22,13 @@ paths:
         connector_id_env: LINEAR_CONNECTOR_ID
         args:
           entity: issues
-          action: get
+          action: context_store_search
           params:
-            id: "AIR-55"
+            query:
+              filter:
+                eq:
+                  identifier: "AGENTIC-1294"
+            limit: 1
           select_fields: [id, identifier, title, state, priority, createdAt, updatedAt, team, labels]
 
   native-mcp:
