@@ -2,9 +2,9 @@ name: slack-list
 title: "Slack — List first 50 channels"
 connector: slack
 connector_id_env: SLACK_CONNECTOR_ID
-description: >
-  List the first 50 Slack channels. Native MCP caps channel search at
-  20/page, requiring 3 paginated calls to approximate bulk list.
+description: |
+  List the first 50 Slack channels.
+  Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per record.
 
 task:
   label: "List first 50 channels"

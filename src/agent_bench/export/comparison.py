@@ -16,7 +16,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+import yaml
+
 from agent_bench.metrics import count_tokens
+
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 
 
 @dataclass
@@ -101,12 +105,28 @@ class ConnectorSummary:
 
 
 def load_stats_from_dir(artifacts_dir: Path) -> list[CellStats]:
-    """Scan an artifacts date directory for recording-stats.json files."""
+    """Scan an artifacts date directory for recording-stats.json files.
+
+    Re-derives the record count from the sibling ``recording.json`` when
+    present, since the stats file may have been written with a heuristic
+    that only handled agent-mcp response shapes.
+    """
     stats: list[CellStats] = []
     if not artifacts_dir.is_dir():
         return stats
     for stats_file in sorted(artifacts_dir.rglob("recording-stats.json")):
         data = json.loads(stats_file.read_text())
+        records = data.get("records", 0)
+
+        # Re-derive record count from recording.json when available,
+        # since stats files may have been written with a heuristic that
+        # only handled agent-mcp response shapes.
+        recording_file = stats_file.parent / "recording.json"
+        if recording_file.exists():
+            recording_data = json.loads(recording_file.read_text())
+            if isinstance(recording_data, list):
+                records = sum(_count_records(call.get("response", {})) for call in recording_data)
+
         stats.append(CellStats(
             scenario=data["scenario"],
             connector=data["connector"],
@@ -117,10 +137,69 @@ def load_stats_from_dir(artifacts_dir: Path) -> list[CellStats]:
             tokens=data["tokens"],
             payload_bytes=data["payload_bytes"],
             latency_ms=data.get("latency_ms"),
-            records=data.get("records", 0),
+            records=records,
             api_calls=data.get("api_calls", 1),
         ))
     return stats
+
+
+def _count_records(response: dict) -> int:
+    """Best-effort record count from a recording response payload.
+
+    Handles both agent-mcp format (`results[0].result.result`) and native-mcp
+    formats (Gong `calls`, Zendesk `tickets`, Salesforce `records`/`searchRecords`,
+    Slack `channels`, Linear `issues.nodes`).
+    """
+    if not isinstance(response, dict):
+        return 0
+
+    # Agent-mcp envelope: results[0].result.result
+    results_list = response.get("results", [])
+    if isinstance(results_list, list) and results_list:
+        inner = results_list[0]
+        if isinstance(inner, dict) and "result" in inner:
+            result_obj = inner.get("result", {})
+            if isinstance(result_obj, dict):
+                result_data = result_obj.get("result", {})
+                if isinstance(result_data, list):
+                    return len(result_data)
+                if isinstance(result_data, dict):
+                    # Nested data key (e.g. gong context store: {data: [...], meta: ...})
+                    if "data" in result_data and isinstance(result_data["data"], list):
+                        return len(result_data["data"])
+                    # Single-record get response
+                    if "Id" in result_data or "id" in result_data:
+                        return 1
+            # Recognized agent-mcp envelope but unrecognized inner shape
+            return 0
+
+    # Native-mcp: list responses with known collection keys
+    _LIST_KEYS = ("calls", "tickets", "records", "searchRecords", "channels",
+                  "messages", "results")
+    for key in _LIST_KEYS:
+        if key in response and isinstance(response[key], list):
+            return len(response[key])
+
+    # Native-mcp: Salesforce SOSL searchRecords (already covered above)
+    # Native-mcp: Linear issues.nodes
+    if "issues" in response:
+        issues = response["issues"]
+        if isinstance(issues, dict) and "nodes" in issues:
+            return len(issues["nodes"])
+        if isinstance(issues, list):
+            return len(issues)
+
+    # Native-mcp: single-record get (e.g. Gong `call`, Zendesk `ticket`)
+    _SINGULAR_KEYS = ("call", "ticket", "issue")
+    for key in _SINGULAR_KEYS:
+        if key in response and isinstance(response[key], dict):
+            return 1
+
+    # Fallback: response itself looks like a single record
+    if "Id" in response or "id" in response:
+        return 1
+
+    return 0
 
 
 def load_stats_from_recordings(artifacts_dir: Path) -> list[CellStats]:
@@ -157,17 +236,7 @@ def load_stats_from_recordings(artifacts_dir: Path) -> list[CellStats]:
             payload = json.dumps(response, default=str)
             total_bytes += len(payload.encode())
             total_tokens += count_tokens(response)
-            # Try to count records from response
-            if isinstance(response, dict):
-                result = response.get("results", [])
-                if isinstance(result, list):
-                    for r in result:
-                        result_data = r.get("result", {}) if isinstance(r, dict) else {}
-                        if isinstance(result_data, dict):
-                            for v in result_data.values():
-                                if isinstance(v, list):
-                                    total_records += len(v)
-                                    break
+            total_records += _count_records(response)
 
         stats.append(CellStats(
             scenario=scenario,
@@ -183,6 +252,28 @@ def load_stats_from_recordings(artifacts_dir: Path) -> list[CellStats]:
             api_calls=len(data),
         ))
     return stats
+
+
+def load_scenario_metadata() -> dict[str, dict[str, str]]:
+    """Load scenario descriptions and titles from YAML files.
+
+    Returns a dict keyed by scenario name (e.g. `linear-search`) with
+    `title` and `description` sub-keys.
+    """
+    metadata: dict[str, dict[str, str]] = {}
+    if not SCENARIOS_DIR.is_dir():
+        return metadata
+    for yaml_path in sorted(SCENARIOS_DIR.glob("*.yaml")):
+        data = yaml.safe_load(yaml_path.read_text())
+        name = data.get("name", yaml_path.stem)
+        annotations = data.get("annotations", {})
+        metadata[name] = {
+            "title": data.get("title", name),
+            "description": data.get("description", "").strip(),
+            "annotations": {k: str(v) for k, v in annotations.items()} if annotations else {},
+            "is_comparable": data.get("is_comparable", True),
+        }
+    return metadata
 
 
 def build_comparison(
@@ -220,7 +311,7 @@ def build_comparison(
         )
         # Flag anomalies
         if row.ratio_pct is not None and row.ratio_pct > 200:
-            row.note = "Anomaly: right path returned significantly fewer results"
+            row.note = f"Anomaly: {right_path} returned significantly fewer results"
         connector_rows.setdefault(connector, []).append(row)
 
     summaries = []
@@ -237,10 +328,12 @@ def render_comparison_markdown(
     left_label: str = "Agent MCP",
     right_label: str = "Native MCP",
     date: str | None = None,
+    scenario_meta: dict[str, dict[str, str]] | None = None,
 ) -> str:
     """Render a full markdown comparison report."""
     lines: list[str] = []
     run_date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    meta = scenario_meta or {}
 
     lines.append("# Token Efficiency Comparison Report")
     lines.append("")
@@ -250,75 +343,95 @@ def render_comparison_markdown(
     lines.append(f"**Connectors:** {', '.join(c.title() for c in connectors)}")
     lines.append("")
 
-    # Grand totals
-    grand_left = sum(s.left_total for s in summaries)
-    grand_right = sum(s.right_total for s in summaries)
-    if grand_right > 0:
-        grand_ratio = grand_left / grand_right * 100
-        grand_savings = 100 - grand_ratio
-        lines.append("## Summary")
-        lines.append("")
-        lines.append(
-            f"**Overall: {left_label} uses {grand_ratio:.0f}% of "
-            f"{right_label} tokens ({grand_savings:.0f}% reduction)**"
-        )
-        lines.append("")
-        lines.append(
-            f"- {left_label} total: **{grand_left:,}** tokens  "
-        )
-        lines.append(
-            f"- {right_label} total: **{grand_right:,}** tokens  "
-        )
-        lines.append(
-            f"- Token savings: **{grand_savings:.0f}%**"
-        )
-        lines.append("")
-
-    # Per-connector summary table
-    lines.append("## Per-Connector Results")
-    lines.append("")
-    lines.append(
-        f"| Connector | {left_label} tokens | {right_label} tokens | "
-        f"Ratio | Savings |"
-    )
-    lines.append("|---|---:|---:|---:|---:|")
-    for s in summaries:
-        ratio_str = f"{s.ratio_pct:.0f}%" if s.ratio_pct is not None else "N/A"
-        savings_str = f"{s.savings_pct:.0f}%" if s.savings_pct is not None else "N/A"
-        lines.append(
-            f"| {s.connector.title()} | {s.left_total:,} | {s.right_total:,} | "
-            f"{ratio_str} | {savings_str} |"
-        )
-    lines.append("")
-
     # Per-scenario detail
     lines.append("## Per-Scenario Breakdown")
     lines.append("")
     for s in summaries:
+        benchmark_rows = [
+            r for r in s.rows
+            if meta.get(r.scenario, {}).get("is_comparable", True)
+        ]
+        not_comparable_rows = [
+            r for r in s.rows
+            if not meta.get(r.scenario, {}).get("is_comparable", True)
+        ]
+
+        if not benchmark_rows and not not_comparable_rows:
+            continue
+
         lines.append(f"### {s.connector.title()}")
         lines.append("")
-        lines.append(
-            f"| Action | {left_label} | {right_label} | Ratio | Savings | Notes |"
-        )
-        lines.append("|---|---:|---:|---:|---:|---|")
-        for row in s.rows:
-            left_str = f"{row.left_tokens:,}" if row.left_tokens is not None else "—"
-            right_str = f"{row.right_tokens:,}" if row.right_tokens is not None else "—"
-            ratio_str = f"{row.ratio_pct:.0f}%" if row.ratio_pct is not None else "N/A"
-            savings_str = f"{row.savings_pct:.0f}%" if row.savings_pct is not None else "N/A"
-            note_str = row.note or ""
-            lines.append(
-                f"| {row.action} | {left_str} | {right_str} | "
-                f"{ratio_str} | {savings_str} | {note_str} |"
-            )
-        if s.ratio_pct is not None:
+
+        if benchmark_rows:
+            # Table 1: Scenario Descriptions
+            lines.append("#### Scenario Descriptions")
+            lines.append("")
+            lines.append("| Action | Description | Annotations |")
+            lines.append("|---|---|---|")
+            for row in benchmark_rows:
+                desc = meta.get(row.scenario, {}).get("description", "").strip()
+                desc = desc.replace("\n", "<br>")
+                scenario_ann = meta.get(row.scenario, {}).get("annotations", {})
+                ann_str = "; ".join(v.strip() for v in scenario_ann.values()) if scenario_ann else ""
+                lines.append(f"| {row.action} | {desc} | {ann_str} |")
+            lines.append("")
+
+            # Table 2: Scenario Benchmark Results
+            lines.append("#### Scenario Benchmark Results")
             lines.append("")
             lines.append(
-                f"**Connector total:** {left_label} uses "
-                f"{s.ratio_pct:.0f}% of {right_label} tokens "
-                f"({s.savings_pct:.0f}% savings)"
+                f"| Action | {left_label} tokens | {right_label} tokens | "
+                f"{left_label} records | {right_label} records | Ratio | Savings | Notes |"
             )
-        lines.append("")
+            lines.append("|---|---:|---:|---:|---:|---:|---:|---|")
+            for row in benchmark_rows:
+                left_str = f"{row.left_tokens:,}" if row.left_tokens is not None else "—"
+                right_str = f"{row.right_tokens:,}" if row.right_tokens is not None else "—"
+                ratio_str = f"{row.ratio_pct:.0f}%" if row.ratio_pct is not None else "N/A"
+                savings_str = f"{row.savings_pct:.0f}%" if row.savings_pct is not None else "N/A"
+                left_rec = str(row.left_records) if row.left_records is not None else "—"
+                right_rec = str(row.right_records) if row.right_records is not None else "—"
+                notes_parts: list[str] = []
+                scenario_annotations = meta.get(row.scenario, {}).get("annotations", {})
+                if scenario_annotations:
+                    notes_parts.extend(v.strip() for v in scenario_annotations.values())
+                if row.note:
+                    notes_parts.append(row.note)
+                note_str = "; ".join(notes_parts)
+                lines.append(
+                    f"| {row.action} | {left_str} | {right_str} | "
+                    f"{left_rec} | {right_rec} | {ratio_str} | {savings_str} | {note_str} |"
+                )
+            bench_left = sum(r.left_tokens for r in benchmark_rows if r.left_tokens)
+            bench_right = sum(r.right_tokens for r in benchmark_rows if r.right_tokens)
+            if bench_right:
+                bench_ratio = bench_left / bench_right * 100
+                bench_savings = 100 - bench_ratio
+                lines.append("")
+                lines.append(
+                    f"**Connector total:** {left_label} uses "
+                    f"{bench_ratio:.0f}% of {right_label} tokens "
+                    f"({bench_savings:.0f}% savings)"
+                )
+            lines.append("")
+
+        if not_comparable_rows:
+            lines.append("#### Benchmarks Not Comparable")
+            lines.append("")
+            lines.append(
+                "These scenarios could not produce a valid comparison "
+                "between Agent MCP and the vendor's native MCP server."
+            )
+            lines.append("")
+            lines.append("| Action | Description | Annotations |")
+            lines.append("|---|---|---|")
+            for row in not_comparable_rows:
+                desc = meta.get(row.scenario, {}).get("description", "").strip()
+                desc = desc.replace("\n", "<br>")
+                scenario_ann = meta.get(row.scenario, {}).get("annotations", {})
+                ann_str = "; ".join(v.strip() for v in scenario_ann.values()) if scenario_ann else ""
+                lines.append(f"| {row.action} | {desc} | {ann_str} |")
+            lines.append("")
 
     # Methodology note
     lines.append("## Methodology")
@@ -337,6 +450,38 @@ def render_comparison_markdown(
     lines.append(
         "- Each scenario executes the same logical operation (search/get/list) on both paths"
     )
+    lines.append("")
+
+    # Per-connector summary table at the bottom (benchmark rows only)
+    lines.append("## Per-Connector Summary")
+    lines.append("")
+    lines.append(
+        "> :warning: Please review detailed results above for necessary "
+        "disclaimers, descriptions of issues, and other explanations."
+    )
+    lines.append("")
+    lines.append(
+        f"| Connector | {left_label} tokens | {right_label} tokens | "
+        f"Ratio | Savings |"
+    )
+    lines.append("|---|---:|---:|---:|---:|")
+    for s in summaries:
+        bench_rows = [
+            r for r in s.rows
+            if meta.get(r.scenario, {}).get("is_comparable", True)
+        ]
+        if not bench_rows:
+            continue
+        left_total = sum(r.left_tokens for r in bench_rows if r.left_tokens)
+        right_total = sum(r.right_tokens for r in bench_rows if r.right_tokens)
+        ratio_pct = (left_total / right_total * 100) if right_total else None
+        savings_pct = (100 - ratio_pct) if ratio_pct is not None else None
+        ratio_str = f"{ratio_pct:.0f}%" if ratio_pct is not None else "N/A"
+        savings_str = f"{savings_pct:.0f}%" if savings_pct is not None else "N/A"
+        lines.append(
+            f"| {s.connector.title()} | {left_total:,} | {right_total:,} | "
+            f"{ratio_str} | {savings_str} |"
+        )
     lines.append("")
 
     return "\n".join(lines)
@@ -365,8 +510,9 @@ def generate_comparison_report(
     # Infer date from directory name
     date = artifacts_dir.name if artifacts_dir.name[0].isdigit() else None
 
+    scenario_meta = load_scenario_metadata()
     summaries = build_comparison(stats, left_path, right_path)
-    report = render_comparison_markdown(summaries, left_label, right_label, date)
+    report = render_comparison_markdown(summaries, left_label, right_label, date, scenario_meta)
 
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)

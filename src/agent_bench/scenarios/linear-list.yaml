@@ -2,9 +2,9 @@ name: linear-list
 title: "Linear — List first 50 issues"
 connector: linear
 connector_id_env: LINEAR_CONNECTOR_ID
-description: >
-  List the first 50 Linear issues. Measures bulk-list payload where
-  field projection compounds across many records.
+description: |
+  List the first 50 Linear issues.
+  Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels per record.
 
 task:
   label: "List first 50 issues"

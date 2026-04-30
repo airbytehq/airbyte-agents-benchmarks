@@ -34,6 +34,7 @@ class Scenario:
     connector_id_env: str  # env var name holding the connector instance UUID
     task: Task
     description: str = ""
+    annotations: dict[str, str] = field(default_factory=dict)
 
 
 def load_scenario(name: str) -> Scenario:
@@ -64,6 +65,7 @@ def load_scenario(name: str) -> Scenario:
         connector_id_env=data["connector_id_env"],
         task=task,
         description=data.get("description", ""),
+        annotations=data.get("annotations", {}),
     )
 
 
