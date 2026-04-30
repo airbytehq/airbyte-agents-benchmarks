@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-29T21:11:04.899998+00:00",
+  "scenario": "salesforce-list",
+  "connector": "salesforce",
+  "path": "native-mcp",
+  "action": "list",
+  "entity": "accounts",
+  "status": "ok",
+  "tokens": 3091,
+  "payload_bytes": 8468,
+  "latency_ms": 252.9,
+  "records": 1,
+  "api_calls": 1
+}

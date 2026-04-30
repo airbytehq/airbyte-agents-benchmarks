@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-30T16:31:00+00:00",
+  "scenario": "slack-search",
+  "connector": "slack",
+  "path": "native-mcp",
+  "action": "search",
+  "entity": "unknown",
+  "status": "ok",
+  "tokens": 4472,
+  "payload_bytes": 13619,
+  "latency_ms": null,
+  "records": 12,
+  "api_calls": 1
+}

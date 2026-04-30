@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-29T21:11:04.897797+00:00",
+  "scenario": "gong-search",
+  "connector": "gong",
+  "path": "native-mcp",
+  "action": "search",
+  "entity": "calls",
+  "status": "ok",
+  "tokens": 26578,
+  "payload_bytes": 69967,
+  "latency_ms": 1173.5,
+  "records": 1,
+  "api_calls": 1
+}

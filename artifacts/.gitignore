@@ -2,4 +2,8 @@
 # non-public data (client names, internal ticket subjects, etc.).
 # Keep locally for running benchmarks; do not commit.
 **/recording.json
-**/recording-stats.json
+
+# recording-stats.json files contain only aggregate metrics
+# (token counts, latency, record counts) — no API response data.
+# These ARE committed so other sessions can generate reports
+# without needing full credentials or raw recordings.

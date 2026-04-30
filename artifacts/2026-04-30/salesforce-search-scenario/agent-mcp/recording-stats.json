@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-30T16:31:00+00:00",
+  "scenario": "salesforce-search",
+  "connector": "salesforce",
+  "path": "agent-mcp",
+  "action": "search",
+  "entity": "unknown",
+  "status": "ok",
+  "tokens": 515,
+  "payload_bytes": 1338,
+  "latency_ms": null,
+  "records": 10,
+  "api_calls": 1
+}

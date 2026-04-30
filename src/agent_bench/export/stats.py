@@ -18,24 +18,54 @@ from agent_bench.runner import Cell
 SCHEMA_VERSION = 2
 
 
-def cell_to_stats(cell: Cell) -> dict:
-    """Serialize a single Cell to the normalized stats schema."""
-    r = cell.result
+def build_stats_dict(
+    *,
+    scenario: str,
+    connector: str,
+    path: str,
+    action: str,
+    entity: str,
+    status: str,
+    tokens: int,
+    payload_bytes: int,
+    latency_ms: float | None,
+    records: int,
+    api_calls: int,
+) -> dict:
+    """Build the canonical stats JSON dict from flat field values."""
     return {
         "schema_version": SCHEMA_VERSION,
         "run_date": datetime.now(timezone.utc).isoformat(),
-        "scenario": cell.scenario.name,
-        "connector": cell.scenario.connector,
-        "path": cell.path_short,
-        "action": cell.scenario.inferred_action,
-        "entity": cell.scenario.inferred_entity,
-        "status": r.status,
-        "tokens": r.total_tokens,
-        "payload_bytes": r.total_payload_bytes,
-        "latency_ms": round(r.total_latency_ms, 1) if r.total_latency_ms is not None else None,
-        "records": r.total_records,
-        "api_calls": r.api_calls,
+        "scenario": scenario,
+        "connector": connector,
+        "path": path,
+        "action": action,
+        "entity": entity,
+        "status": status,
+        "tokens": tokens,
+        "payload_bytes": payload_bytes,
+        "latency_ms": round(latency_ms, 1) if latency_ms is not None else None,
+        "records": records,
+        "api_calls": api_calls,
     }
+
+
+def cell_to_stats(cell: Cell) -> dict:
+    """Serialize a single Cell to the normalized stats schema."""
+    r = cell.result
+    return build_stats_dict(
+        scenario=cell.scenario.name,
+        connector=cell.scenario.connector,
+        path=cell.path_short,
+        action=cell.scenario.inferred_action,
+        entity=cell.scenario.inferred_entity,
+        status=r.status,
+        tokens=r.total_tokens,
+        payload_bytes=r.total_payload_bytes,
+        latency_ms=r.total_latency_ms,
+        records=r.total_records,
+        api_calls=r.api_calls,
+    )
 
 
 def stats_path(base_dir: Path, cell: Cell) -> Path:
@@ -52,3 +82,33 @@ def write_cell_stats(base_dir: Path, cell: Cell) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(cell_to_stats(cell), indent=2) + "\n")
     return out
+
+
+def write_stats_for_dir(artifacts_dir: Path) -> int:
+    """Generate `recording-stats.json` from sibling `recording.json` files.
+
+    Returns the number of stats files written.
+    """
+    from agent_bench.export.comparison import load_stats_from_recordings
+
+    stats = load_stats_from_recordings(artifacts_dir)
+    count = 0
+    for s in stats:
+        out_path = artifacts_dir / f"{s.scenario}-scenario" / s.path / "recording-stats.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        data = build_stats_dict(
+            scenario=s.scenario,
+            connector=s.connector,
+            path=s.path,
+            action=s.action,
+            entity=s.entity,
+            status=s.status,
+            tokens=s.tokens,
+            payload_bytes=s.payload_bytes,
+            latency_ms=s.latency_ms,
+            records=s.records,
+            api_calls=s.api_calls,
+        )
+        out_path.write_text(json.dumps(data, indent=2) + "\n")
+        count += 1
+    return count
