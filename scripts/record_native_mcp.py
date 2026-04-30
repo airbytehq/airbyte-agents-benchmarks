@@ -21,11 +21,13 @@ import argparse
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from xml.sax.saxutils import escape as xml_escape
 
 import requests
 
@@ -345,38 +347,53 @@ def record_gong(access_key: str, access_secret: str, dry_run: bool = False) -> l
 
 # ---------- Salesforce API ----------
 
-def get_salesforce_token(client_id: str, client_secret: str, refresh_token: str) -> str:
-    """Exchange refresh token for access token."""
-    r = requests.post("https://login.salesforce.com/services/oauth2/token", timeout=30, data={
-        "grant_type": "refresh_token",
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "refresh_token": refresh_token,
-    })
+def get_salesforce_session_soap(
+    username: str, password: str, security_token: str,
+    instance_url: str = "https://airbyte.my.salesforce.com",
+) -> tuple[str, str]:
+    """Authenticate via SOAP login and return `(session_id, instance_url)`."""
+    soap_body = (
+        '<?xml version="1.0" encoding="utf-8" ?>'
+        '<env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"'
+        '    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
+        '    xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">'
+        '  <env:Body>'
+        '    <n1:login xmlns:n1="urn:partner.soap.sforce.com">'
+        f'      <n1:username>{xml_escape(username)}</n1:username>'
+        f'      <n1:password>{xml_escape(password)}{xml_escape(security_token)}</n1:password>'
+        '    </n1:login>'
+        '  </env:Body>'
+        '</env:Envelope>'
+    )
+    r = requests.post(
+        f"{instance_url}/services/Soap/u/59.0",
+        headers={"Content-Type": "text/xml", "SOAPAction": "login"},
+        data=soap_body,
+        timeout=30,
+    )
     r.raise_for_status()
-    return r.json()["access_token"]
+    session_match = re.search(r"<sessionId>(.+?)</sessionId>", r.text)
+    server_match = re.search(r"<serverUrl>(.+?)</serverUrl>", r.text)
+    if not session_match or not server_match:
+        raise RuntimeError(f"SOAP login failed: {r.text[:300]}")
+    session_id = session_match.group(1)
+    server_url = server_match.group(1)
+    inst_match = re.search(r"(https://[^/]+)", server_url)
+    resolved_instance = inst_match.group(1) if inst_match else instance_url
+    return session_id, resolved_instance
 
 
-def record_salesforce(client_id: str, client_secret: str, refresh_token: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Salesforce native responses via REST API."""
+def record_salesforce(
+    username: str, password: str, security_token: str, dry_run: bool = False,
+) -> list[tuple[str, Path]]:
+    """Record Salesforce native responses via REST API (SOAP login)."""
     results = []
     if dry_run:
         print("  [dry-run] Would record salesforce-search, salesforce-get, salesforce-list")
         return results
 
-    token = get_salesforce_token(client_id, client_secret, refresh_token)
+    token, instance_url = get_salesforce_session_soap(username, password, security_token)
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    # Need to get instance URL
-    r = requests.get("https://login.salesforce.com/services/oauth2/userinfo", headers=headers, timeout=30)
-    # Fall back to standard instance
-    instance_url = "https://airbyte-dev-ed.develop.my.salesforce.com"
-    if r.ok:
-        profile = r.json()
-        # Try to extract org URL
-        urls = profile.get("urls", {})
-        if "custom_domain" in urls:
-            instance_url = urls["custom_domain"].rstrip("/")
-    
     base = f"{instance_url}/services/data/v59.0"
     date = get_date_str()
 
@@ -398,7 +415,7 @@ def record_salesforce(client_id: str, client_secret: str, refresh_token: str, dr
     print(f"    salesforce-search: {len(records)} records")
 
     # Get (SOQL with field selection — returns only 4 fields, matching agent-mcp)
-    account_id = "0014W000027f6UwQAI"
+    account_id = "0015e00000FMsFhAAL"
     get_soql = f"SELECT Id, Name, Type, Industry FROM Account WHERE Id = '{account_id}'"
     start = time.time()
     r = requests.get(f"{base}/query/", headers=headers, params={"q": get_soql}, timeout=60)
@@ -556,10 +573,15 @@ def main() -> int:
                 all_results.extend(record_gong(access_key, access_secret, opts.dry_run))
 
             elif connector == "salesforce":
-                client_id = load_secret("salesforce", "client_id", "test-credentials-oauth")
-                client_secret = load_secret("salesforce", "client_secret", "test-credentials-oauth")
-                refresh_token = load_secret("salesforce", "refresh_token", "test-credentials-oauth")
-                all_results.extend(record_salesforce(client_id, client_secret, refresh_token, opts.dry_run))
+                sf_user = os.environ.get("SALESFORCE_USERNAME", "marketing@airbyte.io")
+                sf_pass = os.environ.get("SALESFORCE_PASSWORD", "")
+                sf_token = os.environ.get("SALESFORCE_SECURITY_TOKEN", "")
+                if not sf_pass or not sf_token:
+                    sf_pass = load_secret("salesforce", "password", "prod-credentials-soap")
+                    sf_token = load_secret("salesforce", "security_token", "prod-credentials-soap")
+                if not sf_pass or not sf_token:
+                    raise ValueError("Salesforce credentials missing: set SALESFORCE_PASSWORD and SALESFORCE_SECURITY_TOKEN env vars or populate 1Password prod-credentials-soap section.")
+                all_results.extend(record_salesforce(sf_user, sf_pass, sf_token, opts.dry_run))
 
             elif connector == "zendesk":
                 subdomain = load_secret("zendesk-support", "subdomain", "test-credentials-oauth")
