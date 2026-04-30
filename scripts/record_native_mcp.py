@@ -540,10 +540,15 @@ class ZendeskMCP:
                 "-e", f"accessToken={access_token}",
                 ZENDESK_MCP_IMAGE,
             ],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=sys.stderr,
             text=True,
         )
-        self._initialize()
+        try:
+            self._initialize()
+        except Exception:
+            self.proc.terminate()
+            self.proc.wait(timeout=5)
+            raise
 
     def _initialize(self):
         init_req = {
@@ -606,9 +611,9 @@ def record_zendesk(subdomain: str, access_token: str, dry_run: bool = False) -> 
     date = get_date_str()
 
     try:
-        # Search — query-based search (Zendesk query syntax)
+        # Search — keyword search (aligns with agent-mcp fuzzy subject search for "sync")
         tool = "zendeskSearchTickets"
-        args = {"query": "status:open"}
+        args = {"query": "sync"}
         response, wall_ms = mcp.call_tool(tool, args)
         path = save_recording("zendesk-search", [{
             "tool": f"mcp__zendesk__{tool}",
