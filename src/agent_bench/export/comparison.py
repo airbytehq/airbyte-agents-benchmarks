@@ -254,26 +254,80 @@ def load_stats_from_recordings(artifacts_dir: Path) -> list[CellStats]:
     return stats
 
 
-def load_scenario_metadata() -> dict[str, dict[str, str]]:
-    """Load scenario descriptions and titles from YAML files.
+def load_scenario_metadata() -> dict[str, dict]:
+    """Load scenario descriptions, titles, and path tool_calls from YAML files.
 
     Returns a dict keyed by scenario name (e.g. `linear-search`) with
-    `title` and `description` sub-keys.
+    `title`, `description`, `annotations`, `is_comparable`, and `paths` sub-keys.
+    The `paths` value is a dict mapping path name to its list of tool_call dicts.
     """
-    metadata: dict[str, dict[str, str]] = {}
+    metadata: dict[str, dict] = {}
     if not SCENARIOS_DIR.is_dir():
         return metadata
     for yaml_path in sorted(SCENARIOS_DIR.glob("*.yaml")):
         data = yaml.safe_load(yaml_path.read_text())
         name = data.get("name", yaml_path.stem)
         annotations = data.get("annotations", {})
+        paths_raw = data.get("paths", {})
+        paths_meta: dict[str, list[dict]] = {}
+        for path_name, path_spec in paths_raw.items():
+            if isinstance(path_spec, dict):
+                paths_meta[path_name] = path_spec.get("tool_calls", [])
         metadata[name] = {
             "title": data.get("title", name),
             "description": data.get("description", "").strip(),
             "annotations": {k: str(v) for k, v in annotations.items()} if annotations else {},
             "is_comparable": data.get("is_comparable", True),
+            "paths": paths_meta,
         }
     return metadata
+
+
+@dataclass
+class PerCallStats:
+    """Token breakdown for one tool call within a recording."""
+
+    index: int
+    tool: str
+    server: str
+    tokens: int
+    records: int
+
+
+def load_per_call_breakdown(
+    artifacts_dir: Path,
+    scenario: str,
+    path_name: str,
+    tool_calls_yaml: list[dict],
+) -> list[PerCallStats]:
+    """Load per-tool-call token breakdown from a multi-step recording.
+
+    Reads the recording.json for the given scenario+path and computes
+    token counts per call. Uses tool_calls from the YAML to label each call.
+    """
+    recording_file = artifacts_dir / f"{scenario}-scenario" / path_name / "recording.json"
+    if not recording_file.exists():
+        return []
+    data = json.loads(recording_file.read_text())
+    if not isinstance(data, list):
+        return []
+
+    result: list[PerCallStats] = []
+    for i, call in enumerate(data):
+        yaml_call = tool_calls_yaml[i] if i < len(tool_calls_yaml) else {}
+        server = yaml_call.get("server", call.get("tool", "unknown").split("__")[1] if "__" in call.get("tool", "") else "unknown")
+        tool = yaml_call.get("tool", call.get("tool", "unknown"))
+        response = call.get("response", {})
+        tokens = count_tokens(response)
+        records = _count_records(response)
+        result.append(PerCallStats(
+            index=i,
+            tool=tool,
+            server=server,
+            tokens=tokens,
+            records=records,
+        ))
+    return result
 
 
 def build_comparison(
@@ -328,7 +382,10 @@ def render_comparison_markdown(
     left_label: str = "Agent MCP",
     right_label: str = "Native MCP",
     date: str | None = None,
-    scenario_meta: dict[str, dict[str, str]] | None = None,
+    scenario_meta: dict[str, dict] | None = None,
+    artifacts_dir: Path | None = None,
+    left_path: str = "agent-mcp",
+    right_path: str = "native-mcp",
 ) -> str:
     """Render a full markdown comparison report."""
     lines: list[str] = []
@@ -415,6 +472,56 @@ def render_comparison_markdown(
                 )
             lines.append("")
 
+            # Per-tool-call breakdown for multi-step scenarios
+            if artifacts_dir:
+                for row in benchmark_rows:
+                    scenario_paths = meta.get(row.scenario, {}).get("paths", {})
+                    left_calls_yaml = scenario_paths.get(left_path, [])
+                    right_calls_yaml = scenario_paths.get(right_path, [])
+                    max_calls = max(len(left_calls_yaml), len(right_calls_yaml))
+                    if max_calls <= 1:
+                        continue
+
+                    left_breakdown = load_per_call_breakdown(
+                        artifacts_dir, row.scenario, left_path, left_calls_yaml,
+                    )
+                    right_breakdown = load_per_call_breakdown(
+                        artifacts_dir, row.scenario, right_path, right_calls_yaml,
+                    )
+                    if not left_breakdown and not right_breakdown:
+                        continue
+
+                    title = meta.get(row.scenario, {}).get("title", row.scenario)
+                    lines.append(f"<details><summary>Per-tool-call breakdown: {title}</summary>")
+                    lines.append("")
+
+                    if left_breakdown:
+                        lines.append(f"**{left_label}** ({len(left_breakdown)} calls)")
+                        lines.append("")
+                        lines.append("| Step | Server | Tool | Tokens | Records |")
+                        lines.append("|---:|---|---|---:|---:|")
+                        for pc in left_breakdown:
+                            lines.append(
+                                f"| {pc.index + 1} | {pc.server} | {pc.tool} "
+                                f"| {pc.tokens:,} | {pc.records} |"
+                            )
+                        lines.append("")
+
+                    if right_breakdown:
+                        lines.append(f"**{right_label}** ({len(right_breakdown)} calls)")
+                        lines.append("")
+                        lines.append("| Step | Server | Tool | Tokens | Records |")
+                        lines.append("|---:|---|---|---:|---:|")
+                        for pc in right_breakdown:
+                            lines.append(
+                                f"| {pc.index + 1} | {pc.server} | {pc.tool} "
+                                f"| {pc.tokens:,} | {pc.records} |"
+                            )
+                        lines.append("")
+
+                    lines.append("</details>")
+                    lines.append("")
+
         if not_comparable_rows:
             lines.append("#### Benchmarks Not Comparable")
             lines.append("")
@@ -431,6 +538,16 @@ def render_comparison_markdown(
                 scenario_ann = meta.get(row.scenario, {}).get("annotations", {})
                 ann_str = "; ".join(v.strip() for v in scenario_ann.values()) if scenario_ann else ""
                 lines.append(f"| {row.action} | {desc} | {ann_str} |")
+            lines.append("")
+
+        # Cross-link to scenario YAML definitions (after all sections for this connector)
+        all_rows_for_connector = benchmark_rows + not_comparable_rows
+        yaml_links = []
+        for row in all_rows_for_connector:
+            yaml_rel = f"../../src/agent_bench/scenarios/{row.scenario}.yaml"
+            yaml_links.append(f"[{row.scenario}]({yaml_rel})")
+        if yaml_links:
+            lines.append(f"**Scenario definitions:** {' | '.join(yaml_links)}")
             lines.append("")
 
     # Methodology note
@@ -512,7 +629,10 @@ def generate_comparison_report(
 
     scenario_meta = load_scenario_metadata()
     summaries = build_comparison(stats, left_path, right_path)
-    report = render_comparison_markdown(summaries, left_label, right_label, date, scenario_meta)
+    report = render_comparison_markdown(
+        summaries, left_label, right_label, date, scenario_meta,
+        artifacts_dir=artifacts_dir, left_path=left_path, right_path=right_path,
+    )
 
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -8,12 +8,24 @@ description: |
 
 annotations:
   highlight: >
-    💎 Agent returned more records with fewer tokens.
+    💎Agent returned more records with fewer tokens.
 
-task:
-  label: "List recent tickets"
-  action: list
-  entity: tickets
-  metric_focus: bulk_list
-  params:
-    limit: 50
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: ZENDESK_CONNECTOR_ID
+        args:
+          entity: tickets
+          action: list
+          params:
+            limit: 50
+          select_fields: [id, subject, status, priority]
+
+  native-mcp:
+    tool_calls:
+      - server: zendesk
+        tool: list_tickets
+        args:
+          limit: 50

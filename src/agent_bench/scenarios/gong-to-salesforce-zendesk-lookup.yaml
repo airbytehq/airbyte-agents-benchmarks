@@ -1,0 +1,79 @@
+name: gong-to-salesforce-zendesk-lookup
+title: "Cross-system: Gong calls today → Salesforce + Zendesk lookup"
+connector: gong
+connector_id_env: GONG_CONNECTOR_ID
+description: |
+  Multi-step cross-connector workflow: search for Gong calls scheduled
+  today, then look up the associated account names in Salesforce and
+  find open tickets for those accounts in Zendesk.
+  Steps 2 and 3 use dummy static account/ticket lists to demonstrate
+  the choreographed multi-step scenario format.
+
+faux_prompt: >
+  For all Gong calls scheduled today, look up the account names
+  in Salesforce and find open tickets for those accounts in Zendesk.
+
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: GONG_CONNECTOR_ID
+        args:
+          entity: calls
+          action: context_store_search
+          params:
+            query:
+              filter:
+                gte:
+                  scheduled: "2026-04-28"
+                lte:
+                  scheduled: "2026-04-28"
+            limit: 20
+          select_fields: [id, title, scheduled, duration]
+
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SALESFORCE_CONNECTOR_ID
+        args:
+          entity: accounts
+          action: context_store_search
+          params:
+            query:
+              filter:
+                in:
+                  Name: ["Acme Corp", "Preset", "RVezy"]
+            limit: 20
+          select_fields: [Id, Name, Type, Industry]
+
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: ZENDESK_CONNECTOR_ID
+        args:
+          entity: tickets
+          action: context_store_search
+          params:
+            query:
+              filter:
+                in:
+                  subject: ["Acme Corp", "Preset", "RVezy"]
+            limit: 20
+          select_fields: [id, subject, status, priority]
+
+  native-mcp:
+    tool_calls:
+      - server: gong
+        tool: list_calls
+        args:
+          fromDateTime: "2026-04-28T00:00:00Z"
+          toDateTime: "2026-04-28T23:59:59Z"
+
+      - server: salesforce
+        tool: soql_query
+        args:
+          q: "SELECT Id, Name, Type, Industry FROM Account WHERE Name IN ('Acme Corp', 'Preset', 'RVezy')"
+
+      - server: zendesk
+        tool: search_tickets
+        args:
+          query: "subject:Acme Corp OR subject:Preset OR subject:RVezy"

@@ -77,9 +77,10 @@ def list_scenarios_cmd() -> None:
 
     for name in _list():
         sc = load_scenario(name)
+        action = sc.task.action if sc.task else "choreographed"
         console.print(
             f"[cyan]{name}[/cyan] — {sc.title} "
-            f"([dim]connector={sc.connector}, action={sc.task.action}[/dim])"
+            f"([dim]connector={sc.connector}, action={action}[/dim])"
         )
 
 
@@ -106,30 +107,42 @@ def plan(
 
     for name in scenario_list:
         sc = load_scenario(name)
-        task = sc.task
         console.print(f"\n[bold]== {sc.name} ==[/bold] ({sc.title})")
-        if "agent-mcp" in path_list:
-            connector_id = config.connector_ids[sc.connector]
-            console.print("  [magenta]agent-mcp setup[/magenta]:")
-            console.print("      [1] mcp__airbyte-agent__describe_connector")
-            console.print(f"          args: {json.dumps({'connector_id': connector_id})}")
-        console.print(f"\n  [cyan]{task.action}[/cyan] {task.entity} — {task.label}")
-        for slug in path_list:
-            if slug == "native-mcp":
-                path = NativeMCPPath(FSPath("/dev/null"))
-            elif slug == "agent-mcp":
-                path = AgentMCPPath(config, FSPath("/dev/null"))
-            else:
-                continue
-            tplan = path.plan(task, sc)
-            console.print(f"    [magenta]{slug}[/magenta]:")
-            for idx, call in enumerate(tplan.calls):
-                console.print(f"      [{idx + 1}] {call.tool}")
-                console.print(f"          args: {json.dumps(call.args)}")
-                if call.note:
-                    console.print(f"          [dim]note: {call.note}[/dim]")
-            for note in tplan.notes:
-                console.print(f"          [dim]note: {note}[/dim]")
+
+        if sc.is_choreographed:
+            for path_name, path_spec in (sc.paths or {}).items():
+                if path_name not in path_list:
+                    continue
+                console.print(f"  [magenta]{path_name}[/magenta] ({len(path_spec.tool_calls)} call(s)):")
+                for idx, tc in enumerate(path_spec.tool_calls):
+                    console.print(f"    [{idx + 1}] {tc.server}::{tc.tool}")
+                    console.print(f"        args: {json.dumps(tc.args)}")
+                    if tc.connector_id_env:
+                        console.print(f"        [dim]connector_id_env: {tc.connector_id_env}[/dim]")
+        else:
+            task = sc.task
+            if "agent-mcp" in path_list:
+                connector_id = config.connector_ids[sc.connector]
+                console.print("  [magenta]agent-mcp setup[/magenta]:")
+                console.print("      [1] mcp__airbyte-agent__describe_connector")
+                console.print(f"          args: {json.dumps({'connector_id': connector_id})}")
+            console.print(f"\n  [cyan]{task.action}[/cyan] {task.entity} — {task.label}")
+            for slug in path_list:
+                if slug == "native-mcp":
+                    path = NativeMCPPath(FSPath("/dev/null"))
+                elif slug == "agent-mcp":
+                    path = AgentMCPPath(config, FSPath("/dev/null"))
+                else:
+                    continue
+                tplan = path.plan(task, sc)
+                console.print(f"    [magenta]{slug}[/magenta]:")
+                for idx, call in enumerate(tplan.calls):
+                    console.print(f"      [{idx + 1}] {call.tool}")
+                    console.print(f"          args: {json.dumps(call.args)}")
+                    if call.note:
+                        console.print(f"          [dim]note: {call.note}[/dim]")
+                for note in tplan.notes:
+                    console.print(f"          [dim]note: {note}[/dim]")
 
 
 @app.command()
@@ -364,7 +377,8 @@ def _agent_sdk_mcp_consistency_issues(report) -> list[str]:
     groups: dict[tuple[str, str], dict[str, object]] = {}
     for cell in report.cells:
         if cell.path_short in {"agent-sdk", "agent-mcp"}:
-            groups.setdefault((cell.scenario.name, cell.scenario.task.action), {})[cell.path_short] = cell
+            action = cell.scenario.task.action if cell.scenario.task else "choreographed"
+            groups.setdefault((cell.scenario.name, action), {})[cell.path_short] = cell
 
     issues: list[str] = []
     for (scenario, action), by_path in groups.items():

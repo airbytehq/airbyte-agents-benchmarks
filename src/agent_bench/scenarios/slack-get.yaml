@@ -9,7 +9,7 @@ description: |
 
 annotations:
   tool_mismatch: >
-    🛑 No native get-by-ID tool exists in
+    🛑No native get-by-ID tool exists in
     [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)
     ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)).
     All 8 tools:
@@ -17,14 +17,25 @@ annotations:
     `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`.
     None accept a channel ID and return a single channel.
     Alternative path: paginate `slack_list_channels` until the target channel is found
-    (est. ~13,400 tokens to scan ~60 channels at ~4,500 tokens/page of 20;
-    compare agent-mcp `get` at ~133 tokens).
+    (est. approximately 13,400 tokens to scan approximately 60 channels at approximately 4,500 tokens/page of 20;
+    compare agent-mcp `get` at approximately 133 tokens).
 
-task:
-  label: "Get single channel by ID"
-  action: get
-  entity: channels
-  metric_focus: single_record_fetch
-  params:
-    id: "C02TD5CB7PZ"
-    name_hint: "feedback_survey_results"
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SLACK_CONNECTOR_ID
+        args:
+          entity: channels
+          action: get
+          params:
+            channel: "C02TD5CB7PZ"
+          select_fields: [id, name, num_members, is_archived, is_private, created, updated, topic, purpose]
+
+  native-mcp:
+    tool_calls:
+      - server: slack
+        tool: slack_list_channels
+        args:
+          limit: 20

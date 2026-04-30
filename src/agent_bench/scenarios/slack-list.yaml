@@ -6,10 +6,30 @@ description: |
   List the first 50 Slack channels.
   Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per record.
 
-task:
-  label: "List first 50 channels"
-  action: list
-  entity: channels
-  metric_focus: bulk_list
-  params:
-    limit: 50
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SLACK_CONNECTOR_ID
+        args:
+          entity: channels
+          action: list
+          params:
+            limit: 50
+          select_fields: [id, name, num_members, is_archived, is_private, created, updated, topic, purpose]
+
+  native-mcp:
+    tool_calls:
+      - server: slack
+        tool: slack_list_channels
+        args:
+          limit: 20
+      - server: slack
+        tool: slack_list_channels
+        args:
+          limit: 20
+      - server: slack
+        tool: slack_list_channels
+        args:
+          limit: 20

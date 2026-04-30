@@ -1,10 +1,10 @@
 """Re-record all agent-mcp benchmark recordings via the Sonar execute API.
 
 Usage (requires SONAR credentials in env or MCP access):
-    uv run python scripts/rerecord_agent_mcp.py --date 2026-04-28
+    uv run python scripts/rerecord_agent_mcp.py --date 2026-04-30
 
-Calls the Sonar integrations execute endpoint for each scenario,
-wraps the response in the MCP envelope format, and writes to:
+Reads the `paths.agent-mcp.tool_calls` from each scenario YAML and
+executes them against the Sonar API. Writes recordings to:
     artifacts/{date}/{scenario}-scenario/agent-mcp/recording.json
 """
 
@@ -26,87 +26,6 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCENARIOS_DIR = REPO_ROOT / "src" / "agent_bench" / "scenarios"
 ARTIFACTS_ROOT = REPO_ROOT / "artifacts"
-
-# select_fields per (connector, entity) — matches agent_mcp.py
-SELECT_FIELDS: dict[tuple[str, str], list[str]] = {
-    ("slack", "channels"): [
-        "id", "name", "num_members", "is_archived",
-        "is_private", "created", "updated", "topic", "purpose",
-    ],
-    ("linear", "issues"): [
-        "id", "identifier", "title", "state", "priority",
-        "createdAt", "updatedAt", "team", "labels",
-    ],
-    ("granola", "notes"): [
-        "id", "title", "created_at", "updated_at",
-        "attendees", "summary_text", "transcript",
-    ],
-    ("gong", "calls"): ["id", "title", "scheduled", "duration"],
-    ("salesforce", "accounts"): ["Id", "Name", "Type", "Industry"],
-    ("zendesk", "tickets"): ["id", "subject", "status", "priority"],
-}
-
-# SDK-compatible translation (mirrors agent_sdk._DISPATCH + _translate)
-DISPATCH: dict[str, dict[str, Any]] = {
-    "slack": {
-        "search_field": {"channels": "name", "users": "real_name"},
-        "get_key": {"channels": "channel", "users": "user"},
-        "list_limit_key": "limit",
-    },
-    "linear": {
-        "search_field": {"issues": "title", "projects": "name", "users": "name"},
-        "get_key": {"issues": "id", "projects": "id", "users": "id"},
-        "list_limit_key": "first",
-    },
-    "granola": {
-        "search_field": {"notes": "summary_text"},
-        "get_key": {"notes": "note_id"},
-        "list_limit_key": "page_size",
-    },
-    "gong": {
-        "search_field": {"calls": "title"},
-        "get_key": {"calls": "id"},
-        "list_limit_key": "limit",
-    },
-    "salesforce": {
-        "search_field": {"accounts": "Name"},
-        "get_key": {"accounts": "id"},
-        "list_limit_key": "q",
-        "list_soql": {"accounts": "SELECT Id, Name, Type, Industry FROM Account"},
-    },
-    "zendesk": {
-        "search_field": {"tickets": "subject"},
-        "get_key": {"tickets": "ticket_id"},
-        "list_limit_key": "limit",
-    },
-}
-
-
-def translate(action: str, entity: str, params: dict, dispatch: dict) -> tuple[str, dict]:
-    if action == "search":
-        field = dispatch["search_field"].get(entity)
-        limit = int(params.get("limit", 10))
-        return "context_store_search", {
-            "query": {"filter": {"fuzzy": {field: params["keyword"]}}},
-            "limit": limit,
-        }
-    if action == "get":
-        key = dispatch["get_key"].get(entity)
-        return "get", {key: params["id"]}
-    if action == "list":
-        soql_templates = dispatch.get("list_soql", {})
-        soql = soql_templates.get(entity)
-        limit = int(params.get("limit", 50))
-        if soql:
-            return "list", {"q": f"{soql} LIMIT {limit}"}
-        limit_key = dispatch["list_limit_key"]
-        if limit_key == "q" and not soql:
-            raise ValueError(
-                f"Entity {entity!r} requires a list_soql template "
-                f"but none is defined in DISPATCH."
-            )
-        return "list", {limit_key: limit}
-    raise ValueError(f"Unknown action: {action}")
 
 
 def load_scenarios() -> list[dict]:
@@ -204,8 +123,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--connectors",
-        default="linear,slack,gong,salesforce,zendesk",
-        help="Comma-separated connectors to re-record.",
+        default=None,
+        help="Comma-separated connectors to re-record. Defaults to all.",
     )
     parser.add_argument(
         "--base-url",
@@ -222,81 +141,92 @@ def main() -> int:
         print("ERROR: AIRBYTE_ORGANIZATION_ID, AIRBYTE_CLIENT_ID, AIRBYTE_CLIENT_SECRET must be set", file=sys.stderr)
         return 1
 
-    target_connectors = set(opts.connectors.split(","))
+    target_connectors = set(opts.connectors.split(",")) if opts.connectors else None
     scenarios = load_scenarios()
 
     # Authenticate
+    token = ""
     if not opts.dry_run:
         print("Authenticating against Airbyte API ...")
         token = get_airbyte_token(client_id, client_secret)
         print("Authenticated.")
 
-    results_summary = []
+    results_summary: list[tuple[str, str, str]] = []
 
     for scenario in scenarios:
         connector = scenario["connector"]
-        if connector not in target_connectors:
+        if target_connectors and connector not in target_connectors:
             continue
 
         scenario_name = scenario["name"]
-        task = scenario["task"]
-        dispatch = DISPATCH.get(connector)
-        if dispatch is None:
-            print(f"SKIP {scenario_name}: no dispatch table for {connector}")
+        paths = scenario.get("paths", {})
+        agent_mcp = paths.get("agent-mcp", {})
+        tool_calls = agent_mcp.get("tool_calls", [])
+        if not tool_calls:
+            print(f"SKIP {scenario_name}: no agent-mcp tool_calls defined")
             continue
-
-        connector_id_env = scenario["connector_id_env"]
-        connector_id = os.environ.get(connector_id_env)
-        if not connector_id:
-            print(f"SKIP {scenario_name}: {connector_id_env} not set")
-            continue
-
-        sdk_action, sdk_params = translate(
-            task["action"], task["entity"], task["params"], dispatch
-        )
-        select_fields = SELECT_FIELDS.get((connector, task["entity"]), ["id"])
 
         out_path = ARTIFACTS_ROOT / opts.date / f"{scenario_name}-scenario" / "agent-mcp" / "recording.json"
 
-        print(f"\n{'[DRY RUN] ' if opts.dry_run else ''}Recording {scenario_name} ...")
-        print(f"  connector_id: {connector_id}")
-        print(f"  action: {sdk_action}, entity: {task['entity']}")
-        print(f"  params: {json.dumps(sdk_params)}")
-        print(f"  select_fields: {select_fields}")
-        print(f"  output: {out_path}")
+        print(f"\n{'[DRY RUN] ' if opts.dry_run else ''}Recording {scenario_name} ({len(tool_calls)} call(s)) ...")
 
         if opts.dry_run:
+            for i, tc in enumerate(tool_calls):
+                cid_env = tc.get("connector_id_env", scenario.get("connector_id_env", ""))
+                args = tc.get("args", {})
+                print(f"  [{i+1}] connector_id_env={cid_env}")
+                print(f"      entity={args.get('entity')}, action={args.get('action')}")
+                print(f"      select_fields={args.get('select_fields', [])}")
             continue
 
-        try:
-            response, wall_ms = execute_call(
-                opts.base_url, token, org_id,
-                connector_id, task["entity"], sdk_action, sdk_params, select_fields,
-            )
-            # Use server-side execution_time_ms as wall_clock_ms for consistency
-            # with the MCP recording format (the harness validates they match).
-            exec_ms = response.get("execution_metadata", {}).get("execution_time_ms")
-            effective_ms = float(exec_ms) if exec_ms is not None else wall_ms
-            print(f"  wall_clock_ms: {effective_ms:.1f} (http: {wall_ms:.1f})")
+        recording: list[dict] = []
+        scenario_ok = True
 
-            recording = [wrap_mcp_envelope(
-                connector_id, task["entity"], sdk_action, sdk_params,
-                select_fields, response, effective_ms,
-            )]
+        for i, tc in enumerate(tool_calls):
+            cid_env = tc.get("connector_id_env", scenario.get("connector_id_env", ""))
+            connector_id = os.environ.get(cid_env, "")
+            if not connector_id:
+                print(f"  SKIP call [{i+1}]: {cid_env} not set")
+                scenario_ok = False
+                break
 
+            args = tc.get("args", {})
+            entity = args.get("entity", "unknown")
+            action = args.get("action", "unknown")
+            params = args.get("params", {})
+            select_fields = args.get("select_fields", [])
+
+            print(f"  [{i+1}] connector_id={connector_id[:8]}... entity={entity} action={action}")
+
+            try:
+                response, wall_ms = execute_call(
+                    opts.base_url, token, org_id,
+                    connector_id, entity, action, params, select_fields,
+                )
+                exec_ms = response.get("execution_metadata", {}).get("execution_time_ms")
+                effective_ms = float(exec_ms) if exec_ms is not None else wall_ms
+                print(f"      wall_clock_ms: {effective_ms:.1f} (http: {wall_ms:.1f})")
+
+                recording.append(wrap_mcp_envelope(
+                    connector_id, entity, action, params,
+                    select_fields, response, effective_ms,
+                ))
+
+                payload = json.dumps(response, default=str)
+                print(f"      payload_bytes: {len(payload.encode())}")
+
+            except Exception as exc:
+                print(f"      ERROR: {exc}")
+                scenario_ok = False
+                results_summary.append((scenario_name, "FAILED", str(exc)))
+                break
+
+        if scenario_ok and recording:
             out_path.parent.mkdir(parents=True, exist_ok=True)
             with out_path.open("w") as f:
                 json.dump(recording, f, indent=2)
-
-            # Quick stats
-            payload = json.dumps(response, default=str)
-            print(f"  payload_bytes: {len(payload.encode())}")
             print(f"  saved to {out_path}")
-            results_summary.append((scenario_name, "OK", f"{wall_ms:.0f}ms"))
-
-        except Exception as exc:
-            print(f"  ERROR: {exc}")
-            results_summary.append((scenario_name, "FAILED", str(exc)))
+            results_summary.append((scenario_name, "OK", f"{len(recording)} call(s)"))
 
     print("\n=== Summary ===")
     for name, status, detail in results_summary:
