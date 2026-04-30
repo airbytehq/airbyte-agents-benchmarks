@@ -2,9 +2,9 @@ name: linear-search
 title: "Linear — Search issues by keyword"
 connector: linear
 connector_id_env: LINEAR_CONNECTOR_ID
-description: >
-  Search Linear issues by keyword. Measures narrow-context retrieval where
-  field projection has the largest impact on token counts.
+description: |
+  Search Linear issues by keyword.
+  Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels per result.
 
 task:
   label: "Search issues by keyword"
@@ -12,4 +12,4 @@ task:
   entity: issues
   metric_focus: narrow_context
   params:
-    keyword: "context store"
+    keyword: "backend"

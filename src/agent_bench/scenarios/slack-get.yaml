@@ -2,9 +2,23 @@ name: slack-get
 title: "Slack — Get single channel by ID"
 connector: slack
 connector_id_env: SLACK_CONNECTOR_ID
-description: >
-  Fetch a single Slack channel by ID. Native MCP has no get-channel-by-ID
-  tool, so it falls back to search-then-filter.
+is_comparable: false
+description: |
+  Fetch a single Slack channel by ID.
+  Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose.
+
+annotations:
+  tool_mismatch: >
+    🛑 No native get-by-ID tool exists in
+    [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)
+    ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)).
+    All 8 tools:
+    `slack_list_channels`, `slack_post_message`, `slack_reply_to_thread`, `slack_add_reaction`,
+    `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`.
+    None accept a channel ID and return a single channel.
+    Alternative path: paginate `slack_list_channels` until the target channel is found
+    (est. ~13,400 tokens to scan ~60 channels at ~4,500 tokens/page of 20;
+    compare agent-mcp `get` at ~133 tokens).
 
 task:
   label: "Get single channel by ID"

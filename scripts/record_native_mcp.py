@@ -112,9 +112,9 @@ def record_linear(api_key: str, dry_run: bool = False) -> list[tuple[str, Path]]
     mcp = LinearMCP(api_key)
     date = get_date_str()
 
-    # Search
+    # Search — use a broad query that returns results in this test workspace
     tool = "list_issues"
-    args = {"query": "context store", "limit": 10}
+    args = {"query": "backend", "limit": 10}
     response, wall_ms = mcp.call_tool(tool, args)
     path = save_recording("linear-search", [{
         "tool": f"mcp__claude_ai_Linear__{tool}",
@@ -127,7 +127,7 @@ def record_linear(api_key: str, dry_run: bool = False) -> list[tuple[str, Path]]
 
     # Get
     tool = "get_issue"
-    args = {"id": "AGENTIC-338"}
+    args = {"id": "AIR-55"}
     response, wall_ms = mcp.call_tool(tool, args)
     path = save_recording("linear-get", [{
         "tool": f"mcp__claude_ai_Linear__{tool}",
@@ -393,16 +393,17 @@ def record_salesforce(client_id: str, client_secret: str, refresh_token: str, dr
     records = search_response.get("searchRecords", []) if isinstance(search_response, dict) else []
     print(f"    salesforce-search: {len(records)} records")
 
-    # Get
-    account_id = "0015e00000FMsFhAAL"
+    # Get (SOQL with field selection — returns only 4 fields, matching agent-mcp)
+    account_id = "0014W000027f6UwQAI"
+    get_soql = f"SELECT Id, Name, Type, Industry FROM Account WHERE Id = '{account_id}'"
     start = time.time()
-    r = requests.get(f"{base}/sobjects/Account/{account_id}", headers=headers, timeout=60)
+    r = requests.get(f"{base}/query/", headers=headers, params={"q": get_soql}, timeout=60)
     wall_ms = (time.time() - start) * 1000
     get_response = r.json()
 
     path = save_recording("salesforce-get", [{
-        "tool": "mcp__salesforce__get_record",
-        "args": {"sobject": "Account", "id": account_id},
+        "tool": "mcp__salesforce__query",
+        "args": {"q": get_soql},
         "wall_clock_ms": round(wall_ms, 1),
         "response": get_response,
     }], date)
@@ -431,20 +432,20 @@ def record_salesforce(client_id: str, client_secret: str, refresh_token: str, dr
 
 # ---------- Zendesk API ----------
 
-def record_zendesk(subdomain: str, email: str, api_token: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Zendesk native responses via REST API."""
+def record_zendesk(subdomain: str, access_token: str, dry_run: bool = False) -> list[tuple[str, Path]]:
+    """Record Zendesk native responses via REST API (OAuth Bearer token)."""
     results = []
     if dry_run:
         print("  [dry-run] Would record zendesk-search, zendesk-get, zendesk-list")
         return results
 
     base = f"https://{subdomain}.zendesk.com/api/v2"
-    auth = (f"{email}/token", api_token)
+    headers = {"Authorization": f"Bearer {access_token}"}
     date = get_date_str()
 
     # Search
     start = time.time()
-    r = requests.get(f"{base}/search.json", auth=auth, params={"query": "type:ticket sync", "per_page": 50}, timeout=60)
+    r = requests.get(f"{base}/search.json", headers=headers, params={"query": "type:ticket sync", "per_page": 50}, timeout=60)
     wall_ms = (time.time() - start) * 1000
     search_response = r.json()
 
@@ -458,10 +459,10 @@ def record_zendesk(subdomain: str, email: str, api_token: str, dry_run: bool = F
     ticket_results = search_response.get("results", []) if isinstance(search_response, dict) else []
     print(f"    zendesk-search: {len(ticket_results)} results")
 
-    # Get
-    ticket_id = "6885"
+    # Get — use ticket ID 2 (known to exist in d3v-airbyte)
+    ticket_id = "2"
     start = time.time()
-    r = requests.get(f"{base}/tickets/{ticket_id}.json", auth=auth, timeout=60)
+    r = requests.get(f"{base}/tickets/{ticket_id}.json", headers=headers, timeout=60)
     wall_ms = (time.time() - start) * 1000
     get_response = r.json()
 
@@ -476,7 +477,7 @@ def record_zendesk(subdomain: str, email: str, api_token: str, dry_run: bool = F
 
     # List
     start = time.time()
-    r = requests.get(f"{base}/tickets.json", auth=auth, params={"per_page": 50, "sort_by": "created_at", "sort_order": "desc"}, timeout=60)
+    r = requests.get(f"{base}/tickets.json", headers=headers, params={"per_page": 50, "sort_by": "created_at", "sort_order": "desc"}, timeout=60)
     wall_ms = (time.time() - start) * 1000
     list_response = r.json()
 
@@ -551,10 +552,9 @@ def main() -> int:
                 all_results.extend(record_salesforce(client_id, client_secret, refresh_token, opts.dry_run))
 
             elif connector == "zendesk":
-                subdomain = load_secret("zendesk-support", "subdomain", "test-credentials-basic")
-                email = load_secret("zendesk-support", "email", "test-credentials-basic")
-                api_token = load_secret("zendesk-support", "api_token", "test-credentials-basic")
-                all_results.extend(record_zendesk(subdomain, email, api_token, opts.dry_run))
+                subdomain = load_secret("zendesk-support", "subdomain", "test-credentials-oauth")
+                access_token = load_secret("zendesk-support", "access_token", "test-credentials-oauth")
+                all_results.extend(record_zendesk(subdomain, access_token, opts.dry_run))
 
             else:
                 print(f"  Unknown connector: {connector}")

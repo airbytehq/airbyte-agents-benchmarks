@@ -2,9 +2,13 @@ name: gong-list
 title: "Gong — List recent calls"
 connector: gong
 connector_id_env: GONG_CONNECTOR_ID
-description: >
-  List the most recent Gong calls. Bulk fetch where field projection
-  compounds across many records.
+description: |
+  List the most recent Gong calls.
+  Agent requests id, title, scheduled, and duration per record.
+
+annotations:
+  highlight: >
+    💎 Equal record counts; savings driven purely by field projection.
 
 task:
   label: "List recent calls"

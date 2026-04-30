@@ -2,9 +2,13 @@ name: zendesk-list
 title: "Zendesk — List recent tickets"
 connector: zendesk
 connector_id_env: ZENDESK_CONNECTOR_ID
-description: >
-  List recent Zendesk tickets. Bulk fetch where field projection
-  compounds across many records.
+description: |
+  List recent Zendesk tickets.
+  Agent requests id, subject, status, and priority per record.
+
+annotations:
+  highlight: >
+    💎 Agent returned more records with fewer tokens.
 
 task:
   label: "List recent tickets"

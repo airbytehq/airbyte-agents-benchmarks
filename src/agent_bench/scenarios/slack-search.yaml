@@ -2,9 +2,23 @@ name: slack-search
 title: "Slack — Search channels by keyword"
 connector: slack
 connector_id_env: SLACK_CONNECTOR_ID
-description: >
-  Search Slack channels by keyword. Native MCP uses
-  slack_search_channels with a 20-result page cap.
+is_comparable: false
+description: |
+  Search Slack channels by keyword.
+  Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per result.
+
+annotations:
+  tool_mismatch: >
+    🛑 No native search/filter tool exists in
+    [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)
+    ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)).
+    All 8 tools:
+    `slack_list_channels`, `slack_post_message`, `slack_reply_to_thread`, `slack_add_reaction`,
+    `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`.
+    None support keyword filtering on channel names.
+    Alternative path: paginate `slack_list_channels` (all pages) and filter client-side by keyword
+    (est. ~13,400 tokens to scan all ~60 channels at ~4,500 tokens/page of 20;
+    must exhaust every page to find all matches).
 
 task:
   label: "Search channels by keyword"

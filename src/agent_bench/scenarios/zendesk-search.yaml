@@ -2,9 +2,9 @@ name: zendesk-search
 title: "Zendesk — Search tickets by keyword"
 connector: zendesk
 connector_id_env: ZENDESK_CONNECTOR_ID
-description: >
-  Search Zendesk tickets matching a keyword. An agent triaging support
-  needs subject and priority, not the full ticket payload.
+description: |
+  Search Zendesk tickets matching a keyword.
+  Agent requests id, subject, status, and priority per result.
 
 task:
   label: "Search tickets by keyword"

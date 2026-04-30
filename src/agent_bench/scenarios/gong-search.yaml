@@ -2,10 +2,13 @@ name: gong-search
 title: "Gong — Search calls by keyword"
 connector: gong
 connector_id_env: GONG_CONNECTOR_ID
-description: >
-  Search Gong calls matching a keyword. An agent answering
-  "what calls do I have about Airbyte?" needs only the call title
-  and schedule — not the full call object.
+description: |
+  Search Gong calls matching a keyword.
+  Agent requests id, title, scheduled, and duration per result.
+
+annotations:
+  record_count: >
+    ℹ️ Unequal record counts amplify the ratio. Per-record savings are real.
 
 task:
   label: "Search calls by keyword"

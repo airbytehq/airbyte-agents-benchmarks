@@ -2,9 +2,9 @@ name: salesforce-list
 title: "Salesforce — List accounts"
 connector: salesforce
 connector_id_env: SALESFORCE_CONNECTOR_ID
-description: >
-  List Salesforce accounts via SOQL. Bulk fetch where projection
-  across 200+ fields per record compounds dramatically.
+description: |
+  List Salesforce accounts via SOQL.
+  Agent requests Id, Name, Type, and Industry per record.
 
 task:
   label: "List accounts"
