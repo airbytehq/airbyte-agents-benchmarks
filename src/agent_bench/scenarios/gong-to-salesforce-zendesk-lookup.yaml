@@ -76,4 +76,4 @@ paths:
       - server: zendesk
         tool: zendeskSearchTickets
         args:
-          query: "status:open"
+          query: "subject:Acme Corp OR subject:Preset OR subject:RVezy status:open"

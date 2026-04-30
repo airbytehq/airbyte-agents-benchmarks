@@ -177,9 +177,9 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 |---|---:|---:|---:|---:|---:|---:|---|
 | get | 130 | 511 | 1 | 1 | 25% | 75% | 💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`. |
 | list | 3,600 | 12,088 | 100 | 25 | 30% | 70% | 💎Agent returned more records with fewer tokens. |
-| search | 431 | 12,356 | 10 | 25 | 3% | 97% |  |
+| search | 431 | 1,015 | 10 | 2 | 42% | 58% |  |
 
-**Connector total:** Agent MCP uses 17% of Native MCP tokens (83% savings)
+**Connector total:** Agent MCP uses 31% of Native MCP tokens (69% savings)
 
 **Scenario definitions:** [zendesk-get](../../src/agent_bench/scenarios/zendesk-get.yaml) | [zendesk-list](../../src/agent_bench/scenarios/zendesk-list.yaml) | [zendesk-search](../../src/agent_bench/scenarios/zendesk-search.yaml)
 
@@ -201,4 +201,4 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 | Linear | 9,606 | 18,758 | 51% | 49% |
 | Salesforce | 2,227 | 3,181 | 70% | 30% |
 | Slack | 6,985 | 13,416 | 52% | 48% |
-| Zendesk | 4,161 | 24,955 | 17% | 83% |
+| Zendesk | 4,161 | 13,614 | 31% | 69% |

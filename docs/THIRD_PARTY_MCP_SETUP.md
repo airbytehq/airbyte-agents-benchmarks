@@ -13,9 +13,9 @@ Each connector in the benchmark has a corresponding MCP server maintained by the
 | Linear | `https://mcp.linear.app/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
 | Granola | `https://mcp.granola.ai/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
 | Slack | `@modelcontextprotocol/server-slack` | stdio (local, via `npx`) | Bot token + team ID |
-| Zendesk | `reminia/zendesk-mcp-server` | stdio (local, via `uvx`) | Email + API token |
+| Zendesk | `ghcr.io/dunialabs/mcp-servers/zendesk` | stdio (local, via Docker) | OAuth access token |
 
-Linear and Granola run as remote hosted servers with browser-based OAuth. Slack and Zendesk run locally via subprocess with static credentials.
+Linear and Granola run as remote hosted servers with browser-based OAuth. Slack runs locally via `npx` with a bot token. Zendesk runs locally via Docker with an OAuth access token.
 
 ---
 
