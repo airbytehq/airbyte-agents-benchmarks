@@ -94,7 +94,7 @@
 
 | Action | Description | Annotations |
 |---|---|---|
-| get | Fetch a single Salesforce account by ID.<br>Agent requests Id, Name, Type, and Industry.<br>Note: agent-mcp and native-mcp use different account IDs because<br>they connect to different Salesforce orgs. |  |
+| get | Fetch a single Salesforce account by ID.<br>Agent requests Id, Name, Type, and Industry.<br>Both paths query the same Salesforce org (airbyte.my.salesforce.com). |  |
 | list | List Salesforce accounts via SOQL.<br>Agent requests Id, Name, Type, and Industry per record. |  |
 
 #### Scenario Benchmark Results

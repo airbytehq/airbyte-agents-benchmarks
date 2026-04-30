@@ -33,7 +33,7 @@ def test_scenario_loads_choreographed_format() -> None:
     native_calls = gong_get.paths["native-mcp"].tool_calls
     assert len(native_calls) == 1
     assert native_calls[0].server == "gong"
-    assert native_calls[0].tool == "get_call"
+    assert native_calls[0].tool == "retrieve_transcripts"
 
 
 def test_multi_step_scenario_loads() -> None:
