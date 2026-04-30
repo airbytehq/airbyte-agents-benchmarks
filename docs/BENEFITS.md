@@ -69,15 +69,15 @@ This is not just a convenience improvement. It is a fundamental reduction in the
 
 We measured token consumption across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) comparing Agent MCP against each vendor's native MCP server on the same data operations (search, get, list).
 
-**Headline: Agent MCP used 77% fewer tokens than native MCP servers** across 13 comparable scenarios.
+**Headline: Agent MCP used 74% fewer tokens than native MCP servers** across 14 comparable scenarios.
 
 | Connector | Agent MCP tokens | Native MCP tokens | Savings |
 |---|---:|---:|---:|
 | Gong | 6,234 | 52,946 | 88% |
-| Zendesk | 4,161 | 13,614 | 69% |
+| Zendesk | 4,161 | 26,173 | 84% |
 | Linear | 9,606 | 18,758 | 49% |
 | Slack | 6,985 | 13,416 | 48% |
-| Salesforce | 2,227 | 3,181 | 30% |
+| Salesforce | 2,742 | 4,610 | 41% |
 
 ### Why the savings are so large
 
@@ -122,15 +122,16 @@ None of these tools:
 - Accept a channel ID and return that channel's details (**no get-by-ID**)
 - Support keyword filtering on channel names (**no search**)
 
-An agent that needs to find a channel by name, or look up a channel's details by ID, has no direct path. The only workaround is to call `slack_list_channels` repeatedly (paginating at 20 channels per page), scan all results client-side, and hope the target channel appears before the agent runs out of context.
+An agent that needs to find a channel by name, or look up a channel's details by ID, has no direct path. The only workaround is to call `slack_list_channels` repeatedly, scan all results client-side, and hope the target channel appears before the agent runs out of context.
 
-**The cost of the workaround:**
-- Estimated approximately 13,400 tokens to paginate through approximately 60 channels
+**The cost of the workaround (measured):**
+- 13,416 tokens across 3 paginated calls to scan 36 channels (approximately 4,472 tokens per page of 12 channels)
 - Must exhaust every page to guarantee finding all matches (for search) or the target (for get)
 - Multiple round-trips to the MCP server
+- In larger workspaces the cost scales linearly with the number of channels
 
 **Agent MCP handles both operations in a single call:**
-- Get-by-ID: approximately 133 tokens (approximately 100x more efficient than the workaround)
+- Get-by-ID: 133 tokens
 - Search: approximately 1,200 tokens for fuzzy keyword matching across all channels
 
 ### The broader pattern
@@ -145,7 +146,7 @@ This isn't unique to Slack. Vendor MCP servers are built as thin wrappers around
 |---|---|---|
 | **Setup** | Per-vendor server install; platform-specific admin steps (e.g., Salesforce Connected App) | One hosted MCP endpoint; no per-vendor setup |
 | **Credentials** | One credential set per vendor (5 vendors = 5 secrets) | One Airbyte credential set for all connectors |
-| **Token efficiency** | Full API response objects (30-200+ fields) | Only requested fields returned (`select_fields`) — 77% fewer tokens |
+| **Token efficiency** | Full API response objects (30-200+ fields) | Only requested fields returned (`select_fields`) — 74% fewer tokens |
 | **Capability** | Limited to vendor's MCP tool set; missing operations require expensive workarounds | Context store provides get, list, and search for every entity |
 
 ---
@@ -162,6 +163,7 @@ These scenarios could not produce a valid head-to-head comparison and are exclud
 |---|---|---|
 | Slack get | No native tool exists | Slack MCP has no get-channel-by-ID operation |
 | Slack search | No native tool exists | Slack MCP has no channel search/filter operation |
-| Salesforce search | Data mismatch | Native SOSL returned 0 results due to org misalignment; fix in progress |
 
-The Slack scenarios are structural — they cannot become comparable because the vendor MCP lacks the capability. They illustrate benefit number 4 (making impossible tasks easy). The Salesforce scenario is a test environment issue that will be resolved by adapting the search query.
+The Slack scenarios are structural — they cannot become comparable because the vendor MCP lacks the capability. They illustrate benefit number 4 (making impossible tasks easy).
+
+Note: Salesforce search is included in the comparable totals above (Agent 515 vs Native 729 tokens). The scenario YAML annotation notes an org misalignment issue that affected earlier test runs, but the April 30 recordings produced valid results for both paths.

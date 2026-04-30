@@ -8,18 +8,18 @@ A head-to-head benchmark measuring the cost and capability of accessing business
 |---|---|---|
 | **Setup** | Per-vendor server install; some require admin privileges (e.g., Salesforce Connected App) | One hosted endpoint — no per-vendor setup |
 | **Credentials** | One secret per vendor (5 vendors = 5 credential sets) | One Airbyte credential for all connectors |
-| **Token efficiency** | Full API objects (30-200+ fields per record) | Only requested fields (`select_fields`) — **77% fewer tokens** |
+| **Token efficiency** | Full API objects (30-200+ fields per record) | Only requested fields (`select_fields`) — **74% fewer tokens** |
 | **Capability** | Limited to vendor's tool set; missing ops require workarounds | Context store provides get, list, and search for every entity |
 
-Across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) and 13 comparable scenarios, Agent MCP used **77% fewer tokens** than native MCP servers for the same data operations:
+Across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) and 14 comparable scenarios, Agent MCP used **74% fewer tokens** than native MCP servers for the same data operations:
 
 | Connector | Agent MCP tokens | Native MCP tokens | Savings |
 |---|---:|---:|---:|
 | Gong | 6,234 | 52,946 | 88% |
-| Zendesk | 4,161 | 13,614 | 69% |
+| Zendesk | 4,161 | 26,173 | 84% |
 | Linear | 9,606 | 18,758 | 49% |
 | Slack | 6,985 | 13,416 | 48% |
-| Salesforce | 2,227 | 3,181 | 30% |
+| Salesforce | 2,742 | 4,610 | 41% |
 
 For the full benefits narrative — including setup complexity, credential management, capability gaps, and cross-connector workflow results — see **[docs/BENEFITS.md](docs/BENEFITS.md)**.
 
