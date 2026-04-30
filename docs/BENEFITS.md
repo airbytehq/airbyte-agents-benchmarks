@@ -1,0 +1,167 @@
+# Airbyte Agent MCP: Benefits Over Native MCP Servers
+
+> **Purpose:** Raw material for press release and marketing communications.
+> Data from the [April 30, 2026 benchmark report](../artifacts/2026-04-30/comparison-report.md).
+> See [METHODOLOGY.md](METHODOLOGY.md) for measurement design.
+
+## Overview
+
+AI agents need to access business data from dozens of SaaS tools — CRMs, support desks, communication platforms, call recording systems. Today, the standard approach is to wire up each vendor's native MCP server individually. This creates four compounding problems:
+
+1. **Setup is painful** — each vendor requires its own server, auth flow, and platform-specific configuration.
+2. **Credential sprawl** — agents accumulate dozens of secrets across vendors.
+3. **Context is wasted** — native MCP servers return full API objects, burning tokens on fields the agent never uses.
+4. **Some tasks are simply impossible** — vendor MCP servers lack basic operations, forcing expensive workarounds or blocking agents entirely.
+
+Airbyte's Agent MCP solves all four. One MCP server. One credential. Field-level projection. And a context store that makes every data operation available — even when the vendor's own MCP can't do it.
+
+---
+
+## 1. Ease of Agent Setup
+
+### The problem with native MCP
+
+Each vendor's MCP server has its own installation, hosting model, and platform requirements. Setting up five connectors means five different setup procedures:
+
+| Connector | Native MCP setup required |
+|---|---|
+| Linear | Remote OAuth server, browser-based auth flow, dynamic client registration |
+| Slack | Local npm package (`npx`), Slack App creation, bot token scopes configuration, Team ID lookup |
+| Zendesk | Docker container, OAuth access token provisioning |
+| Gong | API key generation, local server configuration |
+| Salesforce | **Connected App creation requiring Salesforce admin privileges**, OAuth consumer setup, SOAP/REST endpoint configuration, IP whitelisting |
+
+The Salesforce case is especially telling: creating a Connected App requires elevated server-side actions that only a Salesforce administrator can perform. Developers, analysts, and most team members are entirely locked out of MCP access — not because of a technical limitation, but because of an administrative gatekeeping step that has nothing to do with the data they need.
+
+### Agent MCP: one server, zero per-vendor setup
+
+With Airbyte Agent MCP, there is no per-vendor server to install, no Docker containers to run, no npm packages to manage, no platform-specific admin steps. The agent connects to a single hosted MCP endpoint (`mcp.airbyte.ai`), and every connector is available through the same interface. Adding a new data source means adding a connector in Airbyte — not researching, installing, and debugging another vendor's MCP server.
+
+---
+
+## 2. Simplified Credential Management
+
+### The problem with native MCP
+
+Each vendor MCP server requires its own set of credentials:
+
+| Connector | Credential type |
+|---|---|
+| Linear | OAuth 2.0 token (browser flow) or API key |
+| Slack | Bot token (`xoxb-...`) + Team ID |
+| Zendesk | OAuth access token or email + API token |
+| Gong | API key + API secret |
+| Salesforce | OAuth consumer key/secret + user credentials |
+
+For an agent accessing five data sources, that is five separate credential sets to provision, rotate, and secure. Each one has a different format, a different expiration policy, and a different revocation process. Credential management becomes a security surface that scales linearly with the number of data sources.
+
+### Agent MCP: one credential for everything
+
+Agent MCP requires a single Airbyte credential set. The agent authenticates once, and Airbyte handles per-connector authentication behind the scenes. Adding a tenth data source doesn't add a tenth secret to manage — the agent's credential surface stays constant.
+
+This is not just a convenience improvement. It is a fundamental reduction in the security surface area that agents expose.
+
+---
+
+## 3. More Efficient LLM Context Usage
+
+### The benchmark
+
+We measured token consumption across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) comparing Agent MCP against each vendor's native MCP server on the same data operations (search, get, list).
+
+**Headline: Agent MCP used 77% fewer tokens than native MCP servers** across 13 comparable scenarios.
+
+| Connector | Agent MCP tokens | Native MCP tokens | Savings |
+|---|---:|---:|---:|
+| Gong | 6,234 | 52,946 | 88% |
+| Zendesk | 4,161 | 13,614 | 69% |
+| Linear | 9,606 | 18,758 | 49% |
+| Slack | 6,985 | 13,416 | 48% |
+| Salesforce | 2,227 | 3,181 | 30% |
+
+### Why the savings are so large
+
+Native MCP servers return the vendor API's full response objects — typically 30 to 200+ fields per record. Agent MCP's `select_fields` parameter lets the caller declare exactly which fields they need (typically 4 to 9), and the platform returns only those fields.
+
+**Example — listing 100 Gong calls:**
+
+An agent summarizing recent calls needs `id`, `title`, `scheduled`, and `duration`. Four fields.
+
+| Path | Tokens | Records | Fields returned |
+|---|---:|---:|---|
+| Agent MCP | 5,436 | 100 | 4 selected fields |
+| Native MCP | 26,084 | 100 | Full call objects |
+
+Same 100 records. **79% fewer tokens.** The saving comes entirely from not sending fields the agent doesn't need.
+
+### What the savings mean in practice
+
+- **Lower cost per agent action.** Token consumption maps directly to LLM API cost.
+- **Longer effective context windows.** Tokens spent on verbose API responses are tokens unavailable for reasoning, planning, and user interaction.
+- **Compound savings in multi-step workflows.** A cross-connector workflow (Gong → Salesforce → Zendesk) completed in **1,486 tokens** via Agent MCP vs **30,208 tokens** via native MCP — a 95% reduction across three tool calls.
+
+### Methodology
+
+Token counts are measured with tiktoken `cl100k_base` encoding on raw JSON response payloads. Each scenario executes the same logical operation on both paths. Recordings use record-replay for deterministic, reproducible measurements. See [METHODOLOGY.md](METHODOLOGY.md) for full details.
+
+---
+
+## 4. Making Impossible Tasks Easy
+
+### The problem: vendor MCP capability gaps
+
+Vendor-provided MCP servers don't always expose the operations agents need. When a tool is missing, agents are forced into expensive workarounds — or they simply can't complete the task.
+
+### Case study: Slack — no get-by-ID, no search
+
+The official Slack MCP server ([`@modelcontextprotocol/server-slack`](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack), [v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)) exposes exactly 8 tools:
+
+`slack_list_channels`, `slack_post_message`, `slack_reply_to_thread`, `slack_add_reaction`, `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`
+
+None of these tools:
+- Accept a channel ID and return that channel's details (**no get-by-ID**)
+- Support keyword filtering on channel names (**no search**)
+
+An agent that needs to find a channel by name, or look up a channel's details by ID, has no direct path. The only workaround is to call `slack_list_channels` repeatedly (paginating at 20 channels per page), scan all results client-side, and hope the target channel appears before the agent runs out of context.
+
+**The cost of the workaround:**
+- Estimated approximately 13,400 tokens to paginate through approximately 60 channels
+- Must exhaust every page to guarantee finding all matches (for search) or the target (for get)
+- Multiple round-trips to the MCP server
+
+**Agent MCP handles both operations in a single call:**
+- Get-by-ID: approximately 133 tokens (approximately 100x more efficient than the workaround)
+- Search: approximately 1,200 tokens for fuzzy keyword matching across all channels
+
+### The broader pattern
+
+This isn't unique to Slack. Vendor MCP servers are built as thin wrappers around existing APIs, and those APIs don't always map to what agents need. Agent MCP's context store provides a uniform data layer — synced, indexed, and searchable — so the agent always has get, list, and search available for every entity, regardless of what the vendor's API exposes.
+
+---
+
+## Summary
+
+| Dimension | Native MCP (per vendor) | Airbyte Agent MCP |
+|---|---|---|
+| **Setup** | Per-vendor server install; platform-specific admin steps (e.g., Salesforce Connected App) | One hosted MCP endpoint; no per-vendor setup |
+| **Credentials** | One credential set per vendor (5 vendors = 5 secrets) | One Airbyte credential set for all connectors |
+| **Token efficiency** | Full API response objects (30-200+ fields) | Only requested fields returned (`select_fields`) — 77% fewer tokens |
+| **Capability** | Limited to vendor's MCP tool set; missing operations require expensive workarounds | Context store provides get, list, and search for every entity |
+
+---
+
+## Appendix: Per-Scenario Benchmark Data
+
+Full per-scenario breakdown with record counts, token counts, and annotations is available in the [April 30, 2026 comparison report](../artifacts/2026-04-30/comparison-report.md).
+
+### Scenarios not yet comparable
+
+These scenarios could not produce a valid head-to-head comparison and are excluded from the aggregate numbers above:
+
+| Scenario | Reason | Details |
+|---|---|---|
+| Slack get | No native tool exists | Slack MCP has no get-channel-by-ID operation |
+| Slack search | No native tool exists | Slack MCP has no channel search/filter operation |
+| Salesforce search | Data mismatch | Native SOSL returned 0 results due to org misalignment; fix in progress |
+
+The Slack scenarios are structural — they cannot become comparable because the vendor MCP lacks the capability. They illustrate benefit number 4 (making impossible tasks easy). The Salesforce scenario is a test environment issue that will be resolved by adapting the search query.
