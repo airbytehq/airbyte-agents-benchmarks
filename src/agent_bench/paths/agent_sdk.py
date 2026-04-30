@@ -126,7 +126,7 @@ class AgentSDKPath:
         result.steps.append(step)
         result.total_records = len(records)
 
-        if task.action == "get":
+        if task.metric_focus == "single_record_fetch":
             result.single_record_calls = len(result.steps)
             result.single_record_tokens = tokens
 
@@ -151,6 +151,8 @@ def _translate(task: Task, dispatch: dict[str, Any]) -> tuple[str, dict]:
             "query": {"filter": {"fuzzy": {field: task.params["keyword"]}}},
             "limit": limit,
         }
+    if task.action == "context_store_search":
+        return "context_store_search", task.params
     if task.action == "get":
         key = dispatch["get_key"].get(task.entity)
         if key is None:

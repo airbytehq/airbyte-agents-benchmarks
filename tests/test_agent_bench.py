@@ -26,14 +26,15 @@ def test_scenario_loads_choreographed_format() -> None:
     assert agent_calls[0].server == "airbyte-agent"
     assert agent_calls[0].tool == "integrations_connectors_id_execute"
     assert agent_calls[0].args["entity"] == "calls"
-    assert agent_calls[0].args["action"] == "get"
-    assert agent_calls[0].args["params"]["id"] == "1005803797056190704"
+    assert agent_calls[0].args["action"] == "context_store_search"
+    assert agent_calls[0].args["params"]["query"]["filter"]["eq"]["id"] == "1005803797056190704"
+    assert agent_calls[0].args["params"]["limit"] == 1
     assert "id" in agent_calls[0].args["select_fields"]
 
     native_calls = gong_get.paths["native-mcp"].tool_calls
     assert len(native_calls) == 1
     assert native_calls[0].server == "gong"
-    assert native_calls[0].tool == "retrieve_transcripts"
+    assert native_calls[0].tool == "get_call"
 
 
 def test_multi_step_scenario_loads() -> None:
@@ -119,22 +120,20 @@ def test_scorecard_renders_interim_ratios(tmp_path) -> None:
     assert "3.0× fewer tokens" in text
 
 
-def test_salesforce_list_translates_to_soql() -> None:
-    scenario = load_scenario("salesforce-list")
-    agent_call = scenario.paths["agent-mcp"].tool_calls[0]
+def test_context_store_search_passthrough() -> None:
+    """context_store_search action passes params directly to the SDK."""
     task = Task(
-        label="List accounts",
-        action="list",
-        entity=agent_call.args["entity"],
-        metric_focus="bulk_list",
-        params={"limit": 50},
+        label="Get account via context store",
+        action="context_store_search",
+        entity="accounts",
+        metric_focus="single_record_fetch",
+        params={"query": {"filter": {"eq": {"Id": "001"}}}, "limit": 1},
     )
     dispatch = _DISPATCH["salesforce"]
     action, params = _translate(task, dispatch)
-    assert action == "list"
-    assert "q" in params
-    assert params["q"].startswith("SELECT Id, Name, Type, Industry FROM Account")
-    assert "LIMIT" in params["q"]
+    assert action == "context_store_search"
+    assert params["query"]["filter"]["eq"]["Id"] == "001"
+    assert params["limit"] == 1
 
 
 def test_salesforce_list_without_soql_raises() -> None:
@@ -152,12 +151,15 @@ def _run_path(path: AgentMCPPath, scenario) -> BenchmarkResult:
     if task is None:
         agent_call = scenario.paths["agent-mcp"].tool_calls[0]
         action = agent_call.args.get("action", "get")
+        params = agent_call.args.get("params", {})
+        inferred = scenario.inferred_action
+        is_single_record = inferred == "get" or params.get("limit") == 1
         task = Task(
             label=f"{action} {agent_call.args.get('entity', 'unknown')}",
             action=action,
             entity=agent_call.args.get("entity", "unknown"),
-            metric_focus="single_record_fetch" if action == "get" else "bulk_list",
-            params=agent_call.args.get("params", {}),
+            metric_focus="single_record_fetch" if is_single_record else "bulk_list",
+            params=params,
         )
 
     async def collect() -> BenchmarkResult:

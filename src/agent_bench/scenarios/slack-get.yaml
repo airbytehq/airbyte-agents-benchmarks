@@ -5,9 +5,13 @@ connector_id_env: SLACK_CONNECTOR_ID
 is_comparable: false
 description: |
   Fetch a single Slack channel by ID.
-  Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose.
+  Agent requests id, name, is_archived, is_private, created, updated, topic, and purpose.
 
 annotations:
+  context_store_empty: >
+    ℹ️ The Slack connector's context store is not populated in the benchmark workspace.
+    `context_store_search` with `eq: {id: "C02TD5CB7PZ"}` returns `data: []`.
+    This scenario uses `action: get` as a direct lookup instead.
   tool_mismatch: >
     🛑No native get-by-ID tool exists in
     [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)
@@ -28,14 +32,12 @@ paths:
         connector_id_env: SLACK_CONNECTOR_ID
         args:
           entity: channels
+          # Using action: get instead of context_store_search because the Slack
+          # connector's context store is not populated in this benchmark workspace.
+          # context_store_search with eq:{id: "C02TD5CB7PZ"} returns data: [].
           action: get
           params:
             channel: "C02TD5CB7PZ"
-          select_fields: [id, name, num_members, is_archived, is_private, created, updated, topic, purpose]
+          select_fields: [id, name, is_archived, is_private, created, updated, topic, purpose]
 
-  native-mcp:
-    tool_calls:
-      - server: slack
-        tool: slack_list_channels
-        args:
-          limit: 20
+  # native-mcp intentionally omitted — no get-by-ID tool exists in @modelcontextprotocol/server-slack

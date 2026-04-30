@@ -82,12 +82,15 @@ async def run_scenario(
         first_call = first_path.tool_calls[0]
         action = first_call.args.get("action", "unknown")
         entity = first_call.args.get("entity", "unknown")
+        params = first_call.args.get("params", {})
+        inferred = scenario.inferred_action
+        is_single_record = inferred == "get" or params.get("limit") == 1
         task = Task(
             label=scenario.title or scenario.name,
             action=action,
             entity=entity,
-            metric_focus="single_record_fetch" if action == "get" else "bulk_list",
-            params=first_call.args.get("params", {}),
+            metric_focus="single_record_fetch" if is_single_record else "bulk_list",
+            params=params,
         )
 
     async def _run_path(path):
@@ -144,7 +147,7 @@ async def run_all(
         requested_scenarios=list(scenario_names),
         requested_paths=list(path_slugs),
     )
-    required_connectors = list({load_scenario(n).connector for n in scenario_names})
+    required_connectors = list({c for n in scenario_names for c in load_scenario(n).connectors})
     config = LiveConfig.from_env(required_connectors=required_connectors)
     for name in scenario_names:
         sc = load_scenario(name)

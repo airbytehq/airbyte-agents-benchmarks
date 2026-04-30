@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-30  
 **Compared paths:** Agent MCP vs Native MCP  
-**Connectors:** Gong, Gong-To-Salesforce-Zendesk, Linear, Salesforce, Slack, Zendesk
+**Connectors:** Gong, Linear, Multi_Source, Salesforce, Slack, Zendesk
 
 ## Per-Scenario Breakdown
 
@@ -12,35 +12,59 @@
 
 | Action | Description | Annotations |
 |---|---|---|
-| get | Fetch a single Gong call by ID.<br>Agent requests id, title, scheduled, and duration. | 💎Only requested fields consume token context: `id`, `title`, `scheduled`, and `duration`. |
-| list | List the most recent Gong calls.<br>Agent requests id, title, scheduled, and duration per record. | 💎Only requested fields consume token context: `id`, `title`, `scheduled`, and `duration`. |
-| search | Search Gong calls matching a keyword.<br>Agent requests id, title, scheduled, and duration per result. | ℹ️Unequal record counts amplify the ratio. Per-record savings are proportional to get/list. |
+| get | Look up a single Gong call by ID.<br>Agent requests id, title, scheduled, and duration. | 💎Only requested fields consume token context: `id`, `title`, `scheduled`, and `duration`. |
 
 #### Scenario Benchmark Results
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| get | 160 | 278 | 1 | 1 | 58% | 42% | 💎Only requested fields consume token context: `id`, `title`, `scheduled`, and `duration`. |
-| list | 5,436 | 26,084 | 100 | 100 | 21% | 79% | 💎Only requested fields consume token context: `id`, `title`, `scheduled`, and `duration`. |
-| search | 638 | 26,584 | 10 | 100 | 2% | 98% | ℹ️Unequal record counts amplify the ratio. Per-record savings are proportional to get/list. |
+| get | 195 | 279 | 1 | 1 | 70% | 30% | 💎Only requested fields consume token context: `id`, `title`, `scheduled`, and `duration`. |
 
-**Connector total:** Agent MCP uses 12% of Native MCP tokens (88% savings)
+**Connector total:** Agent MCP uses 70% of Native MCP tokens (30% savings)
 
-**Scenario definitions:** [gong-get](../../src/agent_bench/scenarios/gong-get.yaml) | [gong-list](../../src/agent_bench/scenarios/gong-list.yaml) | [gong-search](../../src/agent_bench/scenarios/gong-search.yaml)
+#### Benchmarks Not Comparable
 
-### Gong-To-Salesforce-Zendesk
+These scenarios could not produce a valid comparison between Agent MCP and the vendor's native MCP server.
+
+| Action | Description | Annotations |
+|---|---|---|
+| search | Search Gong calls matching a keyword.<br>Agent requests id, title, scheduled, and duration per result. | ℹ️ The Gong REST API (and the third-party kenazk/gong-mcp server) does not expose a keyword/text search endpoint. Native MCP can only list calls by date range with a fixed page size of 100. Agent-mcp uses context_store_search with fuzzy matching, a capability that has no native equivalent. |
+
+**Scenario definitions:** [gong-get](../../src/agent_bench/scenarios/gong-get.yaml) | [gong-search](../../src/agent_bench/scenarios/gong-search.yaml)
+
+### Linear
 
 #### Scenario Descriptions
 
 | Action | Description | Annotations |
 |---|---|---|
-| lookup | Multi-step cross-connector workflow: search for Gong calls scheduled<br>on 2026-04-28, then look up the associated account names in Salesforce and<br>find open tickets for those accounts in Zendesk.<br>Steps 2 and 3 use dummy static account/ticket lists to demonstrate<br>the choreographed multi-step scenario format. |  |
+| get | Look up a single Linear issue by ID.<br>Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels. | ℹ️ The agent-mcp connector and native Linear MCP are currently connected to different Linear workspaces. Agent-mcp syncs from the AGENTIC workspace (issues prefixed `AGENTIC-`), while the native MCP API key connects to `airbyte-integration-testing` (issues prefixed `AIR-`). Each path fetches a valid single issue from its own workspace; the benchmark measures token overhead, not data identity. |
+| search | Search Linear issues by keyword.<br>Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels per result. |  |
 
 #### Scenario Benchmark Results
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| lookup | 1,486 | 30,208 | 22 | 145 | 5% | 95% |  |
+| get | 263 | 311 | 1 | 1 | 85% | 15% | ℹ️ The agent-mcp connector and native Linear MCP are currently connected to different Linear workspaces. Agent-mcp syncs from the AGENTIC workspace (issues prefixed `AGENTIC-`), while the native MCP API key connects to `airbyte-integration-testing` (issues prefixed `AIR-`). Each path fetches a valid single issue from its own workspace; the benchmark measures token overhead, not data identity. |
+| search | 944 | 1,044 | 7 | 3 | 90% | 10% |  |
+
+**Connector total:** Agent MCP uses 89% of Native MCP tokens (11% savings)
+
+**Scenario definitions:** [linear-get](../../src/agent_bench/scenarios/linear-get.yaml) | [linear-search](../../src/agent_bench/scenarios/linear-search.yaml)
+
+### Multi_Source
+
+#### Scenario Descriptions
+
+| Action | Description | Annotations |
+|---|---|---|
+| multi-step | Multi-step cross-connector workflow: search for Gong calls scheduled<br>on 2026-04-28, then look up the associated account names in Salesforce and<br>find open tickets for those accounts in Zendesk.<br>Steps 2 and 3 use dummy static account/ticket lists to demonstrate<br>the choreographed multi-step scenario format. |  |
+
+#### Scenario Benchmark Results
+
+| Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
+|---|---:|---:|---:|---:|---:|---:|---|
+| multi-step | 1,482 | 30,208 | 22 | 145 | 5% | 95% |  |
 
 **Connector total:** Agent MCP uses 5% of Native MCP tokens (95% savings)
 
@@ -50,9 +74,9 @@
 
 | Step | Server | Tool | Tokens | Records |
 |---:|---|---|---:|---:|
-| 1 | airbyte-agent | integrations_connectors_id_execute | 1,146 | 20 |
+| 1 | airbyte-agent | integrations_connectors_id_execute | 1,143 | 20 |
 | 2 | airbyte-agent | integrations_connectors_id_execute | 210 | 2 |
-| 3 | airbyte-agent | integrations_connectors_id_execute | 130 | 0 |
+| 3 | airbyte-agent | integrations_connectors_id_execute | 129 | 0 |
 
 **Native MCP** (3 calls)
 
@@ -66,49 +90,25 @@
 
 **Scenario definitions:** [gong-to-salesforce-zendesk-lookup](../../src/agent_bench/scenarios/gong-to-salesforce-zendesk-lookup.yaml)
 
-### Linear
-
-#### Scenario Descriptions
-
-| Action | Description | Annotations |
-|---|---|---|
-| get | Fetch a single Linear issue by ID.<br>Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels. |  |
-| list | List the first 50 Linear issues.<br>Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels per record. |  |
-| search | Search Linear issues by keyword.<br>Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels per result. |  |
-
-#### Scenario Benchmark Results
-
-| Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
-|---|---:|---:|---:|---:|---:|---:|---|
-| get | 274 | 311 | 1 | 1 | 88% | 12% |  |
-| list | 8,374 | 17,403 | 50 | 50 | 48% | 52% |  |
-| search | 958 | 1,044 | 7 | 3 | 92% | 8% |  |
-
-**Connector total:** Agent MCP uses 51% of Native MCP tokens (49% savings)
-
-**Scenario definitions:** [linear-get](../../src/agent_bench/scenarios/linear-get.yaml) | [linear-list](../../src/agent_bench/scenarios/linear-list.yaml) | [linear-search](../../src/agent_bench/scenarios/linear-search.yaml)
-
 ### Salesforce
 
 #### Scenario Descriptions
 
 | Action | Description | Annotations |
 |---|---|---|
-| get | Fetch a single Salesforce account by ID.<br>Agent requests Id, Name, Type, and Industry. |  |
-| list | List Salesforce accounts via SOQL.<br>Agent requests Id, Name, Type, and Industry per record. |  |
+| get | Look up a single Salesforce account by ID.<br>Agent requests Id, Name, Type, and Industry. |  |
 | search | Search Salesforce accounts matching a keyword.<br>Agent requests Id, Name, Type, and Industry per result. |  |
 
 #### Scenario Benchmark Results
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| get | 141 | 90 | 1 | 1 | 157% | -57% |  |
-| list | 2,086 | 3,791 | 50 | 50 | 55% | 45% |  |
-| search | 515 | 729 | 10 | 10 | 71% | 29% |  |
+| get | 178 | 90 | 1 | 1 | 198% | -98% |  |
+| search | 506 | 729 | 10 | 10 | 69% | 31% |  |
 
-**Connector total:** Agent MCP uses 59% of Native MCP tokens (41% savings)
+**Connector total:** Agent MCP uses 84% of Native MCP tokens (16% savings)
 
-**Scenario definitions:** [salesforce-get](../../src/agent_bench/scenarios/salesforce-get.yaml) | [salesforce-list](../../src/agent_bench/scenarios/salesforce-list.yaml) | [salesforce-search](../../src/agent_bench/scenarios/salesforce-search.yaml)
+**Scenario definitions:** [salesforce-get](../../src/agent_bench/scenarios/salesforce-get.yaml) | [salesforce-search](../../src/agent_bench/scenarios/salesforce-search.yaml)
 
 ### Slack
 
@@ -116,33 +116,15 @@
 
 | Action | Description | Annotations |
 |---|---|---|
-| list | List the first 50 Slack channels.<br>Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per record. |  |
+| list-all | List all non-archived Slack channels in the workspace (approximately 1,085 channels).<br>This represents a realistic "give me everything" use case.<br>Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per record.<br>Both paths exclude archived channels (agent-mcp via exclude_archived param,<br>native-mcp via @modelcontextprotocol/server-slack default behavior).<br>Agent-mcp paginates with limit=1000 per page (3 calls using next_cursor).<br>Native-mcp paginates with limit=100 per page (cursor-based, 21 calls).<br><br>Note: The YAML defines only the first page call. Subsequent pages are recorded<br>dynamically using the next_cursor returned in connector_metadata. The recording<br>script handles pagination automatically. |  |
 
 #### Scenario Benchmark Results
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| list | 6,985 | 13,416 | 50 | 36 | 52% | 48% |  |
+| list-all | 118,896 | 362,313 | 1085 | 1085 | 33% | 67% |  |
 
-**Connector total:** Agent MCP uses 52% of Native MCP tokens (48% savings)
-
-<details><summary>Per-tool-call breakdown: Slack — List first 50 channels</summary>
-
-**Agent MCP** (1 calls)
-
-| Step | Server | Tool | Tokens | Records |
-|---:|---|---|---:|---:|
-| 1 | airbyte-agent | integrations_connectors_id_execute | 6,985 | 50 |
-
-**Native MCP** (3 calls)
-
-| Step | Server | Tool | Tokens | Records |
-|---:|---|---|---:|---:|
-| 1 | slack | slack_list_channels | 4,472 | 12 |
-| 2 | slack | slack_list_channels | 4,472 | 12 |
-| 3 | slack | slack_list_channels | 4,472 | 12 |
-
-</details>
+**Connector total:** Agent MCP uses 33% of Native MCP tokens (67% savings)
 
 #### Benchmarks Not Comparable
 
@@ -150,10 +132,10 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 
 | Action | Description | Annotations |
 |---|---|---|
-| get | Fetch a single Slack channel by ID.<br>Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose. | 🛑No native get-by-ID tool exists in [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack) ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)). All 8 tools: `slack_list_channels`, `slack_post_message`, `slack_reply_to_thread`, `slack_add_reaction`, `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`. None accept a channel ID and return a single channel. Alternative path: paginate `slack_list_channels` until the target channel is found (est. approximately 13,400 tokens to scan approximately 60 channels at approximately 4,500 tokens/page of 20; compare agent-mcp `get` at approximately 133 tokens). |
+| get | Fetch a single Slack channel by ID.<br>Agent requests id, name, is_archived, is_private, created, updated, topic, and purpose. | ℹ️ The Slack connector's context store is not populated in the benchmark workspace. `context_store_search` with `eq: {id: "C02TD5CB7PZ"}` returns `data: []`. This scenario uses `action: get` as a direct lookup instead.; 🛑No native get-by-ID tool exists in [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack) ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)). All 8 tools: `slack_list_channels`, `slack_post_message`, `slack_reply_to_thread`, `slack_add_reaction`, `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`. None accept a channel ID and return a single channel. Alternative path: paginate `slack_list_channels` until the target channel is found (est. approximately 13,400 tokens to scan approximately 60 channels at approximately 4,500 tokens/page of 20; compare agent-mcp `get` at approximately 133 tokens). |
 | search | Search Slack channels by keyword.<br>Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per result. | 🛑No native search/filter tool exists in [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack) ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)). All 8 tools: `slack_list_channels`, `slack_post_message`, `slack_reply_to_thread`, `slack_add_reaction`, `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`. None support keyword filtering on channel names. Alternative path: paginate `slack_list_channels` (all pages) and filter client-side by keyword (est. approximately 13,400 tokens to scan all approximately 60 channels at approximately 4,500 tokens/page of 20; must exhaust every page to find all matches). |
 
-**Scenario definitions:** [slack-list](../../src/agent_bench/scenarios/slack-list.yaml) | [slack-get](../../src/agent_bench/scenarios/slack-get.yaml) | [slack-search](../../src/agent_bench/scenarios/slack-search.yaml)
+**Scenario definitions:** [slack-list-all](../../src/agent_bench/scenarios/slack-list-all.yaml) | [slack-get](../../src/agent_bench/scenarios/slack-get.yaml) | [slack-search](../../src/agent_bench/scenarios/slack-search.yaml)
 
 ### Zendesk
 
@@ -161,21 +143,19 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 
 | Action | Description | Annotations |
 |---|---|---|
-| get | Fetch a single Zendesk ticket by ID.<br>Agent requests id, subject, status, and priority. | 💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`. |
-| list | List recent Zendesk tickets.<br>Agent requests id, subject, status, and priority per record. | 💎Agent returned more records with fewer tokens. |
+| get | Look up a single Zendesk ticket by ID.<br>Agent requests id, subject, status, and priority. | 💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`.; ℹ️ The agent-mcp connector syncs from a Zendesk instance containing ticket #17394, but the native MCP OAuth credentials connect to `d3v-airbyte.zendesk.com` which only has ticket #2. Each path fetches a valid single ticket from its respective instance; the benchmark measures token overhead, not data identity. |
 | search | Search Zendesk tickets matching a keyword.<br>Agent requests id, subject, status, and priority per result. |  |
 
 #### Scenario Benchmark Results
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| get | 130 | 514 | 1 | 1 | 25% | 75% | 💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`. |
-| list | 3,600 | 24,626 | 100 | 50 | 15% | 85% | 💎Agent returned more records with fewer tokens. |
-| search | 431 | 1,033 | 10 | 2 | 42% | 58% |  |
+| get | 182 | 511 | 1 | 1 | 36% | 64% | 💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`.; ℹ️ The agent-mcp connector syncs from a Zendesk instance containing ticket #17394, but the native MCP OAuth credentials connect to `d3v-airbyte.zendesk.com` which only has ticket #2. Each path fetches a valid single ticket from its respective instance; the benchmark measures token overhead, not data identity. |
+| search | 433 | 1,015 | 10 | 2 | 43% | 57% |  |
 
-**Connector total:** Agent MCP uses 16% of Native MCP tokens (84% savings)
+**Connector total:** Agent MCP uses 40% of Native MCP tokens (60% savings)
 
-**Scenario definitions:** [zendesk-get](../../src/agent_bench/scenarios/zendesk-get.yaml) | [zendesk-list](../../src/agent_bench/scenarios/zendesk-list.yaml) | [zendesk-search](../../src/agent_bench/scenarios/zendesk-search.yaml)
+**Scenario definitions:** [zendesk-get](../../src/agent_bench/scenarios/zendesk-get.yaml) | [zendesk-search](../../src/agent_bench/scenarios/zendesk-search.yaml)
 
 ## Methodology
 
@@ -190,9 +170,9 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 
 | Connector | Agent MCP tokens | Native MCP tokens | Ratio | Savings |
 |---|---:|---:|---:|---:|
-| Gong | 6,234 | 52,946 | 12% | 88% |
-| Gong-To-Salesforce-Zendesk | 1,486 | 30,208 | 5% | 95% |
-| Linear | 9,606 | 18,758 | 51% | 49% |
-| Salesforce | 2,742 | 4,610 | 59% | 41% |
-| Slack | 6,985 | 13,416 | 52% | 48% |
-| Zendesk | 4,161 | 26,173 | 16% | 84% |
+| Gong | 195 | 279 | 70% | 30% |
+| Linear | 1,207 | 1,355 | 89% | 11% |
+| Multi_Source | 1,482 | 30,208 | 5% | 95% |
+| Salesforce | 684 | 819 | 84% | 16% |
+| Slack | 118,896 | 362,313 | 33% | 67% |
+| Zendesk | 615 | 1,526 | 40% | 60% |

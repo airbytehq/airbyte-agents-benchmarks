@@ -97,7 +97,7 @@ def plan(
 
     scenario_list = _resolve_scenarios(scenarios)
     path_list = _resolve_paths(paths)
-    connectors = list({load_scenario(n).connector for n in scenario_list})
+    connectors = list({c for n in scenario_list for c in load_scenario(n).connectors})
 
     try:
         config = LiveConfig.from_env(required_connectors=connectors)
@@ -177,7 +177,7 @@ def run(
     export_requested = bool(export_markdown or export_charts or export_stats)
     if export_requested:
         config = None
-        connectors = list({load_scenario(n).connector for n in scenario_list})
+        connectors = list({c for n in scenario_list for c in load_scenario(n).connectors})
         if "agent-mcp" in path_list:
             try:
                 config = LiveConfig.from_env(required_connectors=connectors)
@@ -261,7 +261,7 @@ def validate(
     scenario_list = _resolve_scenarios(scenarios)
     path_list = _resolve_paths(paths)
     dated_dir = _resolve_artifacts_dir(artifacts_dir, date)
-    connectors = list({load_scenario(n).connector for n in scenario_list})
+    connectors = list({c for n in scenario_list for c in load_scenario(n).connectors})
 
     config = None
     if "agent-mcp" in path_list:

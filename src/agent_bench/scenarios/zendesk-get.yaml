@@ -3,12 +3,17 @@ title: "Zendesk — Get single ticket by ID"
 connector: zendesk
 connector_id_env: ZENDESK_CONNECTOR_ID
 description: |
-  Fetch a single Zendesk ticket by ID.
+  Look up a single Zendesk ticket by ID.
   Agent requests id, subject, status, and priority.
 
 annotations:
   highlight: >
     💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`.
+  instance_mismatch: >
+    ℹ️ The agent-mcp connector syncs from a Zendesk instance containing ticket #17394,
+    but the native MCP OAuth credentials connect to `d3v-airbyte.zendesk.com` which only
+    has ticket #2. Each path fetches a valid single ticket from its respective instance;
+    the benchmark measures token overhead, not data identity.
 
 paths:
   agent-mcp:
@@ -18,9 +23,13 @@ paths:
         connector_id_env: ZENDESK_CONNECTOR_ID
         args:
           entity: tickets
-          action: get
+          action: context_store_search
           params:
-            ticket_id: "2"
+            query:
+              filter:
+                eq:
+                  id: "17394"
+            limit: 1
           select_fields: [id, subject, status, priority]
 
   native-mcp:

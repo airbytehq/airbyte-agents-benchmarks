@@ -2,13 +2,17 @@ name: gong-search
 title: "Gong — Search calls by keyword"
 connector: gong
 connector_id_env: GONG_CONNECTOR_ID
+is_comparable: false
 description: |
   Search Gong calls matching a keyword.
   Agent requests id, title, scheduled, and duration per result.
 
 annotations:
-  record_count: >
-    ℹ️Unequal record counts amplify the ratio. Per-record savings are proportional to get/list.
+  not_comparable: >
+    ℹ️ The Gong REST API (and the third-party kenazk/gong-mcp server) does not expose
+    a keyword/text search endpoint. Native MCP can only list calls by date range with
+    a fixed page size of 100. Agent-mcp uses context_store_search with fuzzy matching,
+    a capability that has no native equivalent.
 
 paths:
   agent-mcp:

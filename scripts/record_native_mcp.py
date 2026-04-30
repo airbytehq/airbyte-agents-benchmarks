@@ -106,10 +106,10 @@ class LinearMCP:
 
 
 def record_linear(api_key: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Linear native-mcp for search, get, list scenarios."""
+    """Record Linear native-mcp for search and get scenarios."""
     results = []
     if dry_run:
-        print("  [dry-run] Would record linear-search, linear-get, linear-list")
+        print("  [dry-run] Would record linear-search, linear-get")
         return results
 
     mcp = LinearMCP(api_key)
@@ -140,20 +140,6 @@ def record_linear(api_key: str, dry_run: bool = False) -> list[tuple[str, Path]]
     }], date)
     results.append(("linear-get", path))
     print(f"    linear-get: {json.dumps(response)[:80]}...")
-
-    # List
-    tool = "list_issues"
-    args = {"limit": 50}
-    response, wall_ms = mcp.call_tool(tool, args)
-    path = save_recording("linear-list", [{
-        "tool": f"mcp__claude_ai_Linear__{tool}",
-        "args": args,
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": response,
-    }], date)
-    results.append(("linear-list", path))
-    issues = response.get("issues", [])
-    print(f"    linear-list: {len(issues)} issues")
 
     return results
 
@@ -218,10 +204,10 @@ class SlackMCP:
 
 
 def record_slack(bot_token: str, team_id: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Slack native-mcp for search, get, list scenarios."""
+    """Record Slack native-mcp for search, get, and list-all scenarios."""
     results = []
     if dry_run:
-        print("  [dry-run] Would record slack-search, slack-get, slack-list")
+        print("  [dry-run] Would record slack-search, slack-get, slack-list-all")
         return results
 
     mcp = SlackMCP(bot_token, team_id)
@@ -232,7 +218,6 @@ def record_slack(bot_token: str, team_id: str, dry_run: bool = False) -> list[tu
         tool = "slack_list_channels"
         args = {"limit": 20}
         response, wall_ms = mcp.call_tool(tool, args)
-        # The benchmark uses slack_search_channels tool name but actual MCP exposes slack_list_channels
         path = save_recording("slack-search", [{
             "tool": "mcp__claude_ai_Slack__slack_list_channels",
             "args": args,
@@ -256,10 +241,10 @@ def record_slack(bot_token: str, team_id: str, dry_run: bool = False) -> list[tu
         results.append(("slack-get", path))
         print(f"    slack-get: {json.dumps(response)[:80]}...")
 
-        # List (3 pages of 20)
+        # List-all — paginate all channels (100 per page until exhausted)
         calls = []
-        for page in range(3):
-            page_args = {"limit": 20}
+        page_args = {"limit": 100}
+        while True:
             response, wall_ms = mcp.call_tool("slack_list_channels", page_args)
             calls.append({
                 "tool": "mcp__claude_ai_Slack__slack_list_channels",
@@ -267,9 +252,19 @@ def record_slack(bot_token: str, team_id: str, dry_run: bool = False) -> list[tu
                 "wall_clock_ms": round(wall_ms, 1),
                 "response": response,
             })
-        path = save_recording("slack-list", calls, date)
-        results.append(("slack-list", path))
-        print(f"    slack-list: {len(calls)} calls")
+            # Check if there are more pages
+            metadata = response.get("response_metadata", {}) if isinstance(response, dict) else {}
+            next_cursor = metadata.get("next_cursor", "")
+            if not next_cursor:
+                break
+            page_args = {"limit": 100, "cursor": next_cursor}
+        path = save_recording("slack-list-all", calls, date)
+        results.append(("slack-list-all", path))
+        total_channels = sum(
+            len(c["response"].get("channels", []))
+            for c in calls if isinstance(c.get("response"), dict)
+        )
+        print(f"    slack-list-all: {total_channels} channels across {len(calls)} calls")
     finally:
         mcp.close()
 
@@ -354,33 +349,17 @@ def record_gong(access_key: str, access_secret: str, dry_run: bool = False) -> l
     """Record Gong native-mcp via the kenazk/gong-mcp MCP server."""
     results = []
     if dry_run:
-        print("  [dry-run] Would record gong-list, gong-get, gong-search")
+        print("  [dry-run] Would record gong-get, gong-search")
         return results
 
     mcp = GongMCP(access_key, access_secret)
     date = get_date_str()
 
     try:
-        # List calls
-        tool = "list_calls"
-        args = {"fromDateTime": "2025-01-01T00:00:00Z"}
-        response, wall_ms = mcp.call_tool(tool, args)
-        path = save_recording("gong-list", [{
-            "tool": f"mcp__gong__{tool}",
-            "args": args,
-            "wall_clock_ms": round(wall_ms, 1),
-            "response": response,
-        }], date)
-        results.append(("gong-list", path))
-        calls_list = response.get("calls", []) if isinstance(response, dict) else []
-        print(f"    gong-list: {len(calls_list)} calls")
-
-        # Get single call — the gong-mcp server has no get_call tool.
-        # Use retrieve_transcripts with the target call ID as the closest
-        # single-call retrieval available.
+        # Get single call metadata by ID
         call_id = "1005803797056190704"
-        tool = "retrieve_transcripts"
-        args = {"callIds": [call_id]}
+        tool = "get_call"
+        args = {"id": call_id}
         response, wall_ms = mcp.call_tool(tool, args)
         path = save_recording("gong-get", [{
             "tool": f"mcp__gong__{tool}",
@@ -450,10 +429,17 @@ class SalesforceMCP:
         }
         r = requests.post(self.MCP_URL, json=init_req, headers=self.headers, timeout=30)
         r.raise_for_status()
-        self.session_id = r.headers.get("mcp-session-id", "")
+        session_id = r.headers.get("mcp-session-id")
+        if not session_id or not session_id.strip():
+            raise RuntimeError(
+                "Salesforce MCP initialize response did not include a non-empty "
+                "'mcp-session-id' header"
+            )
+        self.session_id = session_id.strip()
         self.headers["mcp-session-id"] = self.session_id
         notif = {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
-        requests.post(self.MCP_URL, json=notif, headers=self.headers, timeout=30)
+        notif_resp = requests.post(self.MCP_URL, json=notif, headers=self.headers, timeout=30)
+        notif_resp.raise_for_status()
 
     def call_tool(self, tool_name: str, arguments: dict) -> tuple[dict, float]:
         req = {
@@ -487,7 +473,7 @@ def record_salesforce(consumer_key: str, consumer_secret: str, refresh_token: st
     """Record Salesforce native responses via the hosted MCP server (sobject-reads)."""
     results = []
     if dry_run:
-        print("  [dry-run] Would record salesforce-search, salesforce-get, salesforce-list")
+        print("  [dry-run] Would record salesforce-search, salesforce-get")
         return results
 
     mcp = SalesforceMCP(consumer_key, consumer_secret, refresh_token)
@@ -524,22 +510,6 @@ def record_salesforce(consumer_key: str, consumer_secret: str, refresh_token: st
     }], date)
     results.append(("salesforce-get", path))
     print(f"    salesforce-get: {len(json.dumps(response))} bytes")
-
-    # List (SOQL via `soqlQuery` tool)
-    soql = "SELECT Id, Name, Type, Industry FROM Account LIMIT 50"
-    tool = "soqlQuery"
-    args = {"q": soql}
-    response, wall_ms = mcp.call_tool(tool, args)
-
-    path = save_recording("salesforce-list", [{
-        "tool": "mcp__salesforce__soqlQuery",
-        "args": args,
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": response,
-    }], date)
-    results.append(("salesforce-list", path))
-    records = response.get("records", []) if isinstance(response, dict) else []
-    print(f"    salesforce-list: {len(records)} records")
 
     return results
 
@@ -629,7 +599,7 @@ def record_zendesk(subdomain: str, access_token: str, dry_run: bool = False) -> 
     """
     results = []
     if dry_run:
-        print("  [dry-run] Would record zendesk-search, zendesk-get, zendesk-list")
+        print("  [dry-run] Would record zendesk-search, zendesk-get")
         return results
 
     mcp = ZendeskMCP(subdomain, access_token)
@@ -650,7 +620,9 @@ def record_zendesk(subdomain: str, access_token: str, dry_run: bool = False) -> 
         tickets = response.get("tickets", []) if isinstance(response, dict) else []
         print(f"    zendesk-search: {len(tickets)} tickets (via zendeskSearchTickets)")
 
-        # Get — fetch ticket #2 (known to exist in d3v-airbyte)
+        # Get — fetch ticket #2 (known to exist in d3v-airbyte.zendesk.com)
+        # Note: agent-mcp uses ticket #17394 from a different Zendesk instance.
+        # See zendesk-get.yaml instance_mismatch annotation for details.
         tool = "zendeskGetTicket"
         args = {"ticket_id": 2}
         response, wall_ms = mcp.call_tool(tool, args)
@@ -663,19 +635,6 @@ def record_zendesk(subdomain: str, access_token: str, dry_run: bool = False) -> 
         results.append(("zendesk-get", path))
         print(f"    zendesk-get: {len(json.dumps(response))} bytes")
 
-        # List — paginated list of recent tickets
-        tool = "zendeskListTickets"
-        args = {}
-        response, wall_ms = mcp.call_tool(tool, args)
-        path = save_recording("zendesk-list", [{
-            "tool": f"mcp__zendesk__{tool}",
-            "args": args,
-            "wall_clock_ms": round(wall_ms, 1),
-            "response": response,
-        }], date)
-        results.append(("zendesk-list", path))
-        tickets = response.get("tickets", []) if isinstance(response, dict) else []
-        print(f"    zendesk-list: {len(tickets)} tickets")
     finally:
         mcp.close()
 
@@ -745,11 +704,20 @@ def main() -> int:
                 refresh_token = load_secret("salesforce", "refresh_token", "test-credentials-mcp")
                 if not consumer_key:
                     consumer_key = os.environ.get("SF_MCP_CONSUMER_KEY", "")
+                if not consumer_secret:
                     consumer_secret = os.environ.get("SF_MCP_CONSUMER_SECRET", "")
+                if not refresh_token:
                     refresh_token = os.environ.get("SF_MCP_REFRESH_TOKEN", "")
-                if not consumer_key:
+                missing = [
+                    name for name, val in [
+                        ("consumer_key", consumer_key),
+                        ("consumer_secret", consumer_secret),
+                        ("refresh_token", refresh_token),
+                    ] if not val
+                ]
+                if missing:
                     raise ValueError(
-                        "Salesforce MCP credentials not found. "
+                        f"Salesforce MCP credentials incomplete (missing: {', '.join(missing)}). "
                         "Set 1Password section test-credentials-mcp or env vars "
                         "SF_MCP_CONSUMER_KEY, SF_MCP_CONSUMER_SECRET, SF_MCP_REFRESH_TOKEN"
                     )

@@ -139,14 +139,17 @@ def _count_records(response: dict) -> int:
     if not isinstance(response, dict):
         return 0
 
-    # Agent-mcp envelope: results[0].result.result
+    # Agent-mcp envelope: results[0].result (list or {status, result: ...})
     results_list = response.get("results", [])
     if isinstance(results_list, list) and results_list:
         inner = results_list[0]
         if isinstance(inner, dict) and "result" in inner:
-            result_obj = inner.get("result", {})
+            result_obj = inner.get("result")
+            # Direct list response (e.g. Slack list action)
+            if isinstance(result_obj, list):
+                return len(result_obj)
             if isinstance(result_obj, dict):
-                result_data = result_obj.get("result", {})
+                result_data = result_obj.get("result")
                 if isinstance(result_data, list):
                     return len(result_data)
                 if isinstance(result_data, dict):
@@ -161,7 +164,7 @@ def _count_records(response: dict) -> int:
 
     # Native-mcp: list responses with known collection keys
     _LIST_KEYS = ("calls", "tickets", "records", "searchRecords", "channels",
-                  "messages", "results")
+                  "messages", "results", "callTranscripts")
     for key in _LIST_KEYS:
         if key in response and isinstance(response[key], list):
             return len(response[key])
@@ -207,8 +210,24 @@ def load_stats_from_recordings(artifacts_dir: Path) -> list[CellStats]:
         if not scenario_dir.endswith("-scenario"):
             continue
         scenario = scenario_dir.removesuffix("-scenario")
-        connector = scenario.rsplit("-", 1)[0] if "-" in scenario else scenario
-        action = scenario.rsplit("-", 1)[1] if "-" in scenario else "unknown"
+
+        # Look up connector/action from scenario YAML if available
+        scenario_yaml = SCENARIOS_DIR / f"{scenario}.yaml"
+        if scenario_yaml.is_file():
+            spec = yaml.safe_load(scenario_yaml.read_text())
+            connector = spec.get("connector", scenario.rsplit("-", 1)[0] if "-" in scenario else scenario)
+            # Derive action from name suffix (same logic as loader.inferred_action)
+            action = "unknown"
+            for suffix in ("get", "list-all", "list", "search"):
+                if scenario.endswith(f"-{suffix}"):
+                    action = suffix
+                    break
+            else:
+                if "-to-" in scenario or "-and-" in scenario:
+                    action = "multi-step"
+        else:
+            connector = scenario.rsplit("-", 1)[0] if "-" in scenario else scenario
+            action = scenario.rsplit("-", 1)[1] if "-" in scenario else "unknown"
 
         data = json.loads(recording_file.read_text())
         if not isinstance(data, list):

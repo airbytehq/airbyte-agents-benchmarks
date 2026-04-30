@@ -23,7 +23,7 @@ import yaml
 SCENARIOS_DIR = Path(__file__).parent
 
 
-Action = Literal["search", "get", "list"]
+Action = Literal["search", "get", "list", "list-all", "context_store_search"]
 
 
 @dataclass
@@ -80,7 +80,7 @@ class Scenario:
         """Best-effort action label, derived from task or scenario name."""
         if self.task:
             return self.task.action
-        for suffix in ("get", "list", "search"):
+        for suffix in ("get", "list-all", "list", "search"):
             if self.name.endswith(f"-{suffix}"):
                 return suffix
         return "multi-step"
@@ -100,7 +100,7 @@ class Scenario:
 
     @property
     def connectors(self) -> list[str]:
-        """All connectors referenced by this scenario."""
+        """Real connectors referenced by this scenario (those with env vars)."""
         if not self.is_choreographed:
             return [self.connector]
         seen: list[str] = []
@@ -110,9 +110,7 @@ class Scenario:
                     name = tc.connector_id_env.removesuffix("_CONNECTOR_ID").lower()
                     if name not in seen:
                         seen.append(name)
-        if self.connector not in seen:
-            seen.insert(0, self.connector)
-        return seen
+        return seen or [self.connector]
 
 
 def _parse_tool_call(data: dict[str, Any]) -> ToolCall:
@@ -183,5 +181,5 @@ def scenarios_for_connector(connector: str) -> list[str]:
     """List scenario names that belong to a given connector."""
     return [
         name for name in list_scenarios()
-        if name.startswith(f"{connector}-")
+        if load_scenario(name).connector == connector
     ]

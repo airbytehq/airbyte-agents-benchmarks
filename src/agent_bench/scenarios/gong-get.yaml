@@ -3,7 +3,7 @@ title: "Gong — Get single call by ID"
 connector: gong
 connector_id_env: GONG_CONNECTOR_ID
 description: |
-  Fetch a single Gong call by ID.
+  Look up a single Gong call by ID.
   Agent requests id, title, scheduled, and duration.
 
 annotations:
@@ -18,14 +18,18 @@ paths:
         connector_id_env: GONG_CONNECTOR_ID
         args:
           entity: calls
-          action: get
+          action: context_store_search
           params:
-            id: "1005803797056190704"
+            query:
+              filter:
+                eq:
+                  id: "1005803797056190704"
+            limit: 1
           select_fields: [id, title, scheduled, duration]
 
   native-mcp:
     tool_calls:
       - server: gong
-        tool: retrieve_transcripts
+        tool: get_call
         args:
-          callIds: ["1005803797056190704"]
+          id: "1005803797056190704"
