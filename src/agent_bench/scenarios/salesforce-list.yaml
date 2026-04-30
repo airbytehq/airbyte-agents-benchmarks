@@ -6,10 +6,22 @@ description: |
   List Salesforce accounts via SOQL.
   Agent requests Id, Name, Type, and Industry per record.
 
-task:
-  label: "List accounts"
-  action: list
-  entity: accounts
-  metric_focus: bulk_list
-  params:
-    limit: 50
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SALESFORCE_CONNECTOR_ID
+        args:
+          entity: accounts
+          action: list
+          params:
+            q: "SELECT Id, Name, Type, Industry FROM Account LIMIT 50"
+          select_fields: [Id, Name, Type, Industry]
+
+  native-mcp:
+    tool_calls:
+      - server: salesforce
+        tool: soql_query
+        args:
+          q: "SELECT Id, Name, Type, Industry FROM Account LIMIT 50"

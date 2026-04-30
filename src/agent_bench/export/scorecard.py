@@ -142,12 +142,18 @@ def _zero_totals() -> dict[str, float | None]:
     return {"tokens": 0, "bytes": 0, "calls": 0, "latency_ms": None, "records": 0, "n": 0}
 
 
+def _task_label(cell: Cell) -> str:
+    """Derive a human-readable task label from a cell's scenario."""
+    if cell.scenario.task is not None:
+        return cell.scenario.task.label
+    return cell.scenario.title or cell.scenario.name
+
+
 def _per_connector_table(cells: list[Cell]) -> str:
     """One table: rows are tasks \u00d7 paths."""
-    # Group by task, then emit a row per path
     by_task: dict[str, list[Cell]] = {}
     for c in cells:
-        by_task.setdefault(c.scenario.task.label, []).append(c)
+        by_task.setdefault(_task_label(c), []).append(c)
 
     lines = [
         "| Task | Path | Records | Tokens | Bytes | Calls |",

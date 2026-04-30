@@ -3,56 +3,75 @@ from __future__ import annotations
 import asyncio
 import json
 
+import pytest
+
 from agent_bench.config import LiveConfig
 from agent_bench.export.scorecard import render_scorecard
 from agent_bench.metrics import BenchmarkResult, StepResult
 from agent_bench.paths.agent_mcp import AgentMCPPath
+from agent_bench.paths.agent_sdk import _DISPATCH, _translate
 from agent_bench.paths.native_mcp import NativeMCPPath
 from agent_bench.recordings import validate_recordings
 from agent_bench.runner import Cell, RunReport
-from agent_bench.scenarios.loader import load_scenario
+from agent_bench.scenarios.loader import Task, load_scenario
 
 
-def test_scenario_targets_match_launch_plan() -> None:
+def test_scenario_loads_choreographed_format() -> None:
+    gong_get = load_scenario("gong-get")
+    assert gong_get.is_choreographed
+    assert gong_get.paths is not None
+    assert "agent-mcp" in gong_get.paths
+    assert "native-mcp" in gong_get.paths
+
+    agent_calls = gong_get.paths["agent-mcp"].tool_calls
+    assert len(agent_calls) == 1
+    assert agent_calls[0].server == "airbyte-agent"
+    assert agent_calls[0].tool == "integrations_connectors_id_execute"
+    assert agent_calls[0].args["entity"] == "calls"
+    assert agent_calls[0].args["action"] == "get"
+    assert agent_calls[0].args["params"]["id"] == "1005803797056190704"
+    assert "id" in agent_calls[0].args["select_fields"]
+
+    native_calls = gong_get.paths["native-mcp"].tool_calls
+    assert len(native_calls) == 1
+    assert native_calls[0].server == "gong"
+    assert native_calls[0].tool == "get_call"
+
+
+def test_multi_step_scenario_loads() -> None:
+    scenario = load_scenario("gong-to-salesforce-zendesk-lookup")
+    assert scenario.is_choreographed
+    assert scenario.faux_prompt
+    assert len(scenario.paths["agent-mcp"].tool_calls) == 3
+    assert len(scenario.paths["native-mcp"].tool_calls) == 3
+
+    agent_calls = scenario.paths["agent-mcp"].tool_calls
+    assert agent_calls[0].connector_id_env == "GONG_CONNECTOR_ID"
+    assert agent_calls[1].connector_id_env == "SALESFORCE_CONNECTOR_ID"
+    assert agent_calls[2].connector_id_env == "ZENDESK_CONNECTOR_ID"
+
+
+def test_scenario_connectors_property() -> None:
+    scenario = load_scenario("gong-to-salesforce-zendesk-lookup")
+    connectors = scenario.connectors
+    assert "gong" in connectors
+    assert "salesforce" in connectors
+    assert "zendesk" in connectors
+
+
+def test_not_comparable_scenarios() -> None:
     slack_get = load_scenario("slack-get")
-    assert slack_get.task.params["id"] == "C02TD5CB7PZ"
-    assert slack_get.task.params["name_hint"] == "feedback_survey_results"
+    assert slack_get.is_comparable is False
 
-    granola_search = load_scenario("granola-search")
-    granola_get = load_scenario("granola-get")
-    granola_list = load_scenario("granola-list")
-    assert granola_search.task.params["limit"] == 1
-    assert granola_get.task.params["id"] == "not_ES3idLqBAmN9L1"
-    assert granola_get.task.params["claude_mcp_id"] == "96457d50-5ed1-4d81-a2fc-f43c2b93530d"
-    assert granola_list.task.params["limit"] == 25
+    slack_search = load_scenario("slack-search")
+    assert slack_search.is_comparable is False
 
-
-def test_path_planning_uses_connector_specific_shapes(tmp_path) -> None:
-    config = _config()
-
-    scenario = load_scenario("granola-get")
-    task = scenario.task
-    mcp_plan = AgentMCPPath(config, tmp_path).plan(task, scenario)
-    mcp_item = mcp_plan.calls[0].args["items"][0]
-    assert mcp_item["params"] == {"note_id": "not_ES3idLqBAmN9L1"}
-    assert mcp_item["select_fields"] == [
-        "id",
-        "title",
-        "created_at",
-        "updated_at",
-        "attendees",
-        "summary_text",
-        "transcript",
-    ]
-    assert "describe_connector" in mcp_plan.notes[0]
-
-    native_plan = NativeMCPPath(tmp_path).plan(task, scenario)
-    assert native_plan.calls[0].args["meeting_id"] == "96457d50-5ed1-4d81-a2fc-f43c2b93530d"
+    sf_search = load_scenario("salesforce-search")
+    assert sf_search.is_comparable is False
 
 
 def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None:
     scenario = load_scenario("linear-get")
-    task = scenario.task
     rec_dir = tmp_path
     rec_dir.mkdir(parents=True, exist_ok=True)
     (rec_dir / "recording.json").write_text(json.dumps([{
@@ -74,38 +93,12 @@ def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None
     }]))
 
     path = AgentMCPPath(_config(), rec_dir, mode="replay")
-    result = _run_path(path, task, scenario)
+    result = _run_path(path, scenario)
     assert result.status == "ok"
     assert result.total_latency_ms == 123
     assert result.total_records == 1
     assert result.single_record_calls == 1
     assert result.single_record_tokens > 0
-
-
-def test_validation_flags_stale_agent_mcp_recordings(tmp_path) -> None:
-    rec_dir = tmp_path / "linear-get-scenario" / "agent-mcp"
-    rec_dir.mkdir(parents=True)
-    (rec_dir / "recording.json").write_text(json.dumps([{
-        "tool": "mcp__airbyte-agent__execute",
-        "args": {"items": [{
-            "connector_id": "linear-id",
-            "entity": "issues",
-            "action": "get",
-            "params": {"id": "ec6e00c7-dd96-4875-952c-69ecc33ce06d"},
-        }]},
-        "wall_clock_ms": 9,
-        "response": {"results": [{
-            "result": {
-                "status": "success",
-                "result": {"id": "issue-1"},
-                "execution_metadata": {"execution_time_ms": 9},
-            },
-        }]},
-    }]))
-
-    issues = validate_recordings(["linear-get"], ["agent-mcp"], tmp_path, _config())
-    messages = [issue.message for issue in issues]
-    assert any("missing mandatory select_fields" in message for message in messages)
 
 
 def test_scorecard_renders_interim_ratios(tmp_path) -> None:
@@ -128,23 +121,16 @@ def test_scorecard_renders_interim_ratios(tmp_path) -> None:
     assert "3.0× fewer tokens" in text
 
 
-def _run_path(path: AgentMCPPath, task, scenario) -> BenchmarkResult:
-    async def collect() -> BenchmarkResult:
-        result = None
-        async for _step, current in path.run_task(task, scenario):
-            result = current
-        assert result is not None
-        return result
-
-    return asyncio.run(collect())
-
-
 def test_salesforce_list_translates_to_soql() -> None:
-    """SOQL translation produces the expected query with LIMIT."""
-    from agent_bench.paths.agent_sdk import _translate, _DISPATCH
-
     scenario = load_scenario("salesforce-list")
-    task = scenario.task
+    agent_call = scenario.paths["agent-mcp"].tool_calls[0]
+    task = Task(
+        label="List accounts",
+        action="list",
+        entity=agent_call.args["entity"],
+        metric_focus="bulk_list",
+        params={"limit": 50},
+    )
     dispatch = _DISPATCH["salesforce"]
     action, params = _translate(task, dispatch)
     assert action == "list"
@@ -154,12 +140,6 @@ def test_salesforce_list_translates_to_soql() -> None:
 
 
 def test_salesforce_list_without_soql_raises() -> None:
-    """A Salesforce entity without a list_soql template raises ValueError."""
-    import pytest
-
-    from agent_bench.paths.agent_sdk import _translate
-    from agent_bench.scenarios.loader import Task
-
     task = Task(label="test", action="list", entity="unknown_entity", metric_focus="bulk_list", params={"limit": 10})
     dispatch = {
         "list_limit_key": "q",
@@ -167,6 +147,29 @@ def test_salesforce_list_without_soql_raises() -> None:
     }
     with pytest.raises(ValueError, match="requires a list_soql template"):
         _translate(task, dispatch)
+
+
+def _run_path(path: AgentMCPPath, scenario) -> BenchmarkResult:
+    task = scenario.task
+    if task is None:
+        agent_call = scenario.paths["agent-mcp"].tool_calls[0]
+        action = agent_call.args.get("action", "get")
+        task = Task(
+            label=f"{action} {agent_call.args.get('entity', 'unknown')}",
+            action=action,
+            entity=agent_call.args.get("entity", "unknown"),
+            metric_focus="single_record_fetch" if action == "get" else "bulk_list",
+            params=agent_call.args.get("params", {}),
+        )
+
+    async def collect() -> BenchmarkResult:
+        result = None
+        async for _step, current in path.run_task(task, scenario):
+            result = current
+        assert result is not None
+        return result
+
+    return asyncio.run(collect())
 
 
 def _config() -> LiveConfig:

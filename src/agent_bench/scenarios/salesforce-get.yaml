@@ -5,11 +5,25 @@ connector_id_env: SALESFORCE_CONNECTOR_ID
 description: |
   Fetch a single Salesforce account by ID.
   Agent requests Id, Name, Type, and Industry.
+  Note: agent-mcp and native-mcp use different account IDs because
+  they connect to different Salesforce orgs.
 
-task:
-  label: "Get single account by ID"
-  action: get
-  entity: accounts
-  metric_focus: single_record_fetch
-  params:
-    id: "0014W000027f6UwQAI"
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SALESFORCE_CONNECTOR_ID
+        args:
+          entity: accounts
+          action: get
+          params:
+            id: "0015e00000FMsFhAAL"
+          select_fields: [Id, Name, Type, Industry]
+
+  native-mcp:
+    tool_calls:
+      - server: salesforce
+        tool: soql_query
+        args:
+          q: "SELECT Id, Name, Type, Industry FROM Account WHERE Id = '0014W000027f6UwQAI'"

@@ -8,12 +8,28 @@ description: |
 
 annotations:
   record_count: >
-    ℹ️ Unequal record counts amplify the ratio. Per-record savings are real.
+    ℹ️Unequal record counts amplify the ratio. Per-record savings are proportional to get/list.
 
-task:
-  label: "Search calls by keyword"
-  action: search
-  entity: calls
-  metric_focus: narrow_context
-  params:
-    keyword: "airbyte"
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: GONG_CONNECTOR_ID
+        args:
+          entity: calls
+          action: context_store_search
+          params:
+            query:
+              filter:
+                fuzzy:
+                  title: "airbyte"
+            limit: 10
+          select_fields: [id, title, scheduled, duration]
+
+  native-mcp:
+    tool_calls:
+      - server: gong
+        tool: search_calls
+        args:
+          keyword: "airbyte"

@@ -12,7 +12,7 @@ from agent_bench.metrics import BenchmarkResult
 from agent_bench.paths.agent_mcp import AgentMCPPath
 from agent_bench.paths.agent_sdk import AgentSDKPath
 from agent_bench.paths.native_mcp import NativeMCPPath
-from agent_bench.scenarios.loader import Scenario, load_scenario
+from agent_bench.scenarios.loader import Scenario, Task, load_scenario
 
 
 @dataclass
@@ -75,6 +75,17 @@ async def run_scenario(
     cells: list[Cell] = []
     paths = _build_paths(path_slugs, config, scenario.connector, artifacts_dir, scenario.name, mode=mode)
     task = scenario.task
+    if task is None and scenario.is_choreographed:
+        first_call = scenario.paths["agent-mcp"].tool_calls[0]
+        action = first_call.args.get("action", "unknown")
+        entity = first_call.args.get("entity", "unknown")
+        task = Task(
+            label=scenario.title or scenario.name,
+            action=action,
+            entity=entity,
+            metric_focus="single_record_fetch" if action == "get" else "bulk_list",
+            params=first_call.args.get("params", {}),
+        )
 
     async def _run_path(path):
         result = None

@@ -6,11 +6,27 @@ description: >
   Search Granola notes by keyword. Note that native MCP returns a
   synthesized natural-language answer, not structured records.
 
-task:
-  label: "Search notes by keyword"
-  action: search
-  entity: notes
-  metric_focus: narrow_context
-  params:
-    keyword: "context store"
-    limit: 1
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: GRANOLA_CONNECTOR_ID
+        args:
+          entity: notes
+          action: context_store_search
+          params:
+            query:
+              filter:
+                fuzzy:
+                  summary_text: "context store"
+            limit: 1
+          select_fields: [id, title, created_at, updated_at, attendees, summary_text, transcript]
+
+  native-mcp:
+    tool_calls:
+      - server: granola
+        tool: search_notes
+        args:
+          keyword: "context store"
+          limit: 1

@@ -6,10 +6,26 @@ description: |
   Search Zendesk tickets matching a keyword.
   Agent requests id, subject, status, and priority per result.
 
-task:
-  label: "Search tickets by keyword"
-  action: search
-  entity: tickets
-  metric_focus: narrow_context
-  params:
-    keyword: "sync"
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: ZENDESK_CONNECTOR_ID
+        args:
+          entity: tickets
+          action: context_store_search
+          params:
+            query:
+              filter:
+                fuzzy:
+                  subject: "sync"
+            limit: 10
+          select_fields: [id, subject, status, priority]
+
+  native-mcp:
+    tool_calls:
+      - server: zendesk
+        tool: search_tickets
+        args:
+          query: "sync"

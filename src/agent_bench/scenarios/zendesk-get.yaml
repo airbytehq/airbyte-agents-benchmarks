@@ -8,12 +8,24 @@ description: |
 
 annotations:
   highlight: >
-    💎 Equal record counts; savings driven purely by field projection.
+    💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`.
 
-task:
-  label: "Get single ticket by ID"
-  action: get
-  entity: tickets
-  metric_focus: single_record_fetch
-  params:
-    id: "2"
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: ZENDESK_CONNECTOR_ID
+        args:
+          entity: tickets
+          action: get
+          params:
+            ticket_id: "2"
+          select_fields: [id, subject, status, priority]
+
+  native-mcp:
+    tool_calls:
+      - server: zendesk
+        tool: get_ticket
+        args:
+          id: "2"

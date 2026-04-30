@@ -9,7 +9,7 @@ description: |
 
 annotations:
   tool_mismatch: >
-    🛑 No native search/filter tool exists in
+    🛑No native search/filter tool exists in
     [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)
     ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)).
     All 8 tools:
@@ -17,13 +17,29 @@ annotations:
     `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`.
     None support keyword filtering on channel names.
     Alternative path: paginate `slack_list_channels` (all pages) and filter client-side by keyword
-    (est. ~13,400 tokens to scan all ~60 channels at ~4,500 tokens/page of 20;
+    (est. approximately 13,400 tokens to scan all approximately 60 channels at approximately 4,500 tokens/page of 20;
     must exhaust every page to find all matches).
 
-task:
-  label: "Search channels by keyword"
-  action: search
-  entity: channels
-  metric_focus: narrow_context
-  params:
-    keyword: "agent"
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SLACK_CONNECTOR_ID
+        args:
+          entity: channels
+          action: context_store_search
+          params:
+            query:
+              filter:
+                fuzzy:
+                  name: "agent"
+            limit: 10
+          select_fields: [id, name, num_members, is_archived, is_private, created, updated, topic, purpose]
+
+  native-mcp:
+    tool_calls:
+      - server: slack
+        tool: slack_list_channels
+        args:
+          limit: 20

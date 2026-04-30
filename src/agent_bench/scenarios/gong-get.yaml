@@ -8,12 +8,24 @@ description: |
 
 annotations:
   highlight: >
-    💎 Equal record counts; savings driven purely by field projection.
+    💎Only requested fields consume token context: `id`, `title`, `scheduled`, and `duration`.
 
-task:
-  label: "Get single call by ID"
-  action: get
-  entity: calls
-  metric_focus: single_record_fetch
-  params:
-    id: "1005803797056190704"
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: GONG_CONNECTOR_ID
+        args:
+          entity: calls
+          action: get
+          params:
+            id: "1005803797056190704"
+          select_fields: [id, title, scheduled, duration]
+
+  native-mcp:
+    tool_calls:
+      - server: gong
+        tool: get_call
+        args:
+          id: "1005803797056190704"

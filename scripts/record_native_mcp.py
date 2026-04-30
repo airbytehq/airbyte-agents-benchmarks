@@ -33,7 +33,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS_ROOT = REPO_ROOT / "artifacts"
 
 
+_DATE_OVERRIDE: str | None = None
+
 def get_date_str() -> str:
+    if _DATE_OVERRIDE:
+        return _DATE_OVERRIDE
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
@@ -519,8 +523,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Record native MCP responses")
     parser.add_argument("--connectors", default="linear,slack,gong,salesforce,zendesk",
                         help="Comma-separated list of connectors to record")
+    parser.add_argument("--date", default=None,
+                        help="Artifact date folder (YYYY-MM-DD). Defaults to today UTC.")
     parser.add_argument("--dry-run", action="store_true")
     opts = parser.parse_args()
+
+    if opts.date:
+        global _DATE_OVERRIDE
+        _DATE_OVERRIDE = opts.date
 
     connectors = [c.strip() for c in opts.connectors.split(",")]
     all_results = []

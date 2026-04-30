@@ -9,20 +9,38 @@ description: |
 
 annotations:
   data_parity: >
-    🛑 Native SOSL returned 0 results; agent-mcp returned 10. Comparison invalid.
-    Root causes: (1) Different Salesforce orgs between agent-mcp and native-mcp — no overlapping data (org alignment fix in progress).
+    🛑Native SOSL returned 0 results; agent-mcp returned 10. Comparison invalid.
+    Root causes: (1) Different Salesforce orgs between agent-mcp and native-mcp
+    — no overlapping data (org alignment fix in progress).
     (2) [SOSL](https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_sosl.htm)
     relies on a full-text search index with
     [known indexing delays](https://issues.salesforce.com/issue/a028c00000j5kNRAAY) (up to 15-30 min for new records)
     and tokenization quirks that can return 0 results even when data exists.
     If SOSL remains unreliable after org alignment, SOQL `WHERE Name LIKE '%airbyte%'` queries
     the database directly and bypasses the search index
-    (est. ~720 tokens for ~10 matching records at ~72 tokens/record, based on salesforce-list native-mcp rate).
+    (est. approximately 720 tokens for approximately 10 matching records at approximately 72 tokens/record, based on salesforce-list native-mcp rate).
+    Next step: Modify scenario to use valid query in Vendor MCP.
 
-task:
-  label: "Search accounts by keyword"
-  action: search
-  entity: accounts
-  metric_focus: narrow_context
-  params:
-    keyword: "airbyte"
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SALESFORCE_CONNECTOR_ID
+        args:
+          entity: accounts
+          action: context_store_search
+          params:
+            query:
+              filter:
+                fuzzy:
+                  Name: "airbyte"
+            limit: 10
+          select_fields: [Id, Name, Type, Industry]
+
+  native-mcp:
+    tool_calls:
+      - server: salesforce
+        tool: sosl_search
+        args:
+          query: "airbyte"

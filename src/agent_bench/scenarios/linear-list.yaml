@@ -6,10 +6,22 @@ description: |
   List the first 50 Linear issues.
   Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels per record.
 
-task:
-  label: "List first 50 issues"
-  action: list
-  entity: issues
-  metric_focus: bulk_list
-  params:
-    limit: 50
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: LINEAR_CONNECTOR_ID
+        args:
+          entity: issues
+          action: list
+          params:
+            first: 50
+          select_fields: [id, identifier, title, state, priority, createdAt, updatedAt, team, labels]
+
+  native-mcp:
+    tool_calls:
+      - server: linear
+        tool: list_issues
+        args:
+          limit: 50
