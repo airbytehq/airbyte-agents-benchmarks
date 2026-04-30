@@ -26,6 +26,6 @@ paths:
   native-mcp:
     tool_calls:
       - server: zendesk
-        tool: search_tickets
+        tool: zendeskSearchTickets
         args:
-          query: "sync"
+          query: "status:open"

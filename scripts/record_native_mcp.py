@@ -519,66 +519,135 @@ def record_salesforce(
     return results
 
 
-# ---------- Zendesk API ----------
+# ---------- Zendesk MCP (dunialabs/mcp-zendesk via Docker, stdio) ----------
+
+ZENDESK_MCP_IMAGE = "ghcr.io/dunialabs/mcp-servers/zendesk:latest"
+
+
+class ZendeskMCP:
+    """MCP client for dunialabs/mcp-zendesk (Docker stdio transport, OAuth).
+
+    Launches the `ghcr.io/dunialabs/mcp-servers/zendesk` container and
+    communicates via JSON-RPC over stdio. Supports OAuth Bearer auth.
+    Tools: `zendeskGetTicket`, `zendeskListTickets`, `zendeskSearchTickets`.
+    """
+
+    def __init__(self, subdomain: str, access_token: str):
+        self.proc = subprocess.Popen(
+            [
+                "docker", "run", "-i", "--rm",
+                "-e", f"zendeskSubdomain={subdomain}",
+                "-e", f"accessToken={access_token}",
+                ZENDESK_MCP_IMAGE,
+            ],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True,
+        )
+        self._initialize()
+
+    def _initialize(self):
+        init_req = {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "agent-bench-recorder", "version": "0.1"},
+            },
+        }
+        self.proc.stdin.write(json.dumps(init_req) + "\n")
+        self.proc.stdin.flush()
+        self.proc.stdout.readline()  # consume init response
+        notif = {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+        self.proc.stdin.write(json.dumps(notif) + "\n")
+        self.proc.stdin.flush()
+
+    def call_tool(self, tool_name: str, arguments: dict) -> tuple[dict | list | str, float]:
+        req = {
+            "jsonrpc": "2.0", "id": 2,
+            "method": "tools/call",
+            "params": {"name": tool_name, "arguments": arguments},
+        }
+        start = time.time()
+        self.proc.stdin.write(json.dumps(req) + "\n")
+        self.proc.stdin.flush()
+        resp_line = self.proc.stdout.readline()
+        wall_ms = (time.time() - start) * 1000
+
+        data = json.loads(resp_line)
+        result = data.get("result", {})
+        content = result.get("content", [])
+        if content:
+            text = content[0].get("text", "")
+            try:
+                return json.loads(text), wall_ms
+            except json.JSONDecodeError:
+                return {"text": text}, wall_ms
+        return {"error": "no content"}, wall_ms
+
+    def close(self):
+        self.proc.terminate()
+        self.proc.wait(timeout=5)
+
 
 def record_zendesk(subdomain: str, access_token: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Zendesk native responses via REST API (OAuth Bearer token)."""
+    """Record Zendesk native-mcp via dunialabs/mcp-zendesk (Docker, OAuth).
+
+    Tools used:
+    - `zendeskSearchTickets` — keyword/status search via Zendesk query syntax
+    - `zendeskGetTicket` — single ticket by ID
+    - `zendeskListTickets` — paginated list of recent tickets
+    """
     results = []
     if dry_run:
         print("  [dry-run] Would record zendesk-search, zendesk-get, zendesk-list")
         return results
 
-    base = f"https://{subdomain}.zendesk.com/api/v2"
-    headers = {"Authorization": f"Bearer {access_token}"}
+    mcp = ZendeskMCP(subdomain, access_token)
     date = get_date_str()
 
-    # Search
-    start = time.time()
-    r = requests.get(f"{base}/search.json", headers=headers, params={"query": "type:ticket sync", "per_page": 50}, timeout=60)
-    wall_ms = (time.time() - start) * 1000
-    search_response = r.json()
+    try:
+        # Search — query-based search (Zendesk query syntax)
+        tool = "zendeskSearchTickets"
+        args = {"query": "status:open"}
+        response, wall_ms = mcp.call_tool(tool, args)
+        path = save_recording("zendesk-search", [{
+            "tool": f"mcp__zendesk__{tool}",
+            "args": args,
+            "wall_clock_ms": round(wall_ms, 1),
+            "response": response,
+        }], date)
+        results.append(("zendesk-search", path))
+        tickets = response.get("tickets", []) if isinstance(response, dict) else []
+        print(f"    zendesk-search: {len(tickets)} tickets (via zendeskSearchTickets)")
 
-    path = save_recording("zendesk-search", [{
-        "tool": "mcp__zendesk__search_tickets",
-        "args": {"query": "sync"},
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": search_response,
-    }], date)
-    results.append(("zendesk-search", path))
-    ticket_results = search_response.get("results", []) if isinstance(search_response, dict) else []
-    print(f"    zendesk-search: {len(ticket_results)} results")
+        # Get — fetch ticket #2 (known to exist in d3v-airbyte)
+        tool = "zendeskGetTicket"
+        args = {"ticket_id": 2}
+        response, wall_ms = mcp.call_tool(tool, args)
+        path = save_recording("zendesk-get", [{
+            "tool": f"mcp__zendesk__{tool}",
+            "args": args,
+            "wall_clock_ms": round(wall_ms, 1),
+            "response": response,
+        }], date)
+        results.append(("zendesk-get", path))
+        print(f"    zendesk-get: {len(json.dumps(response))} bytes")
 
-    # Get — use ticket ID 2 (known to exist in d3v-airbyte)
-    ticket_id = "2"
-    start = time.time()
-    r = requests.get(f"{base}/tickets/{ticket_id}.json", headers=headers, timeout=60)
-    wall_ms = (time.time() - start) * 1000
-    get_response = r.json()
-
-    path = save_recording("zendesk-get", [{
-        "tool": "mcp__zendesk__get_ticket",
-        "args": {"id": ticket_id},
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": get_response,
-    }], date)
-    results.append(("zendesk-get", path))
-    print(f"    zendesk-get: {len(json.dumps(get_response))} bytes")
-
-    # List
-    start = time.time()
-    r = requests.get(f"{base}/tickets.json", headers=headers, params={"per_page": 50, "sort_by": "created_at", "sort_order": "desc"}, timeout=60)
-    wall_ms = (time.time() - start) * 1000
-    list_response = r.json()
-
-    path = save_recording("zendesk-list", [{
-        "tool": "mcp__zendesk__list_tickets",
-        "args": {"limit": 50},
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": list_response,
-    }], date)
-    results.append(("zendesk-list", path))
-    tickets = list_response.get("tickets", []) if isinstance(list_response, dict) else []
-    print(f"    zendesk-list: {len(tickets)} tickets")
+        # List — paginated list of recent tickets
+        tool = "zendeskListTickets"
+        args = {}
+        response, wall_ms = mcp.call_tool(tool, args)
+        path = save_recording("zendesk-list", [{
+            "tool": f"mcp__zendesk__{tool}",
+            "args": args,
+            "wall_clock_ms": round(wall_ms, 1),
+            "response": response,
+        }], date)
+        results.append(("zendesk-list", path))
+        tickets = response.get("tickets", []) if isinstance(response, dict) else []
+        print(f"    zendesk-list: {len(tickets)} tickets")
+    finally:
+        mcp.close()
 
     return results
 

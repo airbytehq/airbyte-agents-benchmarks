@@ -1,6 +1,6 @@
 # Third-Party MCP Servers: Installation and Configuration
 
-This document explains how to install and configure the native MCP servers provided by Linear, Granola, and Slack. These are the third-party alternatives the benchmark compares Airbyte Agents against.
+This document explains how to install and configure the native MCP servers provided by Linear, Granola, Slack, and Zendesk. These are the third-party alternatives the benchmark compares Airbyte Agents against.
 
 The benchmark's `native-mcp` path uses recordings captured from these providers' MCP tools. To capture fresh recordings or independently verify tool call shapes, you need access to these servers.
 
@@ -13,8 +13,9 @@ Each connector in the benchmark has a corresponding MCP server maintained by the
 | Linear | `https://mcp.linear.app/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
 | Granola | `https://mcp.granola.ai/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
 | Slack | `@modelcontextprotocol/server-slack` | stdio (local, via `npx`) | Bot token + team ID |
+| Zendesk | `reminia/zendesk-mcp-server` | stdio (local, via `uvx`) | Email + API token |
 
-Linear and Granola run as remote hosted servers with browser-based OAuth. Slack runs locally via `npx` with a bot token.
+Linear and Granola run as remote hosted servers with browser-based OAuth. Slack and Zendesk run locally via subprocess with static credentials.
 
 ---
 
@@ -212,6 +213,52 @@ Slack also provides a hosted remote MCP server at `https://mcp.slack.com/mcp` (S
 
 ---
 
+## Zendesk MCP
+
+The benchmark uses the community **dunialabs/mcp-zendesk** server (TypeScript, MIT, Docker image) via stdio transport. No official Zendesk MCP server exists.
+
+**Repo:** https://github.com/dunialabs/mcp-servers/tree/main/mcp-zendesk
+**Docker image:** `ghcr.io/dunialabs/mcp-servers/zendesk:latest`
+
+### Prerequisites
+
+- Docker
+- A Zendesk OAuth access token (or email + API token for development)
+
+### Environment Variables
+
+The recording script loads credentials from 1Password (`zendesk-support` item, `test-credentials-oauth` section). For manual runs, set:
+
+```bash
+export ZENDESK_SUBDOMAIN="d3v-airbyte"
+export ZENDESK_ACCESS_TOKEN="your-oauth-access-token"
+```
+
+### How the Recording Script Launches It
+
+The `ZendeskMCP` class in `scripts/record_native_mcp.py` launches the Docker container with stdio transport:
+
+```bash
+docker run -i --rm \
+  -e zendeskSubdomain=d3v-airbyte \
+  -e accessToken=$ZENDESK_ACCESS_TOKEN \
+  ghcr.io/dunialabs/mcp-servers/zendesk:latest
+```
+
+The container reads JSON-RPC messages from stdin and writes responses to stdout.
+
+### Available Tools
+
+| Benchmark Task | MCP Tool | Args | Description |
+|---|---|---|---|
+| search | `zendeskSearchTickets` | `{"query": "status:open"}` | Search tickets using Zendesk query syntax |
+| get | `zendeskGetTicket` | `{"ticket_id": 2}` | Retrieve a single ticket by ID |
+| list | `zendeskListTickets` | `{}` | List recent tickets (default 25) |
+
+The server exposes 18 tools total (ticket, user, and organization management). The benchmark uses only the three ticket read operations listed above.
+
+---
+
 ## Using These Servers With the Benchmark
 
 ### Replaying Committed Recordings
@@ -269,8 +316,8 @@ Some tasks (e.g., Slack list) produce multiple calls per recording file. Use `--
 
 | Dimension | Third-Party MCP | Agent MCP (`agent-mcp`) |
 |---|---|---|
-| Servers | One per service (Linear, Granola, Slack) | Unified `mcp__airbyte-agent__execute` |
-| Auth | Per-service (OAuth or bot tokens) | Single Airbyte Cloud OAuth credential set |
+| Servers | One per service (Linear, Granola, Slack, Zendesk) | Unified `mcp__airbyte-agent__execute` |
+| Auth | Per-service (OAuth, bot tokens, or API keys) | Single Airbyte Cloud OAuth credential set |
 | Field selection | Not available; full responses returned | `select_fields` narrows returned fields |
 | Response shape | Varies by provider (JSON, text, markdown) | Uniform typed JSON envelope |
-| Hosting | Remote (Linear, Granola) or local (Slack) | Airbyte-hosted proxy at `mcp.airbyte.ai` |
+| Hosting | Remote (Linear, Granola) or local (Slack, Zendesk) | Airbyte-hosted proxy at `mcp.airbyte.ai` |

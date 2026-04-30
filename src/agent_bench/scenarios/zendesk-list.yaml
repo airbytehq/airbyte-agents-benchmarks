@@ -26,6 +26,5 @@ paths:
   native-mcp:
     tool_calls:
       - server: zendesk
-        tool: list_tickets
-        args:
-          limit: 50
+        tool: zendeskListTickets
+        args: {}

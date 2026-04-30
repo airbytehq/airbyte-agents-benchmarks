@@ -74,6 +74,6 @@ paths:
           q: "SELECT Id, Name, Type, Industry FROM Account WHERE Name IN ('Acme Corp', 'Preset', 'RVezy')"
 
       - server: zendesk
-        tool: search_tickets
+        tool: zendeskSearchTickets
         args:
-          query: "subject:Acme Corp OR subject:Preset OR subject:RVezy"
+          query: "status:open"
