@@ -30,6 +30,6 @@ paths:
   native-mcp:
     tool_calls:
       - server: gong
-        tool: search_calls
+        tool: list_calls
         args:
-          keyword: "airbyte"
+          fromDateTime: "2025-01-01T00:00:00Z"

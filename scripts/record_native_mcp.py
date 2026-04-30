@@ -18,7 +18,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import os
 import re
@@ -279,68 +278,137 @@ def record_slack(bot_token: str, team_id: str, dry_run: bool = False) -> list[tu
     return results
 
 
-# ---------- Gong API ----------
+# ---------- Gong MCP (stdio via kenazk/gong-mcp) ----------
+
+GONG_MCP_SERVER_PATH = Path("/home/ubuntu/gong-mcp/dist/index.js")
+
+
+class GongMCP:
+    """Stdio-based MCP client for the kenazk/gong-mcp server."""
+
+    def __init__(self, access_key: str, access_secret: str):
+        env = os.environ.copy()
+        env["GONG_ACCESS_KEY"] = access_key
+        env["GONG_ACCESS_SECRET"] = access_secret
+        self.proc = subprocess.Popen(
+            ["node", str(GONG_MCP_SERVER_PATH)],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=sys.stderr,
+            text=True,
+            env=env,
+        )
+        try:
+            self._initialize()
+        except Exception:
+            self.proc.terminate()
+            self.proc.wait(timeout=5)
+            raise
+
+    def _initialize(self):
+        init_req = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "agent-bench-recorder", "version": "0.1"},
+            },
+        }
+        self.proc.stdin.write(json.dumps(init_req) + "\n")
+        self.proc.stdin.flush()
+        self.proc.stdout.readline()  # consume init response
+        notif = {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+        self.proc.stdin.write(json.dumps(notif) + "\n")
+        self.proc.stdin.flush()
+
+    def call_tool(self, tool_name: str, arguments: dict) -> tuple[dict | list | str, float]:
+        req = {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": tool_name, "arguments": arguments},
+        }
+        start = time.time()
+        self.proc.stdin.write(json.dumps(req) + "\n")
+        self.proc.stdin.flush()
+        resp_line = self.proc.stdout.readline()
+        wall_ms = (time.time() - start) * 1000
+
+        data = json.loads(resp_line)
+        result = data.get("result", {})
+        content = result.get("content", [])
+        if content:
+            text = content[0].get("text", "")
+            try:
+                return json.loads(text), wall_ms
+            except json.JSONDecodeError:
+                return {"text": text}, wall_ms
+        return {"error": "no content"}, wall_ms
+
+    def close(self):
+        self.proc.terminate()
+        self.proc.wait(timeout=5)
+
 
 def record_gong(access_key: str, access_secret: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Gong native responses via REST API."""
+    """Record Gong native-mcp via the kenazk/gong-mcp MCP server."""
     results = []
     if dry_run:
-        print("  [dry-run] Would record gong-search, gong-get, gong-list")
+        print("  [dry-run] Would record gong-list, gong-get, gong-search")
         return results
 
-    auth = base64.b64encode(f"{access_key}:{access_secret}".encode()).decode()
-    headers = {"Authorization": f"Basic {auth}", "Content-Type": "application/json"}
-    base_url = "https://api.gong.io/v2"
+    mcp = GongMCP(access_key, access_secret)
     date = get_date_str()
 
-    # List calls (used for both list and to find a call for get)
-    start = time.time()
-    r = requests.get(f"{base_url}/calls", headers=headers, params={"fromDateTime": "2025-01-01T00:00:00Z"}, timeout=60)
-    wall_ms = (time.time() - start) * 1000
-    list_response = r.json()
+    try:
+        # List calls
+        tool = "list_calls"
+        args = {"fromDateTime": "2025-01-01T00:00:00Z"}
+        response, wall_ms = mcp.call_tool(tool, args)
+        path = save_recording("gong-list", [{
+            "tool": f"mcp__gong__{tool}",
+            "args": args,
+            "wall_clock_ms": round(wall_ms, 1),
+            "response": response,
+        }], date)
+        results.append(("gong-list", path))
+        calls_list = response.get("calls", []) if isinstance(response, dict) else []
+        print(f"    gong-list: {len(calls_list)} calls")
 
-    path = save_recording("gong-list", [{
-        "tool": "mcp__gong__list_calls",
-        "args": {"fromDateTime": "2025-01-01T00:00:00Z"},
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": list_response,
-    }], date)
-    results.append(("gong-list", path))
-    calls_list = list_response.get("calls", [])
-    print(f"    gong-list: {len(calls_list)} calls")
+        # Get single call — the gong-mcp server has no get_call tool.
+        # Use retrieve_transcripts with the target call ID as the closest
+        # single-call retrieval available.
+        call_id = "1005803797056190704"
+        tool = "retrieve_transcripts"
+        args = {"callIds": [call_id]}
+        response, wall_ms = mcp.call_tool(tool, args)
+        path = save_recording("gong-get", [{
+            "tool": f"mcp__gong__{tool}",
+            "args": args,
+            "wall_clock_ms": round(wall_ms, 1),
+            "response": response,
+        }], date)
+        results.append(("gong-get", path))
+        print(f"    gong-get: {json.dumps(response)[:80]}...")
 
-    # Get single call
-    call_id = "1005803797056190704"
-    start = time.time()
-    r = requests.get(f"{base_url}/calls/{call_id}", headers=headers, timeout=60)
-    wall_ms = (time.time() - start) * 1000
-    get_response = r.json()
-
-    path = save_recording("gong-get", [{
-        "tool": "mcp__gong__get_call",
-        "args": {"id": call_id},
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": get_response,
-    }], date)
-    results.append(("gong-get", path))
-    print(f"    gong-get: {json.dumps(get_response)[:80]}...")
-
-    # Search - Gong doesn't have keyword search on calls via REST easily,
-    # use the list endpoint filtered as a search proxy
-    start = time.time()
-    r = requests.post(f"{base_url}/calls/extensive", headers=headers, timeout=60,
-                      json={"filter": {"fromDateTime": "2025-01-01T00:00:00Z"}, "contentSelector": {"exposedFields": {"call": ["title", "scheduled", "duration", "id"]}}})
-    wall_ms = (time.time() - start) * 1000
-    search_response = r.json()
-
-    path = save_recording("gong-search", [{
-        "tool": "mcp__gong__search_calls",
-        "args": {"keyword": "airbyte"},
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": search_response,
-    }], date)
-    results.append(("gong-search", path))
-    print(f"    gong-search: {json.dumps(search_response)[:80]}...")
+        # Search — the gong-mcp server has no search/keyword tool.
+        # Use list_calls as a proxy (matches the agent-mcp approach of
+        # listing then filtering client-side).
+        tool = "list_calls"
+        args = {"fromDateTime": "2025-01-01T00:00:00Z"}
+        response, wall_ms = mcp.call_tool(tool, args)
+        path = save_recording("gong-search", [{
+            "tool": f"mcp__gong__{tool}",
+            "args": args,
+            "wall_clock_ms": round(wall_ms, 1),
+            "response": response,
+        }], date)
+        results.append(("gong-search", path))
+        print(f"    gong-search: {json.dumps(response)[:80]}...")
+    finally:
+        mcp.close()
 
     return results
 

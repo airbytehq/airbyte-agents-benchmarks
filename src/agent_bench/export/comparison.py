@@ -105,27 +105,13 @@ class ConnectorSummary:
 
 
 def load_stats_from_dir(artifacts_dir: Path) -> list[CellStats]:
-    """Scan an artifacts date directory for recording-stats.json files.
-
-    Re-derives the record count from the sibling ``recording.json`` when
-    present, since the stats file may have been written with a heuristic
-    that only handled agent-mcp response shapes.
-    """
+    """Scan an artifacts date directory for recording-stats.json files."""
     stats: list[CellStats] = []
     if not artifacts_dir.is_dir():
         return stats
     for stats_file in sorted(artifacts_dir.rglob("recording-stats.json")):
         data = json.loads(stats_file.read_text())
-        records = data.get("records", 0)
-
-        # Re-derive record count from recording.json when available,
-        # since stats files may have been written with a heuristic that
-        # only handled agent-mcp response shapes.
-        recording_file = stats_file.parent / "recording.json"
-        if recording_file.exists():
-            recording_data = json.loads(recording_file.read_text())
-            if isinstance(recording_data, list):
-                records = sum(_count_records(call.get("response", {})) for call in recording_data)
+        records = data["records"]
 
         stats.append(CellStats(
             scenario=data["scenario"],
