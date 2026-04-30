@@ -34,7 +34,7 @@
 
 | Action | Description | Annotations |
 |---|---|---|
-| lookup | Multi-step cross-connector workflow: search for Gong calls scheduled<br>today, then look up the associated account names in Salesforce and<br>find open tickets for those accounts in Zendesk.<br>Steps 2 and 3 use dummy static account/ticket lists to demonstrate<br>the choreographed multi-step scenario format. |  |
+| lookup | Multi-step cross-connector workflow: search for Gong calls scheduled<br>on 2026-04-28, then look up the associated account names in Salesforce and<br>find open tickets for those accounts in Zendesk.<br>Steps 2 and 3 use dummy static account/ticket lists to demonstrate<br>the choreographed multi-step scenario format. |  |
 
 #### Scenario Benchmark Results
 
@@ -44,7 +44,7 @@
 
 **Connector total:** Agent MCP uses 5% of Native MCP tokens (95% savings)
 
-<details><summary>Per-tool-call breakdown: Cross-system: Gong calls today → Salesforce + Zendesk lookup</summary>
+<details><summary>Per-tool-call breakdown: Cross-system: Gong calls on 2026-04-28 → Salesforce + Zendesk lookup</summary>
 
 **Agent MCP** (3 calls)
 

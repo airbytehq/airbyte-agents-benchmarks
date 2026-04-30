@@ -10,8 +10,6 @@ from agent_bench.export.scorecard import render_scorecard
 from agent_bench.metrics import BenchmarkResult, StepResult
 from agent_bench.paths.agent_mcp import AgentMCPPath
 from agent_bench.paths.agent_sdk import _DISPATCH, _translate
-from agent_bench.paths.native_mcp import NativeMCPPath
-from agent_bench.recordings import validate_recordings
 from agent_bench.runner import Cell, RunReport
 from agent_bench.scenarios.loader import Task, load_scenario
 
