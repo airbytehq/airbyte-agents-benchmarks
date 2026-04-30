@@ -22,6 +22,6 @@ paths:
   native-mcp:
     tool_calls:
       - server: salesforce
-        tool: soql_query
+        tool: soqlQuery
         args:
           q: "SELECT Id, Name, Type, Industry FROM Account LIMIT 50"

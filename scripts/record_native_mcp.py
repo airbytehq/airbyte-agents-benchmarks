@@ -20,13 +20,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from xml.sax.saxutils import escape as xml_escape
 
 import requests
 
@@ -413,107 +411,134 @@ def record_gong(access_key: str, access_secret: str, dry_run: bool = False) -> l
     return results
 
 
-# ---------- Salesforce API ----------
+# ---------- Salesforce Hosted MCP ----------
 
-def get_salesforce_session_soap(
-    username: str, password: str, security_token: str,
-    instance_url: str = "https://airbyte.my.salesforce.com",
-) -> tuple[str, str]:
-    """Authenticate via SOAP login and return `(session_id, instance_url)`."""
-    soap_body = (
-        '<?xml version="1.0" encoding="utf-8" ?>'
-        '<env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"'
-        '    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'
-        '    xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">'
-        '  <env:Body>'
-        '    <n1:login xmlns:n1="urn:partner.soap.sforce.com">'
-        f'      <n1:username>{xml_escape(username)}</n1:username>'
-        f'      <n1:password>{xml_escape(password)}{xml_escape(security_token)}</n1:password>'
-        '    </n1:login>'
-        '  </env:Body>'
-        '</env:Envelope>'
-    )
-    r = requests.post(
-        f"{instance_url}/services/Soap/u/59.0",
-        headers={"Content-Type": "text/xml", "SOAPAction": "login"},
-        data=soap_body,
-        timeout=30,
-    )
-    r.raise_for_status()
-    session_match = re.search(r"<sessionId>(.+?)</sessionId>", r.text)
-    server_match = re.search(r"<serverUrl>(.+?)</serverUrl>", r.text)
-    if not session_match or not server_match:
-        raise RuntimeError(f"SOAP login failed: {r.text[:300]}")
-    session_id = session_match.group(1)
-    server_url = server_match.group(1)
-    inst_match = re.search(r"(https://[^/]+)", server_url)
-    resolved_instance = inst_match.group(1) if inst_match else instance_url
-    return session_id, resolved_instance
+class SalesforceMCP:
+    """Client for the Salesforce hosted MCP server (sobject-reads)."""
+
+    MCP_URL = "https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads"
+
+    def __init__(self, consumer_key: str, consumer_secret: str, refresh_token: str):
+        access_token = self._get_access_token(consumer_key, consumer_secret, refresh_token)
+        self.headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Authorization": f"Bearer {access_token}",
+        }
+        self.session_id: str | None = None
+        self._initialize()
+
+    @staticmethod
+    def _get_access_token(consumer_key: str, consumer_secret: str, refresh_token: str) -> str:
+        r = requests.post("https://login.salesforce.com/services/oauth2/token", timeout=30, data={
+            "grant_type": "refresh_token",
+            "client_id": consumer_key,
+            "client_secret": consumer_secret,
+            "refresh_token": refresh_token,
+        })
+        r.raise_for_status()
+        return r.json()["access_token"]
+
+    def _initialize(self):
+        init_req = {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "agent-bench-recorder", "version": "0.1"},
+            },
+        }
+        r = requests.post(self.MCP_URL, json=init_req, headers=self.headers, timeout=30)
+        r.raise_for_status()
+        self.session_id = r.headers.get("mcp-session-id", "")
+        self.headers["mcp-session-id"] = self.session_id
+        notif = {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+        requests.post(self.MCP_URL, json=notif, headers=self.headers, timeout=30)
+
+    def call_tool(self, tool_name: str, arguments: dict) -> tuple[dict, float]:
+        req = {
+            "jsonrpc": "2.0", "id": 2,
+            "method": "tools/call",
+            "params": {"name": tool_name, "arguments": arguments},
+        }
+        start = time.time()
+        r = requests.post(self.MCP_URL, json=req, headers=self.headers, timeout=60)
+        wall_ms = (time.time() - start) * 1000
+        r.raise_for_status()
+        data = r.json()
+        result = data.get("result", {})
+        structured = result.get("structuredContent")
+        if structured:
+            return structured, wall_ms
+        content = result.get("content", [])
+        if content:
+            text = content[0].get("text", "")
+            try:
+                return json.loads(text), wall_ms
+            except json.JSONDecodeError:
+                return {"text": text}, wall_ms
+        error = data.get("error")
+        if error:
+            return {"error": error}, wall_ms
+        return {"error": "no response"}, wall_ms
 
 
-def record_salesforce(
-    username: str, password: str, security_token: str, dry_run: bool = False,
-) -> list[tuple[str, Path]]:
-    """Record Salesforce native responses via REST API (SOAP login)."""
+def record_salesforce(consumer_key: str, consumer_secret: str, refresh_token: str, dry_run: bool = False) -> list[tuple[str, Path]]:
+    """Record Salesforce native responses via the hosted MCP server (sobject-reads)."""
     results = []
     if dry_run:
         print("  [dry-run] Would record salesforce-search, salesforce-get, salesforce-list")
         return results
 
-    token, instance_url = get_salesforce_session_soap(username, password, security_token)
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    base = f"{instance_url}/services/data/v59.0"
+    mcp = SalesforceMCP(consumer_key, consumer_secret, refresh_token)
     date = get_date_str()
 
-    # Search (SOSL)
-    sosl = "FIND {airbyte} IN ALL FIELDS RETURNING Account(Id, Name, Type, Industry)"
-    start = time.time()
-    r = requests.get(f"{base}/search/", headers=headers, params={"q": sosl}, timeout=60)
-    wall_ms = (time.time() - start) * 1000
-    search_response = r.json()
+    # Search (SOSL via `find` tool — LIMIT 10 for apples-to-apples with agent-mcp)
+    sosl = "FIND {airbyte} IN ALL FIELDS RETURNING Account(Id, Name, Type, Industry LIMIT 10)"
+    tool = "find"
+    args = {"q": sosl}
+    response, wall_ms = mcp.call_tool(tool, args)
 
     path = save_recording("salesforce-search", [{
-        "tool": "mcp__salesforce__search",
-        "args": {"query": "airbyte"},
+        "tool": "mcp__salesforce__find",
+        "args": args,
         "wall_clock_ms": round(wall_ms, 1),
-        "response": search_response,
+        "response": response,
     }], date)
     results.append(("salesforce-search", path))
-    records = search_response.get("searchRecords", []) if isinstance(search_response, dict) else []
+    records = response.get("searchRecords", []) if isinstance(response, dict) else []
     print(f"    salesforce-search: {len(records)} records")
 
-    # Get (SOQL with field selection — returns only 4 fields, matching agent-mcp)
+    # Get (SOQL via `soqlQuery` tool)
     account_id = "0015e00000FMsFhAAL"
     get_soql = f"SELECT Id, Name, Type, Industry FROM Account WHERE Id = '{account_id}'"
-    start = time.time()
-    r = requests.get(f"{base}/query/", headers=headers, params={"q": get_soql}, timeout=60)
-    wall_ms = (time.time() - start) * 1000
-    get_response = r.json()
+    tool = "soqlQuery"
+    args = {"q": get_soql}
+    response, wall_ms = mcp.call_tool(tool, args)
 
     path = save_recording("salesforce-get", [{
-        "tool": "mcp__salesforce__query",
-        "args": {"q": get_soql},
+        "tool": "mcp__salesforce__soqlQuery",
+        "args": args,
         "wall_clock_ms": round(wall_ms, 1),
-        "response": get_response,
+        "response": response,
     }], date)
     results.append(("salesforce-get", path))
-    print(f"    salesforce-get: {len(json.dumps(get_response))} bytes")
+    print(f"    salesforce-get: {len(json.dumps(response))} bytes")
 
-    # List (SOQL)
+    # List (SOQL via `soqlQuery` tool)
     soql = "SELECT Id, Name, Type, Industry FROM Account LIMIT 50"
-    start = time.time()
-    r = requests.get(f"{base}/query/", headers=headers, params={"q": soql}, timeout=60)
-    wall_ms = (time.time() - start) * 1000
-    list_response = r.json()
+    tool = "soqlQuery"
+    args = {"q": soql}
+    response, wall_ms = mcp.call_tool(tool, args)
 
     path = save_recording("salesforce-list", [{
-        "tool": "mcp__salesforce__query",
-        "args": {"q": soql},
+        "tool": "mcp__salesforce__soqlQuery",
+        "args": args,
         "wall_clock_ms": round(wall_ms, 1),
-        "response": list_response,
+        "response": response,
     }], date)
     results.append(("salesforce-list", path))
-    records = list_response.get("records", []) if isinstance(list_response, dict) else []
+    records = response.get("records", []) if isinstance(response, dict) else []
     print(f"    salesforce-list: {len(records)} records")
 
     return results
@@ -715,15 +740,20 @@ def main() -> int:
                 all_results.extend(record_gong(access_key, access_secret, opts.dry_run))
 
             elif connector == "salesforce":
-                sf_user = os.environ.get("SALESFORCE_USERNAME", "marketing@airbyte.io")
-                sf_pass = os.environ.get("SALESFORCE_PASSWORD", "")
-                sf_token = os.environ.get("SALESFORCE_SECURITY_TOKEN", "")
-                if not sf_pass or not sf_token:
-                    sf_pass = load_secret("salesforce", "password", "prod-credentials-soap")
-                    sf_token = load_secret("salesforce", "security_token", "prod-credentials-soap")
-                if not sf_pass or not sf_token:
-                    raise ValueError("Salesforce credentials missing: set SALESFORCE_PASSWORD and SALESFORCE_SECURITY_TOKEN env vars or populate 1Password prod-credentials-soap section.")
-                all_results.extend(record_salesforce(sf_user, sf_pass, sf_token, opts.dry_run))
+                consumer_key = load_secret("salesforce", "consumer_key", "test-credentials-mcp")
+                consumer_secret = load_secret("salesforce", "consumer_secret", "test-credentials-mcp")
+                refresh_token = load_secret("salesforce", "refresh_token", "test-credentials-mcp")
+                if not consumer_key:
+                    consumer_key = os.environ.get("SF_MCP_CONSUMER_KEY", "")
+                    consumer_secret = os.environ.get("SF_MCP_CONSUMER_SECRET", "")
+                    refresh_token = os.environ.get("SF_MCP_REFRESH_TOKEN", "")
+                if not consumer_key:
+                    raise ValueError(
+                        "Salesforce MCP credentials not found. "
+                        "Set 1Password section test-credentials-mcp or env vars "
+                        "SF_MCP_CONSUMER_KEY, SF_MCP_CONSUMER_SECRET, SF_MCP_REFRESH_TOKEN"
+                    )
+                all_results.extend(record_salesforce(consumer_key, consumer_secret, refresh_token, opts.dry_run))
 
             elif connector == "zendesk":
                 subdomain = load_secret("zendesk-support", "subdomain", "test-credentials-oauth")

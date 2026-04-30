@@ -69,7 +69,7 @@ paths:
           toDateTime: "2026-04-28T23:59:59Z"
 
       - server: salesforce
-        tool: soql_query
+        tool: soqlQuery
         args:
           q: "SELECT Id, Name, Type, Industry FROM Account WHERE Name IN ('Acme Corp', 'Preset', 'RVezy')"
 

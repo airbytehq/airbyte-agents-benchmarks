@@ -5,7 +5,6 @@ connector_id_env: SALESFORCE_CONNECTOR_ID
 description: |
   Fetch a single Salesforce account by ID.
   Agent requests Id, Name, Type, and Industry.
-  Both paths query the same Salesforce org (airbyte.my.salesforce.com).
 
 paths:
   agent-mcp:
@@ -23,6 +22,6 @@ paths:
   native-mcp:
     tool_calls:
       - server: salesforce
-        tool: soql_query
+        tool: soqlQuery
         args:
           q: "SELECT Id, Name, Type, Industry FROM Account WHERE Id = '0015e00000FMsFhAAL'"
