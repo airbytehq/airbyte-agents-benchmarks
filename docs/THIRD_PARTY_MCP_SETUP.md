@@ -251,7 +251,7 @@ The container reads JSON-RPC messages from stdin and writes responses to stdout.
 
 | Benchmark Task | MCP Tool | Args | Description |
 |---|---|---|---|
-| search | `zendeskSearchTickets` | `{"query": "status:open"}` | Search tickets using Zendesk query syntax |
+| search | `zendeskSearchTickets` | `{"query": "sync"}` | Search tickets using Zendesk query syntax |
 | get | `zendeskGetTicket` | `{"ticket_id": 2}` | Retrieve a single ticket by ID |
 | list | `zendeskListTickets` | `{}` | List recent tickets (default 25) |
 
