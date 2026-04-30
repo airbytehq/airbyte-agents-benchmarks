@@ -76,7 +76,10 @@ async def run_scenario(
     paths = _build_paths(path_slugs, config, scenario.connector, artifacts_dir, scenario.name, mode=mode)
     task = scenario.task
     if task is None and scenario.is_choreographed:
-        first_call = scenario.paths["agent-mcp"].tool_calls[0]
+        first_path = scenario.paths.get("agent-mcp") or next(iter(scenario.paths.values()), None)
+        if not first_path or not first_path.tool_calls:
+            raise ValueError(f"Choreographed scenario {scenario.name!r} has no tool_calls defined")
+        first_call = first_path.tool_calls[0]
         action = first_call.args.get("action", "unknown")
         entity = first_call.args.get("entity", "unknown")
         task = Task(

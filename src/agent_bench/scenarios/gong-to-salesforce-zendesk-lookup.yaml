@@ -1,16 +1,16 @@
 name: gong-to-salesforce-zendesk-lookup
-title: "Cross-system: Gong calls today → Salesforce + Zendesk lookup"
+title: "Cross-system: Gong calls on 2026-04-28 → Salesforce + Zendesk lookup"
 connector: gong
 connector_id_env: GONG_CONNECTOR_ID
 description: |
   Multi-step cross-connector workflow: search for Gong calls scheduled
-  today, then look up the associated account names in Salesforce and
+  on 2026-04-28, then look up the associated account names in Salesforce and
   find open tickets for those accounts in Zendesk.
   Steps 2 and 3 use dummy static account/ticket lists to demonstrate
   the choreographed multi-step scenario format.
 
 faux_prompt: >
-  For all Gong calls scheduled today, look up the account names
+  For all Gong calls scheduled on 2026-04-28, look up the account names
   in Salesforce and find open tickets for those accounts in Zendesk.
 
 paths:

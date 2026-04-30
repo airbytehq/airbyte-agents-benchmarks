@@ -76,6 +76,29 @@ class Scenario:
         return self.paths is not None
 
     @property
+    def inferred_action(self) -> str:
+        """Best-effort action label, derived from task or scenario name."""
+        if self.task:
+            return self.task.action
+        for suffix in ("get", "list", "search"):
+            if self.name.endswith(f"-{suffix}"):
+                return suffix
+        return "multi-step"
+
+    @property
+    def inferred_entity(self) -> str:
+        """Best-effort entity label, derived from task or first tool call."""
+        if self.task:
+            return self.task.entity
+        if self.paths:
+            first_path = self.paths.get("agent-mcp") or next(iter(self.paths.values()), None)
+            if first_path and first_path.tool_calls:
+                entity = first_path.tool_calls[0].args.get("entity")
+                if entity:
+                    return entity
+        return self.connector
+
+    @property
     def connectors(self) -> list[str]:
         """All connectors referenced by this scenario."""
         if not self.is_choreographed:
