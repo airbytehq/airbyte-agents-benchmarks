@@ -1,16 +1,39 @@
 # Airbyte Agents Benchmarks
 
-A three-way benchmark comparing how AI agents access business data through Airbyte Agents. The harness measures token cost, payload size, and latency across three paths for the same tasks.
+A head-to-head benchmark measuring the cost and capability of accessing business data through Airbyte's Agent MCP versus vendor-provided native MCP servers.
+
+## Why Agent MCP
+
+| | Native MCP (per vendor) | Airbyte Agent MCP |
+|---|---|---|
+| **Setup** | Per-vendor server install; some require admin privileges (e.g., Salesforce Connected App) | One hosted endpoint — no per-vendor setup |
+| **Credentials** | One secret per vendor (5 vendors = 5 credential sets) | One Airbyte credential for all connectors |
+| **Token efficiency** | Full API objects (30-200+ fields per record) | Only requested fields (`select_fields`) — **77% fewer tokens** |
+| **Capability** | Limited to vendor's tool set; missing ops require workarounds | Context store provides get, list, and search for every entity |
+
+Across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) and 13 comparable scenarios, Agent MCP used **77% fewer tokens** than native MCP servers for the same data operations:
+
+| Connector | Agent MCP tokens | Native MCP tokens | Savings |
+|---|---:|---:|---:|
+| Gong | 6,234 | 52,946 | 88% |
+| Zendesk | 4,161 | 13,614 | 69% |
+| Linear | 9,606 | 18,758 | 49% |
+| Slack | 6,985 | 13,416 | 48% |
+| Salesforce | 2,227 | 3,181 | 30% |
+
+For the full benefits narrative — including setup complexity, credential management, capability gaps, and cross-connector workflow results — see **[docs/BENEFITS.md](docs/BENEFITS.md)**.
+
+## Benchmark Design
+
+The harness compares three paths for the same tasks:
 
 | Path | Slug | Description |
 |---|---|---|
-| REST Baseline (via SDK) | `agent-sdk` | Token cost of consuming the provider's full REST API response. The Airbyte connector fetches records from the third-party provider and passes them through unmodified — token counts are equivalent to calling the provider directly. See [Methodology](docs/METHODOLOGY.md#agent-sdk-as-rest-baseline). |
+| REST Baseline (via SDK) | `agent-sdk` | Token cost of consuming the provider's full REST API response. See [Methodology](docs/METHODOLOGY.md#agent-sdk-as-rest-baseline). |
 | Agent MCP | `agent-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
 | Native MCP | `native-mcp` | Record-replay of vendor-native MCP server responses |
 
-Each connector has named scenarios (e.g., `linear-search`, `gong-get`, `salesforce-list`).
-
-The benchmark currently covers five connectors: Linear, Slack, Gong, Salesforce, and Zendesk. Granola recordings from April 24 are preserved but the connector is tombstoned.
+Each connector has named scenarios (e.g., `linear-search`, `gong-get`, `salesforce-list`). The benchmark currently covers five connectors. Granola recordings from April 24 are preserved but the connector is tombstoned.
 
 ## Quick Start (No Credentials)
 
@@ -51,12 +74,13 @@ See [docs/REPRODUCTION.md](docs/REPRODUCTION.md) for the full reproduction guide
 | `tests/` | Unit tests for scenarios, validation, and scorecard rendering |
 | `scripts/record_response.py` | Helper for saving replay recordings |
 | `artifacts/YYYY-MM-DD/` | Recordings, scorecard, charts, and supporting deck artifact |
-| `docs/REPRODUCTION.md` | Step-by-step reproduction guide with troubleshooting |
+| `docs/BENEFITS.md` | Benefits deep-dive and press release raw material |
 | `docs/METHODOLOGY.md` | Measurement details and design choices |
-| `docs/RESULTS.md` | Current numbers and safe claims |
-| `docs/CTO_BRIEF.md` | Executive-facing summary and caveats |
-| `docs/SLACK_STATUS.md` | Slack blocker and completion path |
-| `docs/THIRD_PARTY_MCP_SETUP.md` | Installation and configuration guide for third-party MCP servers (Linear, Granola, Slack) |
+| `docs/REPRODUCTION.md` | Step-by-step reproduction guide with troubleshooting |
+| `docs/RESULTS.md` | April 24 numbers and safe claims (Linear + Granola only) |
+| `docs/CTO_BRIEF.md` | April 24 executive summary (Linear + Granola only) |
+| `docs/SLACK_STATUS.md` | Slack blocker status (historical) |
+| `docs/THIRD_PARTY_MCP_SETUP.md` | Installation and configuration guide for third-party MCP servers |
 
 ## Artifact Layout
 
@@ -117,9 +141,7 @@ For Agent MCP, `--wall-ms` can be omitted when the response contains `execution_
 
 ## Further Reading
 
-- [Reproduction Guide](docs/REPRODUCTION.md) — end-to-end walkthrough from clone to results
+- [Benefits Deep-Dive](docs/BENEFITS.md) — detailed benefits narrative for press release and communications
 - [Methodology](docs/METHODOLOGY.md) — measurement design, token counting, timing
-- [Results](docs/RESULTS.md) — current numbers, safe claims, and caveats
-- [CTO Brief](docs/CTO_BRIEF.md) — executive-facing summary
-- [Slack Status](docs/SLACK_STATUS.md) — Slack blocker and completion path
-- [Third-Party MCP Setup](docs/THIRD_PARTY_MCP_SETUP.md) — install and configure Linear, Granola, and Slack MCP servers
+- [Reproduction Guide](docs/REPRODUCTION.md) — end-to-end walkthrough from clone to results
+- [Third-Party MCP Setup](docs/THIRD_PARTY_MCP_SETUP.md) — install and configure vendor MCP servers
