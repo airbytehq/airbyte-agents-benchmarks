@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-30T16:31:00+00:00",
+  "scenario": "gong-list",
+  "connector": "gong",
+  "path": "native-mcp",
+  "action": "list",
+  "entity": "unknown",
+  "status": "ok",
+  "tokens": 26084,
+  "payload_bytes": 68567,
+  "latency_ms": null,
+  "records": 100,
+  "api_calls": 1
+}

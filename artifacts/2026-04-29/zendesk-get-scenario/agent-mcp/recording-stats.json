@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-29T21:11:04.901484+00:00",
+  "scenario": "zendesk-get",
+  "connector": "zendesk",
+  "path": "agent-mcp",
+  "action": "get",
+  "entity": "tickets",
+  "status": "ok",
+  "tokens": 26,
+  "payload_bytes": 78,
+  "latency_ms": 3458.0,
+  "records": 1,
+  "api_calls": 1
+}

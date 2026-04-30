@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-29T21:11:04.892324+00:00",
+  "scenario": "slack-get",
+  "connector": "slack",
+  "path": "native-mcp",
+  "action": "get",
+  "entity": "channels",
+  "status": "ok",
+  "tokens": 4472,
+  "payload_bytes": 13619,
+  "latency_ms": 125.5,
+  "records": 12,
+  "api_calls": 1
+}

@@ -279,6 +279,32 @@ def validate(
     console.print("[green]recordings ok[/green]")
 
 
+@app.command(name="generate-stats")
+def generate_stats_cmd(
+    artifacts_dir: FSPath = typer.Option(_DEFAULT_ARTIFACTS, "--artifacts-dir"),
+    date: str | None = typer.Option(None, "--date", help="Artifact date folder (e.g. 2026-04-30). Defaults to latest."),
+) -> None:
+    """Generate recording-stats.json from existing recording.json files.
+
+    Derives aggregate metrics (tokens, records, latency) from raw recordings.
+    Useful for (re-)generating stats files that can be committed to the repo
+    so other sessions can produce reports without needing raw recordings.
+    """
+    from agent_bench.export.stats import write_stats_for_dir
+
+    dated_dir = _resolve_artifacts_dir(artifacts_dir, date)
+    if not dated_dir.is_dir():
+        console.print(f"[red]Artifacts directory not found: {dated_dir}[/red]")
+        raise typer.Exit(1)
+
+    count = write_stats_for_dir(dated_dir)
+    if not count:
+        console.print(f"[yellow]No recording.json files found in {dated_dir}[/yellow]")
+        raise typer.Exit(1)
+
+    console.print(f"[green]wrote {count} recording-stats.json files in {dated_dir}[/green]")
+
+
 @app.command()
 def compare(
     artifacts_dir: FSPath = typer.Option(_DEFAULT_ARTIFACTS, "--artifacts-dir"),

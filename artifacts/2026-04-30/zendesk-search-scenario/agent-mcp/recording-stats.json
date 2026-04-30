@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "run_date": "2026-04-30T16:31:00+00:00",
+  "scenario": "zendesk-search",
+  "connector": "zendesk",
+  "path": "agent-mcp",
+  "action": "search",
+  "entity": "unknown",
+  "status": "ok",
+  "tokens": 431,
+  "payload_bytes": 1357,
+  "latency_ms": null,
+  "records": 10,
+  "api_calls": 1
+}
