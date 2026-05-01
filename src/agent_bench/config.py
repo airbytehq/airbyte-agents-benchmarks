@@ -58,12 +58,3 @@ class LiveConfig:
             client_secret=os.environ["AIRBYTE_CLIENT_SECRET"],
             connector_ids=connector_ids,
         )
-
-    def auth_kwargs(self, connector_name: str) -> dict:
-        """Return kwargs suitable for `airbyte_agent_sdk.connect()`."""
-        return {
-            "organization_id": self.organization_id,
-            "client_id": self.client_id,
-            "client_secret": self.client_secret,
-            "connector_id": self.connector_ids[connector_name],
-        }

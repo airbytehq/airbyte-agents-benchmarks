@@ -1,6 +1,6 @@
 # Reproducing the Benchmark
 
-This guide walks through reproducing the Airbyte Agents launch benchmark results from scratch. It covers three tiers of reproduction, from no credentials required to full live runs.
+This guide walks through reproducing the Airbyte Agents launch benchmark results from scratch. It covers two tiers of reproduction: replay-only (no credentials needed) and the full benchmark (requires Airbyte Cloud credentials to record).
 
 ## Prerequisites
 
@@ -53,9 +53,9 @@ uv run agent-bench run \
 
 Token totals are deterministic from the committed recordings.
 
-## Tier 2: Live SDK Path (Requires Credentials)
+## Tier 2: Recording Agent MCP (Requires Credentials)
 
-The REST Baseline path makes live API calls via the `airbyte-agent-sdk` package. You need Airbyte Cloud credentials.
+Recording new Agent MCP responses (and running the live `agent-mcp` path) requires Airbyte Cloud credentials.
 
 ### Credential setup
 
@@ -86,23 +86,13 @@ ZENDESK_CONNECTOR_ID=your-zendesk-source-uuid
 
 ### Authentication note
 
-The SDK authenticates via `POST https://api.airbyte.ai/api/v1/account/applications/token`. It sends the `X-Organization-Id` header alongside the client credentials. If you see a `401` error with "Client has no organization_admin permissions," verify that:
+The MCP server uses an OIDC-proxy auth flow with one-time browser login. If you see a `401` error with "Client has no organization_admin permissions," verify that:
 
 1. The `AIRBYTE_ORGANIZATION_ID` matches the org your application belongs to.
 2. The application has `organization_admin` permissions on the Agent REST API.
 3. You are using the correct client ID and secret pair for that specific organization.
 
-Some Airbyte Cloud application credentials are scoped to a particular org. The same `client_id`/`client_secret` may fail for one org but succeed for another. The `X-Organization-Id` header must match the org that granted the application its permissions.
-
-### Run the REST Baseline path
-
-```bash
-# Single connector
-uv run agent-bench run --scenarios linear --paths agent-sdk
-
-# All five connectors
-uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths agent-sdk
-```
+Some Airbyte Cloud application credentials are scoped to a particular org. The same `client_id`/`client_secret` may fail for one org but succeed for another. The org ID must match the org that granted the application its permissions.
 
 ### Run all paths for a connector
 
@@ -110,7 +100,7 @@ uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths 
 uv run agent-bench run --scenarios linear --paths all --export-markdown linear-results.md
 ```
 
-This runs agent-sdk (live), agent-mcp (live or replay, see below), and native-mcp (replay) side by side.
+This runs agent-mcp (live or replay, see below) and native-mcp (replay) side by side.
 
 ### Recording agent-mcp from `mcp.airbyte.ai` (real MCP)
 
@@ -133,7 +123,7 @@ The recorder reads each scenario's `paths.agent-mcp.tool_calls` block, calls `mc
 
 ### Interpreting live results
 
-The REST Baseline path is live, so token counts will vary as the underlying data changes. This is expected behavior, not a test failure.
+When `agent-mcp` runs in `--mode live`, token counts will vary as the underlying data changes. This is expected behavior, not a test failure.
 
 The replay paths (agent-mcp and native-mcp) are deterministic. Their token totals should always match the committed recordings.
 
@@ -149,9 +139,6 @@ uv run agent-bench run --scenarios linear --paths all
 
 # All five connectors, agent-mcp replay
 uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths agent-mcp
-
-# All five connectors, live SDK
-uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths agent-sdk
 ```
 
 ### Full export
@@ -183,9 +170,9 @@ The requested replay file does not exist. Either:
 - You are running a scenario or path whose recordings have not been committed yet.
 - The artifacts directory was not included in your clone. Run `git status` to verify.
 
-### REST Baseline token counts differ from the artifact
+### Live agent-mcp token counts differ from the artifact
 
-This is expected. The REST Baseline path is live and returns current data. Replay paths are the stable reference for comparison.
+This is expected when running with `--mode live`. The live path returns current data; replay paths are the stable reference for comparison.
 
 ### HTTP 503 on Slack search
 

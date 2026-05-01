@@ -24,16 +24,88 @@ from typing import Any, AsyncIterator, Literal
 from agent_bench.config import LiveConfig
 from agent_bench.metrics import BenchmarkResult, StepResult, count_tokens
 from agent_bench.paths.native_mcp import ToolCallSpec, TaskPlan, _count_records
-from agent_bench.paths.agent_sdk import _DISPATCH as _SDK_DISPATCH, _translate
 from agent_bench.scenarios.loader import Scenario, Task
+
+
+# Per-connector translation table: YAML's canonical `{action, entity, params}`
+# maps to the connector-specific param names and fuzzy-search fields used by
+# the Airbyte Context Store / Agent MCP execute call.
+_DISPATCH: dict[str, dict[str, Any]] = {
+    "slack": {
+        "search_field": {"channels": "name", "users": "real_name"},
+        "get_key": {"channels": "channel", "users": "user"},
+        "list_limit_key": "limit",
+    },
+    "linear": {
+        "search_field": {"issues": "title", "projects": "name", "users": "name"},
+        "get_key": {"issues": "id", "projects": "id", "users": "id"},
+        "list_limit_key": "first",
+    },
+    "granola": {
+        "search_field": {"notes": "summary_text"},
+        "get_key": {"notes": "note_id"},
+        "list_limit_key": "page_size",
+    },
+    "gong": {
+        "search_field": {"calls": "title"},
+        "get_key": {"calls": "id"},
+        "list_limit_key": "limit",
+    },
+    "salesforce": {
+        "search_field": {"accounts": "Name"},
+        "get_key": {"accounts": "id"},
+        "list_limit_key": "q",
+        "list_soql": {"accounts": "SELECT Id, Name, Type, Industry FROM Account"},
+    },
+    "zendesk": {
+        "search_field": {"tickets": "subject"},
+        "get_key": {"tickets": "ticket_id"},
+        "list_limit_key": "limit",
+    },
+}
+
+
+def _translate(task: Task, dispatch: dict[str, Any]) -> tuple[str, dict]:
+    """Canonical `{action, entity, params}` → execute `(action, params)`."""
+    if task.action == "search":
+        field = dispatch["search_field"].get(task.entity)
+        if field is None:
+            raise ValueError(
+                f"No search field mapping for entity {task.entity!r}"
+            )
+        limit = int(task.params.get("limit", 10))
+        return "context_store_search", {
+            "query": {"filter": {"fuzzy": {field: task.params["keyword"]}}},
+            "limit": limit,
+        }
+    if task.action == "context_store_search":
+        return "context_store_search", task.params
+    if task.action == "get":
+        key = dispatch["get_key"].get(task.entity)
+        if key is None:
+            raise ValueError(f"No get-key mapping for entity {task.entity!r}")
+        return "get", {key: task.params["id"]}
+    if task.action == "list":
+        soql_templates = dispatch.get("list_soql", {})
+        soql = soql_templates.get(task.entity)
+        limit = int(task.params.get("limit", 50))
+        if soql:
+            return "list", {"q": f"{soql} LIMIT {limit}"}
+        limit_key = dispatch["list_limit_key"]
+        if limit_key == "q" and not soql:
+            raise ValueError(
+                f"Salesforce entity {task.entity!r} requires a list_soql template "
+                f"but none is defined in _DISPATCH."
+            )
+        return "list", {limit_key: limit}
+    raise ValueError(f"Unsupported task action {task.action!r}")
 
 
 def _entity_select_fields(connector: str, entity: str) -> list[str]:
     """Minimal select_fields per (connector, entity) for fair narrow comparisons.
 
-    Kept deliberately small (IDs + primary label + few metadata fields) so
-    Path B and Path C return the same payload shape. If missing, the MCP
-    requires select_fields or exclude_fields to be present.
+    Kept deliberately small (IDs + primary label + few metadata fields). The
+    Agent MCP requires select_fields or exclude_fields to be present.
     """
     mapping: dict[tuple[str, str], list[str]] = {
         ("slack", "channels"): ["id", "name", "num_members", "is_archived", "is_private", "created", "updated", "topic", "purpose"],
@@ -65,13 +137,13 @@ class AgentMCPPath:
 
     def plan(self, task: Task, scenario: Scenario) -> TaskPlan:
         connector_id = self._config.connector_ids[scenario.connector]
-        sdk_action, sdk_params = _translate(task, _SDK_DISPATCH[scenario.connector])
+        translated_action, translated_params = _translate(task, _DISPATCH[scenario.connector])
         select_fields = _entity_select_fields(scenario.connector, task.entity)
         item = {
             "connector_id": connector_id,
             "entity": task.entity,
-            "action": sdk_action,
-            "params": sdk_params,
+            "action": translated_action,
+            "params": translated_params,
             "select_fields": select_fields,
         }
         return TaskPlan(
@@ -111,13 +183,13 @@ class AgentMCPPath:
 
         result = BenchmarkResult(path_name=self.name)
         connector_id = self._config.connector_ids[scenario.connector]
-        sdk_action, sdk_params = _translate(task, _SDK_DISPATCH[scenario.connector])
+        translated_action, translated_params = _translate(task, _DISPATCH[scenario.connector])
         select_fields = _entity_select_fields(scenario.connector, task.entity)
         args: dict[str, Any] = {
             "connector_id": connector_id,
             "entity": task.entity,
-            "action": sdk_action,
-            "params": sdk_params,
+            "action": translated_action,
+            "params": translated_params,
             "select_fields": select_fields,
         }
 
@@ -135,7 +207,7 @@ class AgentMCPPath:
             result.status = "error"
             result.error = f"{type(exc).__name__}: {exc}"
             step = StepResult(
-                label=f"{sdk_action} {task.entity} [error]",
+                label=f"{translated_action} {task.entity} [error]",
                 latency_ms=elapsed,
                 payload_bytes=0,
                 tokens=0,
@@ -150,7 +222,7 @@ class AgentMCPPath:
             result.status = "error"
             result.error = f"MCP error: {response['error']}"
             step = StepResult(
-                label=f"{sdk_action} {task.entity} [error]",
+                label=f"{translated_action} {task.entity} [error]",
                 latency_ms=elapsed,
                 payload_bytes=0,
                 tokens=0,
@@ -166,7 +238,7 @@ class AgentMCPPath:
         records = _count_records(inner)
 
         step = StepResult(
-            label=f"{sdk_action} {task.entity}",
+            label=f"{translated_action} {task.entity}",
             latency_ms=elapsed,
             payload_bytes=len(payload.encode()),
             tokens=tokens,

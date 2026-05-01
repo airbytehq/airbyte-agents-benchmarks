@@ -10,12 +10,11 @@ from agent_bench.runner import Cell, RunReport
 
 
 PATH_LABEL = {
-    "agent-sdk": "REST Baseline (via SDK)",
     "agent-mcp": "Agent MCP",
     "native-mcp": "Native MCP",
 }
 
-PATH_ORDER = ["agent-sdk", "agent-mcp", "native-mcp"]
+PATH_ORDER = ["agent-mcp", "native-mcp"]
 
 
 def render_scorecard(report: RunReport, path: Path) -> None:
@@ -33,7 +32,7 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     lines.append("# Airbyte Agents Launch Benchmark - April 22, 2026")
     lines.append("")
     lines.append(f"**Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d')}  ")
-    lines.append("**Paths compared:** REST Baseline (via SDK) vs Agent MCP vs Native MCP  ")
+    lines.append("**Paths compared:** Agent MCP vs Native MCP  ")
     lines.append(f"**Connectors:** {', '.join(connectors)}  ")
     lines.append(f"**Cells included:** {included_cells}/{expected_final_cells}")
     if is_interim:
@@ -49,15 +48,12 @@ def render_scorecard(report: RunReport, path: Path) -> None:
 
     lines.append("## Methodology")
     lines.append("")
-    lines.append("Three paths race the same three tasks on each connector:")
+    lines.append("Two paths race the same tasks on each connector:")
     lines.append("")
     lines.append("| Path | Transport |")
     lines.append("|---|---|")
-    lines.append("| **REST Baseline (via SDK)** | `airbyte-agent-sdk` → Airbyte connector → provider REST API |")
     lines.append("| **Agent MCP** | Hosted MCP proxy (`mcp.airbyte.ai`) → Agent REST API |")
     lines.append("| **Native MCP** | Vendor-native MCP servers (`mcp__claude_ai_*`) → vendor API |")
-    lines.append("")
-    lines.append("**Important caveat:** The REST Baseline path returns full records (all fields). The Agent MCP path applies `select_fields` to narrow responses to 6-10 fields. Token ratios between these paths therefore primarily reflect the effect of field projection, not transport or protocol efficiency. A fair protocol comparison requires applying equivalent field projection to the REST Baseline path.")
     lines.append("")
     lines.append("Metrics:")
     lines.append("- **Records** — count in the response")
@@ -68,7 +64,6 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     lines.append("")
     lines.append("Notes:")
     lines.append("- Latency is not reported. The benchmark does not pass data through an LLM, so API round-trip time (1\u20132 s) is negligible compared to LLM inference time, which is the dominant cost driver. Latency becomes meaningful only when a task-completion layer measures end-to-end time through an LLM.")
-    lines.append("- The REST Baseline represents the token cost of consuming the provider's full REST API response. The Airbyte connector fetches records from the third-party provider and passes them through unmodified. See [METHODOLOGY.md](docs/METHODOLOGY.md#agent-sdk-as-rest-baseline) for details.")
     lines.append("- Native MCP connectors return varying shapes: Slack returns markdown-like text, Linear returns structured JSON, Granola returns an aggregated string for list_meetings and a natural-language synthesis for query_granola_meetings.")
     lines.append("")
 
@@ -97,28 +92,22 @@ def render_scorecard(report: RunReport, path: Path) -> None:
 def _exec_summary(report: RunReport, is_interim: bool = False) -> str:
     # Highlight the headline numbers for the intro paragraph.
     totals = _path_totals(report)
-    sdk = totals.get("agent-sdk", _zero_totals())
     mcp = totals.get("agent-mcp", _zero_totals())
     native = totals.get("native-mcp", _zero_totals())
 
-    ratio_mcp_vs_sdk = (sdk["tokens"] / max(mcp["tokens"], 1)) if mcp["tokens"] else None
     ratio_native_vs_mcp = (native["tokens"] / max(mcp["tokens"], 1)) if mcp["tokens"] else None
     prefix = "Interim TL;DR" if is_interim else "TL;DR"
 
-    lines = [
-        f"**{prefix}.** Across the three benchmark tasks on each included connector, Airbyte Agents with `select_fields` "
-        f"returns roughly **{ratio_mcp_vs_sdk:.1f}\u00d7 fewer tokens** than the REST Baseline "
-        f"and **{ratio_native_vs_mcp:.1f}\u00d7 fewer tokens** than native vendor MCPs "
-        "on the included cells. "
-        "Note: the REST Baseline-vs-MCP token ratio primarily reflects field projection (`select_fields`), "
-        "not transport or protocol differences. "
-        "Compared to native vendor MCPs, Airbyte Agents preserves typed "
-        "JSON (vs native MCP's mixed JSON, text, and markdown-like shapes) so agents can filter, "
-        "sort, and join programmatically."
-        if ratio_mcp_vs_sdk and ratio_native_vs_mcp
-        else "**TL;DR.** Airbyte Agents delivers narrower, structured responses vs native vendor MCPs across Linear and Granola."
-    ]
-    return "\n".join(lines)
+    if ratio_native_vs_mcp:
+        line = (
+            f"**{prefix}.** Across the benchmark tasks on each included connector, Airbyte Agents with `select_fields` "
+            f"returns roughly **{ratio_native_vs_mcp:.1f}\u00d7 fewer tokens** than native vendor MCPs on the included cells. "
+            "Compared to native vendor MCPs, Airbyte Agents preserves typed JSON (vs native MCP's mixed JSON, "
+            "text, and markdown-like shapes) so agents can filter, sort, and join programmatically."
+        )
+    else:
+        line = f"**{prefix}.** Airbyte Agents delivers narrower, structured responses vs native vendor MCPs."
+    return line
 
 
 def _path_totals(report: RunReport) -> dict[str, dict[str, float | None]]:

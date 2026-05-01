@@ -1,14 +1,13 @@
 [project]
 name = "agent-bench"
 version = "0.2.0"
-description = "Three-way benchmark: REST Baseline vs Agent MCP vs Native MCP for AI agent data access"
+description = "Two-way benchmark: Agent MCP vs Native MCP for AI agent data access"
 requires-python = ">=3.11"
 dependencies = [
     "rich>=13.0",
     "typer>=0.9",
     "pyyaml>=6.0",
     "tiktoken>=0.5",
-    "airbyte-agent-sdk",
     "httpx>=0.24",
     "mcp>=1.10",
     "python-dotenv>=1.0",

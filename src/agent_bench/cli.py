@@ -26,17 +26,16 @@ from agent_bench.recording.single import record_one
 
 app = typer.Typer(
     name="agent-bench",
-    help="Three-way benchmark: REST Baseline vs Agent MCP vs Native MCP.",
+    help="Two-way benchmark: Agent MCP vs Native MCP.",
     add_completion=False,
     invoke_without_command=False,
 )
 console = Console()
 
 
-_ALL_PATHS = ["agent-sdk", "agent-mcp", "native-mcp"]
+_ALL_PATHS = ["agent-mcp", "native-mcp"]
 
 PATH_LABEL = {
-    "agent-sdk": "REST Baseline (via SDK)",
     "agent-mcp": "Agent MCP",
     "native-mcp": "Native MCP",
 }
@@ -232,13 +231,6 @@ def run(
             )
         raise typer.Exit(1)
 
-    consistency_issues = _agent_sdk_mcp_consistency_issues(report)
-    if export_requested and consistency_issues:
-        console.print("\n[red]Export blocked: REST Baseline/MCP record counts differ.[/red]")
-        for issue in consistency_issues:
-            console.print(f"  [red]{issue}[/red]")
-        raise typer.Exit(1)
-
     if export_stats:
         from agent_bench.export.stats import write_cell_stats
         for cell in report.cells:
@@ -411,29 +403,6 @@ def _update_symlink(report_path: FSPath, artifacts_root: FSPath) -> None:
         console.print(f"[green]symlink →[/green] {symlink} -> {rel}")
     except OSError as exc:
         console.print(f"[yellow]warning:[/yellow] could not update symlink: {exc}")
-
-
-def _agent_sdk_mcp_consistency_issues(report) -> list[str]:
-    groups: dict[tuple[str, str], dict[str, object]] = {}
-    for cell in report.cells:
-        if cell.path_short in {"agent-sdk", "agent-mcp"}:
-            action = cell.scenario.task.action if cell.scenario.task else "choreographed"
-            groups.setdefault((cell.scenario.name, action), {})[cell.path_short] = cell
-
-    issues: list[str] = []
-    for (scenario, action), by_path in groups.items():
-        sdk = by_path.get("agent-sdk")
-        mcp = by_path.get("agent-mcp")
-        if not sdk or not mcp:
-            continue
-        if sdk.result.status != "ok" or mcp.result.status != "ok":
-            continue
-        if sdk.result.total_records != mcp.result.total_records:
-            issues.append(
-                f"{scenario}/{action}: agent-sdk records={sdk.result.total_records}, "
-                f"agent-mcp records={mcp.result.total_records}"
-            )
-    return issues
 
 
 @app.command()

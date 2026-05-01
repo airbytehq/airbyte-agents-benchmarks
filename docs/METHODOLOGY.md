@@ -2,11 +2,10 @@
 
 This repository packages the Airbyte Agents benchmark harness and result artifacts.
 
-The benchmark compares three ways an agent can fetch the same business data:
+The benchmark compares two ways an agent can fetch the same business data:
 
 | Path | What it measures | Payload consumed by the agent |
 |---|---|---|
-| REST Baseline (via SDK) | Token cost of consuming the provider's full REST API response | Full typed records as returned by the third-party service (Linear, Slack, etc.) — see [below](#agent-sdk-as-rest-baseline) |
 | Agent MCP | Hosted Airbyte Platform MCP calls with mandatory `select_fields` | Narrow typed JSON selected by the MCP call |
 | Native MCP | Vendor-native MCP server calls | Connector-specific MCP responses, which may be JSON, text, or markdown-like |
 
@@ -38,11 +37,8 @@ Token counts are computed with `tiktoken` using the `cl100k_base` encoding. The 
 
 This means:
 
-- REST Baseline token counts represent the cost of consuming the full records that the third-party provider's REST API returns. The Airbyte connector fetches these records from the provider (e.g., Linear's API, Slack's API) and passes them through without modification. The SDK adds no transformation, so the token count is equivalent to what an agent would see if it called the provider's REST API directly.
 - Agent MCP token counts include the MCP response after `select_fields` narrows the returned fields.
 - Native MCP token counts include the recorded native MCP tool response, preserving its connector-specific shape.
-
-**Important:** The SDK path returns all fields (30-50+ per record) while the Agent MCP path applies `select_fields` to return only 6-10 fields. Token ratios between these paths therefore primarily reflect the effect of field projection, not transport or protocol differences. A fair protocol comparison requires applying equivalent field projection on the SDK side.
 
 ## Payload Bytes
 
@@ -54,7 +50,6 @@ Bytes and tokens can diverge because tokenization is model-specific, while byte 
 
 Timing is path-specific:
 
-- REST Baseline (via SDK) uses client-side wall clock around the SDK call.
 - Agent MCP uses `execution_metadata.execution_time_ms` from the MCP response.
 - Native MCP timing is not captured by the harness. Native MCP replay rows show `0` latency and should be read as unmeasured, not instant.
 
@@ -81,8 +76,7 @@ Markdown and chart exports are blocked when:
 
 - required replay recordings are missing,
 - Agent MCP recordings are stale or missing `select_fields`,
-- any benchmark cell errors or is skipped,
-- REST Baseline and Agent MCP record counts differ for the same task.
+- any benchmark cell errors or is skipped.
 
 ## Why Token Reduction Matters
 
@@ -93,13 +87,4 @@ Reducing the token count of tool responses affects LLM-based agents in three dim
 - **Context window pressure.** LLMs have finite context windows. Large tool responses consume a disproportionate share of available context, leaving less room for conversation history, system instructions, and subsequent tool calls. As the context fills, the model's ability to reason accurately degrades — an effect sometimes called "lost in the middle." Compact responses preserve context budget for what matters.
 
 The benchmark quantifies these differences by measuring raw token counts on identical data operations across paths.
-
-## Agent SDK as REST Baseline
-
-The `agent-sdk` path measures the token cost of consuming the provider's full REST API response. The Airbyte connector calls the provider (Linear, Slack, Gong), returns the same records, and the SDK passes them through without transformation. The benchmark counts tokens on `json.dumps(records)` via `tiktoken` — the same records an agent would get calling the provider directly.
-
-**Output token overhead: zero.** Neither the connector nor the SDK modifies the provider's records. The benchmark extracts the record list from the response and token-counts it identically to a direct provider call.
-
-**Input token overhead: negligible.** The SDK replaces per-provider auth and endpoint setup with a single `executor.execute(entity, action, params)` call. Request tokens are small relative to the response payload.
-
 

@@ -80,7 +80,7 @@ An agent summarizing recent calls needs `id`, `title`, `scheduled`, and `duratio
 
 ### What the savings mean in practice
 
-The value of Agent MCP is not simply "shorter output." Agent MCP narrows payloads with explicit field selection while preserving typed, structured JSON. Both Agent MCP and the REST Baseline return records that support filtering, sorting, joins, and follow-up actions — Agent MCP simply returns fewer fields per record.
+The value of Agent MCP is not simply "shorter output." Agent MCP narrows payloads with explicit field selection while preserving typed, structured JSON that supports filtering, sorting, joins, and follow-up actions — without the per-vendor shape divergence native MCPs exhibit.
 
 - **Lower cost per agent action.** Token consumption maps directly to LLM API cost. See [Why Token Reduction Matters](METHODOLOGY.md#why-token-reduction-matters) for details on how token count affects latency, cost, and context window pressure.
 - **Longer effective context windows.** Tokens spent on verbose API responses are tokens unavailable for reasoning, planning, and user interaction.

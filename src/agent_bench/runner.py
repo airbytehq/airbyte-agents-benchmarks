@@ -10,7 +10,6 @@ from typing import Iterable, Literal
 from agent_bench.config import LiveConfig
 from agent_bench.metrics import BenchmarkResult
 from agent_bench.paths.agent_mcp import AgentMCPPath
-from agent_bench.paths.agent_sdk import AgentSDKPath
 from agent_bench.paths.native_mcp import NativeMCPPath
 from agent_bench.scenarios.loader import Scenario, Task, load_scenario
 
@@ -51,9 +50,7 @@ def _build_paths(
     paths = []
     scenario_dir = artifacts_dir / f"{scenario_name}-scenario"
     for slug in path_slugs:
-        if slug == "agent-sdk":
-            paths.append(AgentSDKPath(config, connector_name))
-        elif slug == "agent-mcp":
+        if slug == "agent-mcp":
             paths.append(AgentMCPPath(config, scenario_dir / "agent-mcp", mode=mode))
         elif slug == "native-mcp":
             if mode == "live":

@@ -8,8 +8,7 @@ import pytest
 from agent_bench.config import LiveConfig
 from agent_bench.export.scorecard import render_scorecard
 from agent_bench.metrics import BenchmarkResult, StepResult
-from agent_bench.paths.agent_mcp import AgentMCPPath
-from agent_bench.paths.agent_sdk import _DISPATCH, _translate
+from agent_bench.paths.agent_mcp import _DISPATCH, AgentMCPPath, _translate
 from agent_bench.runner import Cell, RunReport
 from agent_bench.scenarios.loader import Task, load_scenario
 
@@ -104,24 +103,22 @@ def test_scorecard_renders_interim_ratios(tmp_path) -> None:
     scenario = load_scenario("linear-search")
     report = RunReport(
         cells=[
-            _cell(scenario, "REST Baseline (via SDK)", "agent-sdk", 400),
             _cell(scenario, "Agent MCP", "agent-mcp", 100),
             _cell(scenario, "Native MCP", "native-mcp", 300),
         ],
         requested_scenarios=["linear-search"],
-        requested_paths=["agent-sdk", "agent-mcp", "native-mcp"],
+        requested_paths=["agent-mcp", "native-mcp"],
     )
 
     out = tmp_path / "scorecard.md"
     render_scorecard(report, out)
     text = out.read_text()
     assert "Interim scorecard" in text
-    assert "4.0× fewer tokens" in text
     assert "3.0× fewer tokens" in text
 
 
 def test_context_store_search_passthrough() -> None:
-    """context_store_search action passes params directly to the SDK."""
+    """context_store_search action passes params directly through."""
     task = Task(
         label="Get account via context store",
         action="context_store_search",

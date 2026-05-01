@@ -17,11 +17,10 @@ For the full benefits narrative — including setup complexity, credential manag
 
 ## Benchmark Design
 
-The harness compares three paths for the same tasks:
+The harness compares two paths for the same tasks:
 
 | Path | Slug | Description |
 |---|---|---|
-| REST Baseline (via SDK) | `agent-sdk` | Token cost of consuming the provider's full REST API response. See [Methodology](docs/METHODOLOGY.md#agent-sdk-as-rest-baseline). |
 | Agent MCP | `agent-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
 | Native MCP | `native-mcp` | Record-replay of vendor-native MCP server responses |
 
