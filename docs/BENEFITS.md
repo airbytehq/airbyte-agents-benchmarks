@@ -1,6 +1,6 @@
 # Airbyte Agent MCP: Benefits Over Native MCP Servers
 
-> Data from the [April 30, 2026 benchmark report](../artifacts/2026-04-30/comparison-report.md).
+> Data from the [latest benchmark report](../latest-benchmark-result-report.md).
 > See [METHODOLOGY.md](METHODOLOGY.md) for measurement design.
 
 ## Overview
@@ -68,30 +68,15 @@ This is not just a convenience improvement. It is a fundamental reduction in the
 
 We measured token consumption across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) comparing Agent MCP against each vendor's native MCP server across comparable data operations — primarily search and get, plus list-all where supported.
 
-**Headline: Agent MCP used 74% fewer tokens than native MCP servers** across 14 comparable scenarios.
-
-| Connector | Agent MCP tokens | Native MCP tokens | Savings |
-|---|---:|---:|---:|
-| Gong | 6,234 | 52,946 | 88% |
-| Zendesk | 4,161 | 26,173 | 84% |
-| Linear | 9,606 | 18,758 | 49% |
-| Slack | 6,985 | 13,416 | 48% |
-| Salesforce | 2,742 | 4,610 | 41% |
+Across all tested connectors, Agent MCP uses significantly fewer tokens than native MCP servers. Per-connector breakdowns are in the [latest comparison report](../latest-benchmark-result-report.md).
 
 ### Why the savings are so large
 
 Native MCP servers return the vendor API's full response objects — typically 30 to 200+ fields per record. Agent MCP's `select_fields` parameter lets the caller declare exactly which fields they need (typically 4 to 9), and the platform returns only those fields.
 
-**Example — listing 100 Gong calls:**
+**Example — Gong calls:**
 
-An agent summarizing recent calls needs `id`, `title`, `scheduled`, and `duration`. Four fields.
-
-| Path | Tokens | Records | Fields returned |
-|---|---:|---:|---|
-| Agent MCP | 5,436 | 100 | 4 selected fields |
-| Native MCP | 26,084 | 100 | Full call objects |
-
-Same 100 records. **79% fewer tokens.** The saving comes entirely from not sending fields the agent doesn't need.
+An agent summarizing recent calls needs `id`, `title`, `scheduled`, and `duration`. Four fields. Agent MCP returns only those four fields; the native MCP server returns the full call object with dozens of fields. The token savings come entirely from not sending fields the agent doesn't need. See the [latest comparison report](../latest-benchmark-result-report.md) for exact token counts.
 
 ### What the savings mean in practice
 
@@ -99,7 +84,7 @@ The value of Agent MCP is not simply "shorter output." Agent MCP narrows payload
 
 - **Lower cost per agent action.** Token consumption maps directly to LLM API cost. See [Why Token Reduction Matters](METHODOLOGY.md#why-token-reduction-matters) for details on how token count affects latency, cost, and context window pressure.
 - **Longer effective context windows.** Tokens spent on verbose API responses are tokens unavailable for reasoning, planning, and user interaction.
-- **Compound savings in multi-step workflows.** A cross-connector workflow (Gong → Salesforce → Zendesk) completed in **1,486 tokens** via Agent MCP vs **30,208 tokens** via native MCP — a 95% reduction across three tool calls. See [Multi-Step Scenarios](METHODOLOGY.md#multi-step-scenarios) for how these workflows are benchmarked.
+- **Compound savings in multi-step workflows.** A cross-connector workflow (Gong → Salesforce → Zendesk) shows dramatic savings via Agent MCP compared to native MCP. See the [multi-step scenario results](../latest-benchmark-result-report.md) and [Multi-Step Scenarios](METHODOLOGY.md#multi-step-scenarios) for how these workflows are benchmarked.
 
 ### Methodology
 
@@ -125,15 +110,13 @@ None of these tools:
 
 An agent that needs to find a channel by name, or look up a channel's details by ID, has no direct path. The only workaround is to call `slack_list_channels` repeatedly, scan all results client-side, and hope the target channel appears before the agent runs out of context.
 
-**The cost of the workaround (measured):**
-- 13,416 tokens across 3 paginated calls to scan 36 channels (approximately 4,472 tokens per page of 12 channels)
+**The cost of the workaround:**
+- Multiple paginated calls to scan all channels, consuming thousands of tokens per page
 - Must exhaust every page to guarantee finding all matches (for search) or the target (for get)
 - Multiple round-trips to the MCP server
 - In larger workspaces the cost scales linearly with the number of channels
 
-**Agent MCP handles both operations in a single call:**
-- Get-by-ID: 133 tokens
-- Search: approximately 1,200 tokens for fuzzy keyword matching across all channels
+**Agent MCP handles both operations in a single call** — returning only the requested fields for the matched record(s). See the [latest comparison report](../latest-benchmark-result-report.md) for exact token counts.
 
 ### The broader pattern
 
@@ -147,24 +130,11 @@ This isn't unique to Slack. Vendor MCP servers are built as thin wrappers around
 |---|---|---|
 | **Setup** | Per-vendor server install; platform-specific admin steps (e.g., Salesforce Connected App) | One hosted MCP endpoint; no per-vendor setup |
 | **Credentials** | One credential set per vendor (5 vendors = 5 secrets) | One Airbyte credential set for all connectors |
-| **Token efficiency** | Full API response objects (30-200+ fields) | Only requested fields returned (`select_fields`) — 74% fewer tokens |
+| **Token efficiency** | Full API response objects (30-200+ fields) | Only requested fields returned (`select_fields`) — significantly fewer tokens |
 | **Capability** | Limited to vendor's MCP tool set; missing operations require expensive workarounds | Context store provides get, list, and search for every entity |
 
 ---
 
 ## Appendix: Per-Scenario Benchmark Data
 
-Full per-scenario breakdown with record counts, token counts, and annotations is available in the [April 30, 2026 comparison report](../artifacts/2026-04-30/comparison-report.md).
-
-### Scenarios not yet comparable
-
-These scenarios could not produce a valid head-to-head comparison and are excluded from the aggregate numbers above:
-
-| Scenario | Reason | Details |
-|---|---|---|
-| Slack get | No native tool exists | Slack MCP has no get-channel-by-ID operation |
-| Slack search | No native tool exists | Slack MCP has no channel search/filter operation |
-
-The Slack scenarios are structural — they cannot become comparable because the vendor MCP lacks the capability. They illustrate benefit number 4 (making impossible tasks easy).
-
-Note: Salesforce search is included in the comparable totals above (Agent 515 vs Native 729 tokens). The scenario YAML annotation notes an org misalignment issue that affected earlier test runs, but the April 30 recordings produced valid results for both paths.
+Full per-scenario breakdown with record counts, token counts, and annotations is available in the [latest comparison report](../latest-benchmark-result-report.md).
