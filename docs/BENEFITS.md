@@ -1,6 +1,5 @@
 # Airbyte Agent MCP: Benefits Over Native MCP Servers
 
-> **Purpose:** Raw material for press release and marketing communications.
 > Data from the [April 30, 2026 benchmark report](../artifacts/2026-04-30/comparison-report.md).
 > See [METHODOLOGY.md](METHODOLOGY.md) for measurement design.
 
@@ -67,7 +66,7 @@ This is not just a convenience improvement. It is a fundamental reduction in the
 
 ### The benchmark
 
-We measured token consumption across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) comparing Agent MCP against each vendor's native MCP server on the same data operations (search, get, list).
+We measured token consumption across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) comparing Agent MCP against each vendor's native MCP server across comparable data operations — primarily search and get, plus list-all where supported.
 
 **Headline: Agent MCP used 74% fewer tokens than native MCP servers** across 14 comparable scenarios.
 
@@ -96,9 +95,11 @@ Same 100 records. **79% fewer tokens.** The saving comes entirely from not sendi
 
 ### What the savings mean in practice
 
-- **Lower cost per agent action.** Token consumption maps directly to LLM API cost.
+The value of Agent MCP is not simply "shorter output." Agent MCP narrows payloads with explicit field selection while preserving typed, structured JSON. Both Agent MCP and the REST Baseline return records that support filtering, sorting, joins, and follow-up actions — Agent MCP simply returns fewer fields per record.
+
+- **Lower cost per agent action.** Token consumption maps directly to LLM API cost. See [Why Token Reduction Matters](METHODOLOGY.md#why-token-reduction-matters) for details on how token count affects latency, cost, and context window pressure.
 - **Longer effective context windows.** Tokens spent on verbose API responses are tokens unavailable for reasoning, planning, and user interaction.
-- **Compound savings in multi-step workflows.** A cross-connector workflow (Gong → Salesforce → Zendesk) completed in **1,486 tokens** via Agent MCP vs **30,208 tokens** via native MCP — a 95% reduction across three tool calls.
+- **Compound savings in multi-step workflows.** A cross-connector workflow (Gong → Salesforce → Zendesk) completed in **1,486 tokens** via Agent MCP vs **30,208 tokens** via native MCP — a 95% reduction across three tool calls. See [Multi-Step Scenarios](METHODOLOGY.md#multi-step-scenarios) for how these workflows are benchmarked.
 
 ### Methodology
 

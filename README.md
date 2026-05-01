@@ -33,7 +33,7 @@ The harness compares three paths for the same tasks:
 | Agent MCP | `agent-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
 | Native MCP | `native-mcp` | Record-replay of vendor-native MCP server responses |
 
-Each connector has named scenarios (e.g., `linear-search`, `gong-get`, `salesforce-list`). The benchmark currently covers five connectors. Granola recordings from April 24 are preserved but the connector is tombstoned.
+Each connector has named scenarios (e.g., `linear-search`, `gong-get`, `slack-list-all`). The benchmark currently covers five connectors. Granola recordings from April 24 are preserved but the connector is tombstoned.
 
 ## Quick Start (No Credentials)
 
@@ -56,31 +56,13 @@ See [docs/REPRODUCTION.md](docs/REPRODUCTION.md) for the full reproduction guide
 
 ## Connectors
 
-| Connector | agent-mcp | native-mcp | agent-sdk |
-|---|---|---|---|
-| Linear | Recordings committed | April 24 recordings | Live |
-| Slack | Recordings committed | Not yet recorded | Live |
-| Gong | Recordings committed | Not yet recorded | Live |
-| Salesforce | Recordings committed | Not yet recorded | Live |
-| Zendesk | Recordings committed | Not yet recorded | Live |
-| Granola | April 24 only (tombstoned) | April 24 recordings | Tombstoned |
-
-## Repository Contents
-
-| Path | Description |
-|---|---|
-| `src/agent_bench/` | Benchmark harness and CLI |
-| `src/agent_bench/scenarios/*.yaml` | Scenario definitions (one YAML per scenario, e.g. `linear-search.yaml`) |
-| `tests/` | Unit tests for scenarios, validation, and scorecard rendering |
-| `scripts/record_response.py` | Helper for saving replay recordings |
-| `artifacts/YYYY-MM-DD/` | Recordings, scorecard, charts, and supporting deck artifact |
-| `docs/BENEFITS.md` | Benefits deep-dive and press release raw material |
-| `docs/METHODOLOGY.md` | Measurement details and design choices |
-| `docs/REPRODUCTION.md` | Step-by-step reproduction guide with troubleshooting |
-| `docs/RESULTS.md` | April 24 numbers and safe claims (Linear + Granola only) |
-| `docs/CTO_BRIEF.md` | April 24 executive summary (Linear + Granola only) |
-| `docs/SLACK_STATUS.md` | Slack blocker status (historical) |
-| `docs/THIRD_PARTY_MCP_SETUP.md` | Installation and configuration guide for third-party MCP servers |
+| Connector | Agent MCP | Native MCP |
+|---|---|---|
+| Linear | ✅ | [Linear MCP](https://linear.app/docs/mcp) |
+| Slack | ✅ | [`@modelcontextprotocol/server-slack`](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack) |
+| Gong | ✅ | [`kenazk/gong-mcp`](https://github.com/kenazk/gong-mcp) |
+| Salesforce | ✅ | [`mcp-salesforce-connector`](https://github.com/smn2gnt/mcp-salesforce) |
+| Zendesk | ✅ | [`dunialabs/mcp-zendesk`](https://github.com/dunialabs/mcp-servers/tree/main/mcp-zendesk) |
 
 ## Artifact Layout
 
@@ -141,7 +123,7 @@ For Agent MCP, `--wall-ms` can be omitted when the response contains `execution_
 
 ## Further Reading
 
-- [Benefits Deep-Dive](docs/BENEFITS.md) — detailed benefits narrative for press release and communications
+- [Benefits Deep-Dive](docs/BENEFITS.md) — setup, credentials, token efficiency, and capability comparison
 - [Methodology](docs/METHODOLOGY.md) — measurement design, token counting, timing
 - [Reproduction Guide](docs/REPRODUCTION.md) — end-to-end walkthrough from clone to results
 - [Third-Party MCP Setup](docs/THIRD_PARTY_MCP_SETUP.md) — install and configure vendor MCP servers

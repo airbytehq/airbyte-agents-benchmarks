@@ -3,11 +3,13 @@ title: "Cross-system: Gong calls on 2026-04-28 → Salesforce + Zendesk lookup"
 connector: multi_source
 connector_id_env: GONG_CONNECTOR_ID
 description: |
-  Multi-step cross-connector workflow: search for Gong calls scheduled
-  on 2026-04-28, then look up the associated account names in Salesforce and
+  Multi-step cross-connector workflow: search Gong for calls scheduled
+  on 2026-04-28, then look up associated account names in Salesforce and
   find open tickets for those accounts in Zendesk.
-  Steps 2 and 3 use dummy static account/ticket lists to demonstrate
-  the choreographed multi-step scenario format.
+  Subsequent step inputs (account names, ticket filters) are statically
+  seeded from values captured at recording time. The harness replays
+  each step deterministically; it does not dynamically chain outputs
+  between steps at runtime. See docs/METHODOLOGY.md for details.
 
 faux_prompt: >
   For all Gong calls scheduled on 2026-04-28, look up the account names

@@ -1,4 +1,4 @@
-"""Render a marketing-ready scorecard markdown from benchmark results."""
+"""Render a scorecard markdown from benchmark results."""
 
 from __future__ import annotations
 
@@ -220,17 +220,14 @@ def _aggregate_table(report: RunReport) -> str:
 
 def _verdict(report: RunReport) -> str:
     totals = _path_totals(report)
-    sdk_tokens = totals.get("agent-sdk", _zero_totals())["tokens"]
     mcp_tokens = totals.get("agent-mcp", _zero_totals())["tokens"]
     native_tokens = totals.get("native-mcp", _zero_totals())["tokens"]
     lines = [
-        "- **Agent MCP** (with `select_fields`) is the narrowest path \u2014 {:.1f}\u00d7 fewer tokens than the REST Baseline, {:.1f}\u00d7 fewer than Native MCP.".format(
-            sdk_tokens / max(mcp_tokens, 1) if mcp_tokens else 0,
+        "- **Agent MCP** (with `select_fields`) is the narrowest path \u2014 {:.1f}\u00d7 fewer tokens than Native MCP.".format(
             native_tokens / max(mcp_tokens, 1) if mcp_tokens else 0,
         ),
-        "- **REST Baseline (via SDK)** returns the full typed records from the provider's REST API \u2014 the same data an agent would see calling the provider directly. Useful when agents need all fields, e.g. for multi-field joins.",
-        "- **Native MCP** is structurally narrower in some cases, but gives up queryability (structured filters) and returns inconsistent shapes across connectors (JSON, text, and markdown-like responses). In the included Linear list task, native MCP returns 25 records while Airbyte Agents returns 50 records in one call.",
+        "- **Native MCP** is structurally narrower in some cases, but gives up queryability (structured filters) and returns inconsistent shapes across connectors (JSON, text, and markdown-like responses).",
         "",
-        "**For marketing:** Agent MCP delivers narrower, structured, queryable data in one call. The REST Baseline shows the unfiltered cost. Native MCP requires pagination, returns mixed shapes, and lacks filter operators.",
+        "**Summary:** Agent MCP delivers narrower, structured, queryable data in one call. Native MCP requires pagination, returns mixed shapes, and lacks filter operators.",
     ]
     return "\n".join(lines)
