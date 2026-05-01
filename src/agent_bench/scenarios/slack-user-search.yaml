@@ -1,0 +1,37 @@
+name: slack-user-search
+title: "Slack — Search users by display name"
+connector: slack
+connector_id_env: SLACK_CONNECTOR_ID
+is_comparable: false
+description: |
+  Search Slack workspace members by display name.
+  Agent requests id, real_name, team_id, is_admin, is_bot, and deleted.
+
+annotations:
+  tool_mismatch: >
+    🛑No native user search tool exists in
+    [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)
+    ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)).
+    The Slack Web API's [`users.list`](https://api.slack.com/methods/users.list)
+    accepts only `cursor` and `limit` — no name filter.
+    There is no `users.search` or `users.lookupByName` method in the API.
+    Alternative path: paginate `slack_get_users` through all workspace members
+    and filter client-side by display name.
+
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SLACK_CONNECTOR_ID
+        args:
+          entity: users
+          action: context_store_search
+          params:
+            query:
+              filter:
+                fuzzy:
+                  real_name: "airbyte"
+            limit: 10
+          select_fields: [id, real_name, team_id, is_admin, is_bot, deleted]
+

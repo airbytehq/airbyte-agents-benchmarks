@@ -1,0 +1,30 @@
+name: slack-user-list
+title: "Slack — List all users"
+connector: slack
+connector_id_env: SLACK_CONNECTOR_ID
+description: |
+  List all Slack workspace members.
+  Agent requests id, real_name, team_id, is_admin, is_bot, and deleted per record.
+  Both paths use `paginate_to_end` to exhaust all pages automatically.
+
+paths:
+  agent-mcp:
+    tool_calls:
+      - server: airbyte-agent
+        tool: integrations_connectors_id_execute
+        connector_id_env: SLACK_CONNECTOR_ID
+        paginate_to_end: true
+        args:
+          entity: users
+          action: list
+          params:
+            limit: 1000
+          select_fields: [id, real_name, team_id, is_admin, is_bot, deleted]
+
+  native-mcp:
+    tool_calls:
+      - server: slack
+        tool: slack_get_users
+        paginate_to_end: true
+        args:
+          limit: 200

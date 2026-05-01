@@ -85,10 +85,10 @@ class LinearMCP:
 
 
 def record_linear(api_key: str, date: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Linear native-mcp for search and get scenarios."""
+    """Record Linear native-mcp for search, get, project-list, user-list scenarios."""
     results: list[tuple[str, Path]] = []
     if dry_run:
-        print("  [dry-run] Would record linear-search, linear-get")
+        print("  [dry-run] Would record linear-search, linear-get, linear-project-list, linear-user-list")
         return results
 
     mcp = LinearMCP(api_key)
@@ -118,6 +118,40 @@ def record_linear(api_key: str, date: str, dry_run: bool = False) -> list[tuple[
     }], date, "native-mcp")
     results.append(("linear-get", path))
     print(f"    linear-get: {json.dumps(response)[:80]}...")
+
+    # Project list (list all projects)
+    tool = "list_projects"
+    args = {}
+    response, wall_ms = mcp.call_tool(tool, args)
+    path = save_recording("linear-project-list", [{
+        "tool": f"mcp__claude_ai_Linear__{tool}",
+        "args": args,
+        "wall_clock_ms": round(wall_ms, 1),
+        "response": response,
+    }], date, "native-mcp")
+    results.append(("linear-project-list", path))
+    projects = response.get("projects", response.get("nodes", []))
+    if isinstance(projects, list):
+        print(f"    linear-project-list: {len(projects)} projects")
+    else:
+        print(f"    linear-project-list: {json.dumps(response)[:80]}...")
+
+    # User list (list all users)
+    tool = "list_users"
+    args = {}
+    response, wall_ms = mcp.call_tool(tool, args)
+    path = save_recording("linear-user-list", [{
+        "tool": f"mcp__claude_ai_Linear__{tool}",
+        "args": args,
+        "wall_clock_ms": round(wall_ms, 1),
+        "response": response,
+    }], date, "native-mcp")
+    results.append(("linear-user-list", path))
+    users = response.get("users", response.get("nodes", []))
+    if isinstance(users, list):
+        print(f"    linear-user-list: {len(users)} users")
+    else:
+        print(f"    linear-user-list: {json.dumps(response)[:80]}...")
 
     return results
 
@@ -186,10 +220,10 @@ class SlackMCP:
 
 
 def record_slack(bot_token: str, team_id: str, date: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Slack native-mcp for search, get, and list-all scenarios."""
+    """Record Slack native-mcp for search, get, list-all, and user-list scenarios."""
     results: list[tuple[str, Path]] = []
     if dry_run:
-        print("  [dry-run] Would record slack-search, slack-get, slack-list-all")
+        print("  [dry-run] Would record slack-search, slack-get, slack-list-all, slack-user-list")
         return results
 
     mcp = SlackMCP(bot_token, team_id)
@@ -245,6 +279,30 @@ def record_slack(bot_token: str, team_id: str, date: str, dry_run: bool = False)
             for c in calls if isinstance(c.get("response"), dict)
         )
         print(f"    slack-list-all: {total_channels} channels across {len(calls)} calls")
+
+        # User list — paginate all users (200 per page until exhausted)
+        user_calls = []
+        page_args = {"limit": 200}
+        while True:
+            response, wall_ms = mcp.call_tool("slack_get_users", page_args)
+            user_calls.append({
+                "tool": "mcp__claude_ai_Slack__slack_get_users",
+                "args": page_args,
+                "wall_clock_ms": round(wall_ms, 1),
+                "response": response,
+            })
+            metadata = response.get("response_metadata", {}) if isinstance(response, dict) else {}
+            next_cursor = metadata.get("next_cursor", "")
+            if not next_cursor:
+                break
+            page_args = {"limit": 200, "cursor": next_cursor}
+        path = save_recording("slack-user-list", user_calls, date, "native-mcp")
+        results.append(("slack-user-list", path))
+        total_members = sum(
+            len(c["response"].get("members", []))
+            for c in user_calls if isinstance(c.get("response"), dict)
+        )
+        print(f"    slack-user-list: {total_members} members across {len(user_calls)} calls")
     finally:
         mcp.close()
 

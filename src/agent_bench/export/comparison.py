@@ -164,7 +164,8 @@ def _count_records(response: dict) -> int:
 
     # Native-mcp: list responses with known collection keys
     _LIST_KEYS = ("calls", "tickets", "records", "searchRecords", "channels",
-                  "messages", "results", "callTranscripts")
+                  "members", "messages", "results", "callTranscripts", "projects",
+                  "users", "issues")
     for key in _LIST_KEYS:
         if key in response and isinstance(response[key], list):
             return len(response[key])

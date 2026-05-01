@@ -83,17 +83,11 @@ This CLI requires Python 3.13+ and is not currently usable in Devin sessions (wh
 
 ## Recording Guidelines
 
-### No PII in recordings
+### No PII in committed files
 
-Recordings are committed to the repo and must not contain personally identifiable information. When choosing `select_fields` for a connector, exclude fields that return names, emails, or other PII. For example, prefer `state`, `team`, `labels` over `assignee` (which includes `name` and `email` sub-fields on Linear).
+Raw recording JSON files (`recording.json`) are gitignored and never committed. Only `recording-stats.json` files (which contain aggregate metrics, not record-level data) are committed.
 
-Before committing new recordings, verify with:
-
-```bash
-grep -rE '"email"|"phone"|"address"' artifacts/
-```
-
-If a field is needed for benchmark validity but contains PII, redact it to a placeholder (e.g., `user-1@example.com`) before committing.
+Since recordings stay local, `select_fields` may include name fields when needed for benchmark validity (e.g., searching users by `name`). However, avoid including email addresses, phone numbers, or other contact information in `select_fields` when not required by the scenario.
 
 ## Existing Documentation
 

@@ -262,7 +262,7 @@ def _count_records(response: Any) -> int:
     if response is None:
         return 0
     if isinstance(response, dict):
-        for key in ("results", "data", "channels", "users", "issues", "meetings", "notes"):
+        for key in ("results", "data", "channels", "members", "users", "issues", "projects", "meetings", "notes"):
             v = response.get(key)
             if isinstance(v, list):
                 return len(v)
