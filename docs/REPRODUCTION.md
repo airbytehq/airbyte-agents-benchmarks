@@ -183,13 +183,61 @@ uv run agent-bench run \
   --export-markdown partial-results.md
 ```
 
-## CLI Reference
+## Artifact Layout
 
-```bash
-uv run agent-bench list              # Show all scenarios and connector IDs
-uv run agent-bench plan              # Show recording plan for replay paths
-uv run agent-bench run               # Run benchmark cells
-uv run agent-bench validate          # Validate replay recordings
+Each benchmark run produces immutable artifacts under a dated directory:
+
+```
+artifacts/
+  YYYY-MM-DD/
+    linear-search-scenario/
+      agent-mcp/
+        recording.json
+        recording-stats.json
+      native-mcp/
+        recording.json
+        recording-stats.json
+    gong-get-scenario/
+      ...
+    <report>.md          # filename varies by export command
+    charts/
 ```
 
-All commands accept `--scenarios` and `--paths` filters. Use `--help` on any command for full options.
+A symlink at [`latest-benchmark-result-report.md`](../latest-benchmark-result-report.md) in the repo root points to the most recent report.
+
+## CLI Reference
+
+```text
+agent-bench list             List available benchmark scenarios
+agent-bench plan             Print MCP tool-call specs for record-replay paths
+agent-bench run              Run the benchmark across selected scenarios and paths
+agent-bench validate         Validate replay recordings before exporting
+agent-bench compare          Generate a markdown comparison report from recording stats
+agent-bench generate-stats   Generate recording-stats.json from existing recordings
+```
+
+The `plan`, `run`, and `validate` commands accept `--scenarios` and `--paths` filters. Pass connector names (e.g. `linear`) to `--scenarios` to select all scenarios for that connector, or pass specific scenario names (e.g. `linear-search,linear-get`). Use `--help` on any command for full options.
+
+Export is blocked when recordings or cells have issues. See [METHODOLOGY.md](METHODOLOGY.md#export-gates) for the full list of export gates.
+
+## Recording New Responses
+
+```bash
+uv run agent-bench plan --scenarios all --paths native-mcp,agent-mcp
+```
+
+For each Agent MCP connector, call `mcp__airbyte-agent__describe_connector` once before recording the planned `mcp__airbyte-agent__execute` call. Every execute item must include `select_fields`.
+
+Save MCP responses with:
+
+```bash
+uv run python scripts/record_response.py \
+  --path agent-mcp \
+  --scenario linear-search \
+  --tool mcp__airbyte-agent__execute \
+  --args '{"items":[...]}' \
+  --response-file /tmp/response.json \
+  --reset
+```
+
+For Agent MCP, `--wall-ms` can be omitted when the response contains `execution_metadata.execution_time_ms`.
