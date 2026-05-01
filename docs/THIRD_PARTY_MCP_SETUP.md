@@ -14,7 +14,7 @@ Each connector in the benchmark has a corresponding MCP server maintained by the
 | Granola | `https://mcp.granola.ai/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
 | Slack | `@modelcontextprotocol/server-slack` | stdio (local, via `npx`) | Bot token + team ID |
 | Zendesk | `ghcr.io/dunialabs/mcp-servers/zendesk` | stdio (local, via Docker) | OAuth access token |
-| Salesforce | `https://api.salesforce.com/.../sobject-reads` | Streamable HTTP (remote) | OAuth 2.0 (Connected App refresh token) |
+| Salesforce | `https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads` | Streamable HTTP (remote) | OAuth 2.0 (Connected App refresh token) |
 
 Linear and Granola run as remote hosted servers with browser-based OAuth. Slack runs locally via `npx` with a bot token. Zendesk runs locally via Docker with an OAuth access token. Salesforce uses its official hosted MCP server with OAuth 2.0 via a Connected App.
 
@@ -326,9 +326,7 @@ The `SalesforceMCP` class in `src/agent_bench/recording/native_mcp_recorder.py` 
 Salesforce hosted MCP servers support native OAuth with Claude. Add via Claude Code:
 
 ```bash
-claude mcp add salesforce-reads \
-  --transport http \
-  https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads
+claude mcp add --transport http salesforce-reads https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads
 ```
 
 Then complete the OAuth flow in your browser when prompted. See [Salesforce's Claude configuration guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/configure-claude.html) for details.
