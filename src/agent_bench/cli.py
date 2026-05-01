@@ -12,6 +12,18 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from agent_bench.airbyte_mcp import (
+    DEFAULT_MCP_URL,
+    DEFAULT_TOKEN_PATH,
+    AirbyteMCPClient,
+    FileTokenStorage,
+)
+from agent_bench.recording.agent_mcp_recorder import record_agent_mcp
+from agent_bench.recording.common import default_date
+from agent_bench.recording.emulated_recorder import record_emulated_agent_mcp
+from agent_bench.recording.native_mcp_recorder import record_native_mcp
+from agent_bench.recording.single import record_one
+
 app = typer.Typer(
     name="agent-bench",
     help="Three-way benchmark: REST Baseline vs Agent MCP vs Native MCP.",
@@ -386,10 +398,12 @@ def _short_error(value: str, limit: int = 180) -> str:
 
 
 def _update_symlink(report_path: FSPath, artifacts_root: FSPath) -> None:
-    """Update the latest-benchmark-result-report.md symlink at repo root."""
+    """Update the `latest_comparison_report/README.md` symlink at repo root."""
     repo_root = artifacts_root.parent
-    symlink = repo_root / "latest-benchmark-result-report.md"
-    rel = os.path.relpath(report_path, repo_root)
+    symlink_dir = repo_root / "latest_comparison_report"
+    symlink_dir.mkdir(exist_ok=True)
+    symlink = symlink_dir / "README.md"
+    rel = os.path.relpath(report_path, symlink_dir)
     try:
         if symlink.is_symlink() or symlink.exists():
             symlink.unlink()
@@ -420,6 +434,104 @@ def _agent_sdk_mcp_consistency_issues(report) -> list[str]:
                 f"agent-mcp records={mcp.result.total_records}"
             )
     return issues
+
+
+@app.command()
+def auth(
+    server_url: str = typer.Option(DEFAULT_MCP_URL, "--server-url", help="MCP server URL."),
+    token_path: FSPath = typer.Option(DEFAULT_TOKEN_PATH, "--token-path", help="Path to persist OAuth tokens."),
+) -> None:
+    """One-time browser OAuth for `mcp.airbyte.ai`.
+
+    Opens a browser, completes the PKCE flow, and persists the resulting
+    access + refresh tokens. Re-run if you see 401 responses during recording.
+    """
+    async def _auth() -> None:
+        storage = FileTokenStorage(token_path)
+        client = AirbyteMCPClient(server_url=server_url, storage=storage)
+        try:
+            await client.initialize()
+        finally:
+            await client.close()
+        console.print(f"[green]Authenticated. Tokens saved to {token_path}.[/green]")
+
+    asyncio.run(_auth())
+
+
+@app.command()
+def record(
+    path: str = typer.Option(..., "--path", help="Recording path: 'agent-mcp' or 'native-mcp'."),
+    connectors: str = typer.Option("all", "--connectors", help="Comma-separated connector names, or 'all'."),
+    date: str | None = typer.Option(None, "--date", help="Artifact date folder (YYYY-MM-DD). Defaults to today UTC."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be recorded without executing."),
+    emulated_mcp: bool = typer.Option(False, "--emulated-mcp/--no-emulated-mcp", help="Use Sonar REST API instead of real MCP (agent-mcp only)."),
+    server_url: str = typer.Option(DEFAULT_MCP_URL, "--server-url", help="MCP server URL (agent-mcp, real MCP only)."),
+    token_path: FSPath = typer.Option(DEFAULT_TOKEN_PATH, "--token-path", help="OAuth token path (agent-mcp, real MCP only)."),
+) -> None:
+    """Record MCP responses for benchmark replay.
+
+    Captures live responses from either the Airbyte Agent MCP server or
+    vendor-native MCP servers and writes them as recording artifacts.
+    """
+    if path not in ("agent-mcp", "native-mcp"):
+        console.print(f"[red]Invalid --path {path!r}. Must be 'agent-mcp' or 'native-mcp'.[/red]")
+        raise typer.Exit(1)
+
+    connector_arg = None if connectors == "all" else connectors
+
+    if path == "native-mcp":
+        if emulated_mcp:
+            console.print("[red]Emulated MCP is not available for native-mcp path.[/red]")
+            raise typer.Exit(1)
+        rc = record_native_mcp(connectors=connector_arg, date=date, dry_run=dry_run)
+
+    elif emulated_mcp:
+        rc = record_emulated_agent_mcp(connectors=connector_arg, date=date, dry_run=dry_run)
+
+    else:
+        rc = asyncio.run(
+            record_agent_mcp(
+                connectors=connector_arg,
+                date=date,
+                server_url=server_url,
+                token_path=token_path,
+                dry_run=dry_run,
+            )
+        )
+
+    if rc != 0:
+        raise typer.Exit(rc)
+
+
+@app.command(name="record-one")
+def record_one_cmd(
+    path: str = typer.Option(..., "--path", help="Recording path: 'native-mcp' or 'agent-mcp'."),
+    scenario: str = typer.Option(..., "--scenario", help="Scenario name, e.g. linear-search."),
+    tool: str = typer.Option(..., "--tool", help="MCP tool name."),
+    args: str = typer.Option(..., "--args", help="JSON string of tool arguments."),
+    response_file: FSPath = typer.Option(..., "--response-file", help="Path to a file with the raw response JSON."),
+    date: str | None = typer.Option(None, "--date", help="Artifact date folder (YYYY-MM-DD). Defaults to today UTC."),
+    wall_ms: float | None = typer.Option(None, "--wall-ms", help="Wall-clock ms. For agent-mcp, defaults to execution_metadata.execution_time_ms."),
+    reset: bool = typer.Option(False, "--reset", help="Overwrite any existing recording for this scenario."),
+) -> None:
+    """Save a single MCP tool-call response as a benchmark recording."""
+    if path not in ("native-mcp", "agent-mcp"):
+        console.print(f"[red]Invalid --path {path!r}. Must be 'native-mcp' or 'agent-mcp'.[/red]")
+        raise typer.Exit(1)
+
+    date_str = date or default_date()
+    out_path = record_one(
+        path_slug=path,
+        scenario=scenario,
+        tool=tool,
+        args_json=args,
+        response_file=response_file,
+        date=date_str,
+        wall_ms=wall_ms,
+        reset=reset,
+    )
+    existing = json.loads(out_path.read_text())
+    console.print(f"saved -> {out_path} ({len(existing)} call(s))")
 
 
 if __name__ == "__main__":

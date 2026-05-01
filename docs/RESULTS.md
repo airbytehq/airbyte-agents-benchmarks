@@ -1,8 +1,8 @@
 # Results
 
-The latest benchmark results are in the auto-generated comparison report, symlinked at the repo root:
+The latest benchmark results are in the auto-generated comparison report:
 
-- **[`latest-benchmark-result-report.md`](../latest-benchmark-result-report.md)** — current report with per-connector and per-scenario breakdowns
+- **[`latest_comparison_report/`](../latest_comparison_report/)** — current report with per-connector and per-scenario breakdowns
 
 The report is regenerated each time the harness runs with `--export-markdown`. Dated artifacts are preserved under `artifacts/YYYY-MM-DD/`.
 
