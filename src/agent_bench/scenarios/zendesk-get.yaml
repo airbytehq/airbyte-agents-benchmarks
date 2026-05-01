@@ -9,11 +9,6 @@ description: |
 annotations:
   highlight: >
     💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`.
-  instance_mismatch: >
-    ℹ️ The agent-mcp connector syncs from a Zendesk instance containing ticket #17394,
-    but the native MCP OAuth credentials connect to `d3v-airbyte.zendesk.com` which only
-    has ticket #2. Each path fetches a valid single ticket from its respective instance;
-    the benchmark measures token overhead, not data identity.
 
 paths:
   agent-mcp:
@@ -37,4 +32,4 @@ paths:
       - server: zendesk
         tool: zendeskGetTicket
         args:
-          ticket_id: 2
+          ticket_id: "17394"

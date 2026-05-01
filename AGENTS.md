@@ -73,6 +73,17 @@ for s in secrets:
 
 **Current GSM coverage:** Slack credentials are available. Linear and Granola are not currently in GSM.
 
+## Salesforce Native MCP — Token Refresh
+
+The Salesforce hosted MCP endpoint (`api.salesforce.com/platform/mcp`) requires an access token from a **production** Salesforce org — Developer Edition orgs (e.g., `airbyte-dev-ed`) will return 401.
+
+**Key facts:**
+- Org domain: `airbyte.my.salesforce.com` (never use `login.salesforce.com`)
+- The External Client App ("Salesforce MCP (Internal Access)") requires **PKCE** for OAuth flows
+- Callback URL: `https://claude.ai/api/mcp/auth_callback` (must match exactly)
+- Do **not** pass explicit `scope` parameters — the app's pre-configured scopes (`refresh_token mcp_api`) apply automatically
+- See [docs/THIRD_PARTY_MCP_SETUP.md](docs/THIRD_PARTY_MCP_SETUP.md#obtaining-a-refresh-token) for the full step-by-step OAuth flow
+
 ## Recording Guidelines
 
 ### No PII in committed files
@@ -84,7 +95,7 @@ Since recordings stay local, `select_fields` may include name fields when needed
 ## Existing Documentation
 
 - [docs/REPRODUCTION.md](docs/REPRODUCTION.md) -- end-to-end guide for reproducing benchmark results
-- [docs/THIRD_PARTY_MCP_SETUP.md](docs/THIRD_PARTY_MCP_SETUP.md) -- installation and configuration for Linear, Granola, and Slack MCP servers
+- [docs/THIRD_PARTY_MCP_SETUP.md](docs/THIRD_PARTY_MCP_SETUP.md) -- installation and configuration for native MCP servers (Linear, Slack, Gong, Salesforce, Zendesk)
 - [docs/METHODOLOGY.md](docs/METHODOLOGY.md) -- measurement design, token counting, export gates
 - [docs/RESULTS.md](docs/RESULTS.md) -- latest results pointer and known caveats
 - [docs/BENEFITS.md](docs/BENEFITS.md) -- benefits narrative, token efficiency data, and claims guidance
