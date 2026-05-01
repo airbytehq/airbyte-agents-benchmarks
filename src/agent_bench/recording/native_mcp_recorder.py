@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 import time
+import traceback
 from pathlib import Path
 
 import requests
@@ -109,7 +110,7 @@ def record_linear(api_key: str, date: str, dry_run: bool = False) -> list[tuple[
 
     # Get
     tool = "get_issue"
-    args = {"id": "AIR-55"}
+    args = {"id": "AGENTIC-55"}
     response, wall_ms = mcp.call_tool(tool, args)
     path = save_recording("linear-get", [{
         "tool": f"mcp__claude_ai_Linear__{tool}",
@@ -447,7 +448,7 @@ class SalesforceMCP:
 
     @staticmethod
     def _get_access_token(consumer_key: str, consumer_secret: str, refresh_token: str) -> str:
-        r = requests.post("https://login.salesforce.com/services/oauth2/token", timeout=30, data={
+        r = requests.post("https://airbyte.my.salesforce.com/services/oauth2/token", timeout=30, data={
             "grant_type": "refresh_token",
             "client_id": consumer_key,
             "client_secret": consumer_secret,
@@ -663,7 +664,7 @@ def record_zendesk(subdomain: str, access_token: str, date: str, dry_run: bool =
 
         # Get
         tool = "zendeskGetTicket"
-        args = {"ticket_id": 2}
+        args = {"ticket_id": 17394}
         response, wall_ms = mcp.call_tool(tool, args)
         path = save_recording("zendesk-get", [{
             "tool": f"mcp__zendesk__{tool}",
@@ -737,7 +738,6 @@ def record_native_mcp(
 
         except Exception as e:  # noqa: BLE001
             print(f"  ERROR: {e}")
-            import traceback
             traceback.print_exc()
 
     print(f"\n{'=' * 40}")

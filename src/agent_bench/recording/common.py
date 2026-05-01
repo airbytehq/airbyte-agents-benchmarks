@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -107,10 +108,12 @@ def count_response_records(response: Any) -> int:
 def load_env_secret(env_var: str) -> str:
     """Read a required secret from the environment.
 
+    Always calls `load_dotenv()` first so `.env` profile values are available.
     Raises `EnvironmentError` with a clear message when the variable is unset
     or empty.  Callers should populate their `.env` file (manually or via
     `agent-bench populate-env`) before running recordings.
     """
+    load_dotenv()
     value = os.environ.get(env_var, "")
     if not value:
         raise EnvironmentError(

@@ -1,6 +1,6 @@
 # Third-Party MCP Servers: Installation and Configuration
 
-This document explains how to install and configure the native MCP servers provided by Linear, Granola, Slack, Zendesk, and Salesforce. These are the third-party alternatives the benchmark compares Airbyte Agents against.
+This document explains how to install and configure the native MCP servers used for benchmarking. These are the third-party alternatives the benchmark compares Airbyte Agents against.
 
 The benchmark's `native-mcp` path uses recordings captured from these providers' MCP tools. To capture fresh recordings or independently verify tool call shapes, you need access to these servers.
 
@@ -10,13 +10,14 @@ Each connector in the benchmark has a corresponding MCP server maintained by the
 
 | Connector | MCP Server | Transport | Auth |
 |---|---|---|---|
-| Linear | `https://mcp.linear.app/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
+| Linear | `https://mcp.linear.app/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) or API key |
 | Granola | `https://mcp.granola.ai/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
 | Slack | `@modelcontextprotocol/server-slack` | stdio (local, via `npx`) | Bot token + team ID |
 | Zendesk | `ghcr.io/dunialabs/mcp-servers/zendesk` | stdio (local, via Docker) | OAuth access token |
-| Salesforce | `https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads` | Streamable HTTP (remote) | OAuth 2.0 (Connected App refresh token) |
+| Gong | `kenazk/gong-mcp` | stdio (local, via Node.js) | Basic (access key + secret) |
+| Salesforce | `api.salesforce.com/platform/mcp` | SSE (remote) | OAuth 2.0 (refresh token) |
 
-Linear and Granola run as remote hosted servers with browser-based OAuth. Slack runs locally via `npx` with a bot token. Zendesk runs locally via Docker with an OAuth access token. Salesforce uses its official hosted MCP server with OAuth 2.0 via a Connected App.
+Linear and Granola run as remote hosted servers with browser-based OAuth. Slack and Gong run locally via `npx`/Node.js. Zendesk runs locally via Docker. Salesforce uses its hosted MCP endpoint.
 
 ---
 
@@ -193,7 +194,7 @@ The Slack MCP server exposes server-native tool names that differ from the Claud
 
 | MCP Server Tool | Claude Code / Benchmark Tool | Description |
 |---|---|---|
-| `slack_search_channels` | `mcp__claude_ai_Slack__slack_search_channels` | Search channels by name; the benchmark uses this for search, get, and list tasks |
+| `slack_list_channels` | `mcp__claude_ai_Slack__slack_list_channels` | List channels (paginated); the benchmark uses this for search, get, and list tasks |
 | `slack_post_message` | `mcp__claude_ai_Slack__slack_post_message` | Post a message to a channel |
 | `slack_reply_to_thread` | `mcp__claude_ai_Slack__slack_reply_to_thread` | Reply to a message thread |
 | `slack_add_reaction` | `mcp__claude_ai_Slack__slack_add_reaction` | Add an emoji reaction |
@@ -204,8 +205,8 @@ The Slack MCP server exposes server-native tool names that differ from the Claud
 
 The benchmark uses channel-oriented read tools. Notable limitations:
 
-- There is no dedicated get-channel-by-ID tool. The benchmark falls back to `mcp__claude_ai_Slack__slack_search_channels` for all channel operations (search, get, and list).
-- The search API caps at 20 results per page. The benchmark's list task issues multiple 20-result search calls to approximate a bulk list.
+- There is no dedicated get-channel-by-ID tool. The benchmark falls back to `mcp__claude_ai_Slack__slack_list_channels` for all channel operations (search, get, and list).
+- The list API caps at 20 results per page. The benchmark's list-all task issues multiple paginated calls to approximate a bulk list.
 - The Slack MCP server is subject to Slack API rate limits (Tier 2: 20+ per minute for search, Tier 3: 50+ per minute for history).
 
 ### Alternative: Slack's Official Remote MCP
@@ -228,12 +229,17 @@ The benchmark uses the community **dunialabs/mcp-zendesk** server (TypeScript, M
 
 ### Environment Variables
 
-Set the following environment variables in your `.env` file (see `.env.example`):
+The recording script prefers environment variables from the active `.env` profile, falling back to 1Password (`zendesk-support` item, `test-credentials-oauth` section). Set these in your `.env` profile:
 
 ```bash
-export ZENDESK_SUBDOMAIN="d3v-airbyte"
-export ZENDESK_ACCESS_TOKEN="your-oauth-access-token"
+ZENDESK_SUBDOMAIN=your-subdomain
+ZENDESK_ACCESS_TOKEN=your-oauth-access-token
+ZENDESK_REFRESH_TOKEN=your-refresh-token
+ZENDESK_CLIENT_ID=your-client-id
+ZENDESK_CLIENT_SECRET=your-client-secret
 ```
+
+See `.env.template` for the full list of credential fields.
 
 ### How the Recording Script Launches It
 
@@ -241,7 +247,7 @@ The `ZendeskMCP` class in `src/agent_bench/recording/native_mcp_recorder.py` lau
 
 ```bash
 docker run -i --rm \
-  -e zendeskSubdomain=d3v-airbyte \
+  -e zendeskSubdomain=$ZENDESK_SUBDOMAIN \
   -e accessToken=$ZENDESK_ACCESS_TOKEN \
   ghcr.io/dunialabs/mcp-servers/zendesk:latest
 ```
@@ -275,23 +281,23 @@ https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads
 
 ### Prerequisites
 
-- A Salesforce org with API access enabled
-- A Connected App (or External Client App) configured with OAuth scopes for MCP access
+- A Salesforce org with API access enabled (production, not Developer Edition)
+- An External Client App configured for MCP access (see below)
 - OAuth credentials: `consumer_key` (client ID), `consumer_secret`, and a `refresh_token`
+
+### Key Details for Airbyte's Salesforce Org
+
+- **Org domain:** `airbyte.my.salesforce.com` (always use this, never `login.salesforce.com`)
+- **MCP Home:** `https://airbyte.my.salesforce-setup.com/lightning/setup/McpServer/home`
+- **External Client App config:** `https://airbyte.my.salesforce-setup.com/lightning/setup/ManageExternalClientApplication/0xIUJ0000000cA9/detail`
+- **App name:** "Salesforce MCP (Internal Access)" (stored in 1Password `direct-connector-credentials` vault, `salesforce` item, section `test-credentials-mcp`)
+- **Callback URL configured in the app:** `https://claude.ai/api/mcp/auth_callback`
 
 ### Authentication
 
-The benchmark authenticates via the OAuth 2.0 refresh token flow. The recording script exchanges the refresh token for an access token at `https://login.salesforce.com/services/oauth2/token`, then passes the access token as a `Bearer` token to the MCP server.
+The benchmark authenticates via the OAuth 2.0 refresh token flow. The recording script exchanges the refresh token for an access token at `https://airbyte.my.salesforce.com/services/oauth2/token`, then passes the access token as a `Bearer` token to the MCP server.
 
-**Required credentials (from 1Password `salesforce` item, section `test-credentials-mcp`):**
-
-| Field | Description |
-|---|---|
-| `consumer_key` | Connected App consumer key (client ID) |
-| `consumer_secret` | Connected App consumer secret |
-| `refresh_token` | OAuth refresh token for the target Salesforce org |
-
-**Environment variable fallbacks** (if 1Password is unavailable):
+**Required environment variables:**
 
 ```bash
 export SF_MCP_CONSUMER_KEY="your-connected-app-consumer-key"
@@ -299,24 +305,86 @@ export SF_MCP_CONSUMER_SECRET="your-connected-app-consumer-secret"
 export SF_MCP_REFRESH_TOKEN="your-oauth-refresh-token"
 ```
 
-### Setting Up a Connected App
+These are set in your `.env` profile (e.g., `.env.dallas-prod`). Consumer key and secret are also available from 1Password (`salesforce` item, section `test-credentials-mcp`).
 
-If you need to create new credentials:
+### Setting Up an External Client App
 
-1. In Salesforce Setup, search for "App Manager" and click **New Connected App**
-2. Enable OAuth Settings with callback URL `https://login.salesforce.com/services/oauth2/success`
-3. Add OAuth scopes: **Full access (`full`)** or at minimum **Access and manage your data (`api`)**
-4. Save and wait a few minutes for the app to propagate
-5. From the app detail page, copy the **Consumer Key** and **Consumer Secret**
-6. Generate a refresh token using the OAuth 2.0 authorization code flow or the username-password flow with the consumer key
+Salesforce recommends **External Client Apps** (not legacy Connected Apps) for MCP connections. To create one:
 
-Alternatively, Salesforce now recommends **External Client Apps** for MCP connections. See the [Salesforce MCP setup guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html) for details.
+1. Follow the [Salesforce MCP setup guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html)
+2. Set the callback URL to match your MCP client (e.g., `https://claude.ai/api/mcp/auth_callback` for Claude)
+3. The app will be assigned a **Consumer Key** and **Consumer Secret** automatically
+
+> **Important:** External Client Apps require PKCE (Proof Key for Code Exchange) for the authorization code flow. You must include `code_challenge` and `code_challenge_method=S256` parameters in the authorize URL, and `code_verifier` in the token exchange.
+
+### Obtaining a Refresh Token
+
+After creating the External Client App, generate a refresh token via the OAuth 2.0 Authorization Code flow with PKCE:
+
+**Step 1: Generate a PKCE code verifier and challenge:**
+
+```python
+import secrets, hashlib, base64
+
+verifier = secrets.token_urlsafe(64)
+challenge = base64.urlsafe_b64encode(
+    hashlib.sha256(verifier.encode()).digest()
+).rstrip(b"=").decode()
+print(f"VERIFIER={verifier}")
+print(f"CHALLENGE={challenge}")
+```
+
+Save these values — you need the verifier for the token exchange in Step 4.
+
+**Step 2: Open the authorize URL in your browser:**
+
+Replace `YOUR_CONSUMER_KEY` and `YOUR_CHALLENGE` with your values:
+
+```
+https://airbyte.my.salesforce.com/services/oauth2/authorize?response_type=code&client_id=YOUR_CONSUMER_KEY&redirect_uri=https://claude.ai/api/mcp/auth_callback&code_challenge=YOUR_CHALLENGE&code_challenge_method=S256
+```
+
+> **Important:** Always use the org-specific domain (`airbyte.my.salesforce.com`), never `login.salesforce.com`. Using `login.salesforce.com` may route to the wrong org or fail with `redirect_uri_mismatch`.
+
+> **Important:** The `redirect_uri` must exactly match the callback URL configured in the External Client App. For Airbyte's app, this is `https://claude.ai/api/mcp/auth_callback`.
+
+> **Important:** Do not pass explicit `scope` parameters. External Client Apps use pre-configured scopes. Passing `scope=api+refresh_token` will fail with `invalid_scope`. The app's configured scopes (`refresh_token mcp_api`) are applied automatically.
+
+**Step 3: Log in and authorize the app.** After authorization, the browser redirects to the callback URL with an authorization code in the query string:
+
+```
+https://claude.ai/api/mcp/auth_callback?code=AUTH_CODE_HERE
+```
+
+Claude's server may show an error (missing `state` parameter) — that's fine. Copy the `code` value from the URL before the page finishes loading.
+
+**Step 4: Exchange the authorization code for tokens:**
+
+```bash
+curl -X POST https://airbyte.my.salesforce.com/services/oauth2/token \
+  -d "grant_type=authorization_code" \
+  -d "client_id=YOUR_CONSUMER_KEY" \
+  -d "client_secret=YOUR_CONSUMER_SECRET" \
+  -d "redirect_uri=https://claude.ai/api/mcp/auth_callback" \
+  -d "code=AUTH_CODE_HERE" \
+  -d "code_verifier=YOUR_VERIFIER"
+```
+
+The response includes `access_token`, `refresh_token`, `instance_url`, and `scope`. Save the `refresh_token` to your `.env` profile as `SF_MCP_REFRESH_TOKEN`.
+
+### Troubleshooting
+
+- **`redirect_uri_mismatch`**: The `redirect_uri` in the authorize URL must exactly match what's configured in the External Client App. Check the app config page linked above.
+- **`invalid_scope`**: Do not pass `scope` parameter for External Client Apps. Scopes are pre-configured in the app.
+- **`app_not_found`**: The External Client App is not installed in the Salesforce org you're authenticating against. Make sure you're using `airbyte.my.salesforce.com`, not a Developer Edition org like `airbyte-dev-ed`.
+- **`missing required code_challenge`**: External Client Apps require PKCE. Include `code_challenge` and `code_challenge_method=S256` in the authorize URL.
+- **401 from hosted MCP endpoint**: The access token must come from a production org with MCP access enabled. Developer Edition orgs (`airbyte-dev-ed`) do not have access to `api.salesforce.com/platform/mcp`.
 
 ### How the Recording Script Uses It
 
 The `SalesforceMCP` class in `src/agent_bench/recording/native_mcp_recorder.py` connects to the hosted MCP server using Streamable HTTP transport:
 
-1. Exchanges the refresh token for an access token via `login.salesforce.com`
+1. Exchanges the refresh token for an access token via `airbyte.my.salesforce.com`
 2. Sends a JSON-RPC `initialize` request to the MCP server URL
 3. Receives an `mcp-session-id` header for subsequent requests
 4. Calls tools via JSON-RPC `tools/call` requests with the session header
@@ -370,26 +438,26 @@ To replay or validate recordings (which read the raw `recording.json` files), yo
 
 ### Capturing Fresh Recordings
 
-To capture new recordings, you need the relevant MCP server configured and accessible in Claude Code (or another MCP client). The workflow is:
-
-1. Configure the MCP server (see sections above).
-2. Invoke the tool call in your MCP client and copy the raw JSON response to a file.
-3. Use the CLI to save the recording:
+The automated recorder script handles all native-mcp recordings. Set up your `.env` profile (see `.env.template`) and run:
 
 ```bash
-uv run agent-bench record-one \
-  --path native-mcp \
-  --scenario linear-search \
-  --tool mcp__claude_ai_Linear__list_issues \
-  --args '{"query": "context store", "limit": 10}' \
-  --wall-ms 0 \
-  --response-file /tmp/response.json \
-  --reset
+uv run agent-bench record --path native-mcp --connectors linear,slack,zendesk,gong,salesforce --date 2026-04-30
 ```
 
-For `native-mcp` path recordings, `--wall-ms` is required. Use `0` if you are not measuring latency (this is the convention in this benchmark since native MCP latency is not captured).
+This launches each connector's MCP server, executes the benchmark tool calls, and saves recordings in the standard format.
 
-The `--tool` and `--args` values must match the tool call shapes shown in the Available Tools tables above.
+To record a single connector:
+
+```bash
+uv run agent-bench record --path native-mcp --connectors linear --date 2026-04-30
+```
+
+After recording, regenerate stats and the comparison report:
+
+```bash
+uv run agent-bench generate-stats --date 2026-04-30
+uv run agent-bench compare --date 2026-04-30 --output artifacts/2026-04-30/comparison-report.md
+```
 
 ### Recording File Format
 
@@ -410,12 +478,57 @@ Some tasks (e.g., Slack list) produce multiple calls per recording file. Use `--
 
 ---
 
+## Gong MCP
+
+The benchmark uses the community **kenazk/gong-mcp** server (TypeScript, local Node.js process) via stdio transport.
+
+**Repo:** https://github.com/kenazk/gong-mcp
+
+### Prerequisites
+
+- Node.js 18 or later
+- A Gong API access key and secret (from Gong Settings > API)
+
+### Environment Variables
+
+Set these in your `.env` profile:
+
+```bash
+GONG_ACCESS_KEY=your-access-key
+GONG_ACCESS_KEY_SECRET=your-access-secret
+```
+
+### How the Recording Script Launches It
+
+The `GongMCP` class clones the repo, builds it, and runs the Node.js process:
+
+```bash
+node /home/ubuntu/gong-mcp/dist/index.js
+```
+
+The process reads JSON-RPC messages from stdin and writes responses to stdout. The access key and secret are passed via environment variables.
+
+### Available Tools
+
+| Benchmark Task | MCP Tool | Args | Description |
+|---|---|---|---|
+| get | `get_call` | `{"id": "1005803797056190704"}` | Retrieve a single call by ID |
+| search | `list_calls` | `{"fromDateTime": "2025-01-01T00:00:00Z"}` | List calls from a given date |
+
+Notable limitations:
+
+- Gong's API has no keyword search. The `list_calls` tool lists calls by date range with a fixed page size of 100.
+- No field projection; full call objects are always returned.
+- This means the `gong-search` scenario is marked "Not Comparable" since it exercises fundamentally different operations between agent-mcp and native-mcp.
+
+---
+
 ## Comparison With Agent MCP
 
 | Dimension | Third-Party MCP | Agent MCP (`agent-mcp`) |
 |---|---|---|
-| Servers | One per service (Linear, Granola, Slack, Zendesk, Salesforce) | Unified `mcp__airbyte-agent__execute` |
+| Servers | One per service (Linear, Granola, Slack, Zendesk, Gong, Salesforce) | Unified `integrations_connectors_id_execute` |
 | Auth | Per-service (OAuth, bot tokens, or API keys) | Single Airbyte Cloud OAuth credential set |
 | Field selection | Not available; full responses returned | `select_fields` narrows returned fields |
 | Response shape | Varies by provider (JSON, text, markdown) | Uniform typed JSON envelope |
-| Hosting | Remote (Linear, Granola, Salesforce) or local (Slack, Zendesk) | Airbyte-hosted proxy at `mcp.airbyte.ai` |
+| Hosting | Remote (Linear, Granola, Salesforce) or local (Slack, Zendesk, Gong) | Airbyte-hosted proxy at `mcp.airbyte.ai` |

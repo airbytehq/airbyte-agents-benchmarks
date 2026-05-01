@@ -6,14 +6,6 @@ description: |
   Look up a single Linear issue by ID.
   Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels.
 
-annotations:
-  workspace_mismatch: >
-    ℹ️ The agent-mcp connector and native Linear MCP are currently connected to different
-    Linear workspaces. Agent-mcp syncs from the AGENTIC workspace (issues prefixed `AGENTIC-`),
-    while the native MCP API key connects to `airbyte-integration-testing` (issues prefixed `AIR-`).
-    Each path fetches a valid single issue from its own workspace; the benchmark measures
-    token overhead, not data identity.
-
 paths:
   agent-mcp:
     tool_calls:
@@ -36,4 +28,4 @@ paths:
       - server: linear
         tool: get_issue
         args:
-          id: "AIR-55"
+          id: "AGENTIC-55"
