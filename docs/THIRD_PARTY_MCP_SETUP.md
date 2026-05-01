@@ -228,7 +228,7 @@ The benchmark uses the community **dunialabs/mcp-zendesk** server (TypeScript, M
 
 ### Environment Variables
 
-The recording script loads credentials from 1Password (`zendesk-support` item, `test-credentials-oauth` section). For manual runs, set:
+Set the following environment variables in your `.env` file (see `.env.example`):
 
 ```bash
 export ZENDESK_SUBDOMAIN="d3v-airbyte"
@@ -237,7 +237,7 @@ export ZENDESK_ACCESS_TOKEN="your-oauth-access-token"
 
 ### How the Recording Script Launches It
 
-The `ZendeskMCP` class in `scripts/record_native_mcp.py` launches the Docker container with stdio transport:
+The `ZendeskMCP` class in `src/agent_bench/recording/native_mcp_recorder.py` launches the Docker container with stdio transport:
 
 ```bash
 docker run -i --rm \
@@ -358,14 +358,15 @@ Notable behavior:
 
 ## Using These Servers With the Benchmark
 
-### Replaying Committed Recordings
+### Viewing Results Without Recording
 
-You do not need to install any third-party MCP server to replay existing recordings. The committed recordings at `artifacts/2026-04-24/{scenario}-scenario/native-mcp/recording.json` are self-contained JSON files that the harness reads directly:
+You do not need to install any third-party MCP server to view benchmark results. The committed `recording-stats.json` files contain aggregate metrics (token counts, record counts). Generate a comparison report with:
 
 ```bash
-uv run agent-bench run --scenarios linear,granola --paths native-mcp
-uv run agent-bench validate --scenarios linear,granola --paths native-mcp
+uv run agent-bench compare
 ```
+
+To replay or validate recordings (which read the raw `recording.json` files), you must first record responses locally — raw recordings are gitignored and not committed.
 
 ### Capturing Fresh Recordings
 
@@ -373,10 +374,10 @@ To capture new recordings, you need the relevant MCP server configured and acces
 
 1. Configure the MCP server (see sections above).
 2. Invoke the tool call in your MCP client and copy the raw JSON response to a file.
-3. Use the helper script to save the recording:
+3. Use the CLI to save the recording:
 
 ```bash
-uv run python scripts/record_response.py \
+uv run agent-bench record-one \
   --path native-mcp \
   --scenario linear-search \
   --tool mcp__claude_ai_Linear__list_issues \
