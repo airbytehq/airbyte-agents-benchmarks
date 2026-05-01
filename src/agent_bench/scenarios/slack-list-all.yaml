@@ -8,12 +8,7 @@ description: |
   Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per record.
   Both paths exclude archived channels (agent-mcp via exclude_archived param,
   native-mcp via @modelcontextprotocol/server-slack default behavior).
-  Agent-mcp paginates with limit=1000 per page (3 calls using next_cursor).
-  Native-mcp paginates with limit=100 per page (cursor-based, 21 calls).
-
-  Note: The YAML defines only the first page call. Subsequent pages are recorded
-  dynamically using the next_cursor returned in connector_metadata. The recording
-  script handles pagination automatically.
+  Both paths use `paginate_to_end` to exhaust all pages automatically.
 
 paths:
   agent-mcp:
@@ -21,6 +16,7 @@ paths:
       - server: airbyte-agent
         tool: integrations_connectors_id_execute
         connector_id_env: SLACK_CONNECTOR_ID
+        paginate_to_end: true
         args:
           entity: channels
           action: list
@@ -33,5 +29,6 @@ paths:
     tool_calls:
       - server: slack
         tool: slack_list_channels
+        paginate_to_end: true
         args:
           limit: 100

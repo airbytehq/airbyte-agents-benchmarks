@@ -34,6 +34,7 @@ class ToolCall:
     tool: str
     args: dict[str, Any] = field(default_factory=dict)
     connector_id_env: str | None = None
+    paginate_to_end: bool = False
 
 
 @dataclass
@@ -119,6 +120,7 @@ def _parse_tool_call(data: dict[str, Any]) -> ToolCall:
         tool=data["tool"],
         args=data.get("args", {}),
         connector_id_env=data.get("connector_id_env"),
+        paginate_to_end=data.get("paginate_to_end", False),
     )
 
 

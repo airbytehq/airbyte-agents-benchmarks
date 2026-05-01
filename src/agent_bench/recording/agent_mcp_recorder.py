@@ -28,6 +28,22 @@ from agent_bench.recording.common import (
 )
 
 
+def _extract_next_cursor(response: dict) -> str:
+    """Extract `next_cursor` from an agent-mcp paginated response.
+
+    Searches through `results[].result.connector_metadata.next_cursor`.
+    """
+    for r in response.get("results", []):
+        result_data = r.get("result", {})
+        if isinstance(result_data, dict):
+            meta = result_data.get("connector_metadata", {})
+            if isinstance(meta, dict):
+                cursor = meta.get("next_cursor", "")
+                if cursor:
+                    return cursor
+    return ""
+
+
 async def record_scenario(
     client: AirbyteMCPClient,
     scenario: dict,
@@ -55,27 +71,41 @@ async def record_scenario(
         if not connector_id:
             return (name, "FAILED", f"{cid_env} not set")
 
-        args = build_arguments(tc.get("args", {}), connector_id)
+        paginate_to_end = tc.get("paginate_to_end", False)
+        base_args = build_arguments(tc.get("args", {}), connector_id)
         print(
-            f"  [{i + 1}/{len(tool_calls)}] {args['entity']} {args['action']} "
+            f"  [{i + 1}/{len(tool_calls)}] {base_args['entity']} {base_args['action']} "
             f"(connector_id={connector_id[:8]}...)"
+            f"{' (paginate_to_end)' if paginate_to_end else ''}"
         )
 
-        execute_args = {"items": [args]}
-        response, wall_ms = await client.call_tool(EXECUTE_TOOL_NAME, execute_args)
+        page_num = 0
+        current_args = dict(base_args)
+        while True:
+            page_num += 1
+            execute_args = {"items": [current_args]}
+            response, wall_ms = await client.call_tool(EXECUTE_TOOL_NAME, execute_args)
 
-        error = check_response_error(response)
-        if error:
-            return (name, "FAILED", error)
+            error = check_response_error(response)
+            if error:
+                return (name, "FAILED", error)
 
-        total_records += count_response_records(response)
+            total_records += count_response_records(response)
 
-        recording.append({
-            "tool": "mcp__airbyte-agent__execute",
-            "args": execute_args,
-            "wall_clock_ms": round(wall_ms, 1),
-            "response": response,
-        })
+            recording.append({
+                "tool": "mcp__airbyte-agent__execute",
+                "args": execute_args,
+                "wall_clock_ms": round(wall_ms, 1),
+                "response": response,
+            })
+
+            if not paginate_to_end:
+                break
+            next_cursor = _extract_next_cursor(response)
+            if not next_cursor:
+                print(f"      pagination complete after {page_num} page(s)")
+                break
+            current_args = {**base_args, "params": {**base_args.get("params", {}), "cursor": next_cursor}}
 
     if total_records == 0:
         return (name, "FAILED", "zero records across all calls")
