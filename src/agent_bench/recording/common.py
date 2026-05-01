@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -105,27 +104,18 @@ def count_response_records(response: Any) -> int:
     return total
 
 
-def load_secret(item: str, field: str, section: str | None = None) -> str:
-    """Load a secret value from the 1Password `direct-connector-credentials` vault."""
-    token = os.environ.get("DEVIN_1PASSWORD_SERVICE_TOKEN") or os.environ.get(
-        "SONAR_CONNECTOR_CREDS_1PASS_TOKEN", ""
-    )
-    env = os.environ.copy()
-    env["OP_SERVICE_ACCOUNT_TOKEN"] = token
+def load_env_secret(env_var: str) -> str:
+    """Read a required secret from the environment.
 
-    cmd = [
-        "op", "item", "get", item,
-        "--vault=direct-connector-credentials",
-        "--format=json",
-        "--reveal",
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, env=env)  # noqa: S603
-    data = json.loads(result.stdout)
-
-    for f_entry in data.get("fields", []):
-        f_section = f_entry.get("section", {}).get("label", "")
-        f_label = f_entry.get("label", "")
-        if f_label == field:
-            if section is None or f_section == section:
-                return f_entry.get("value", "")
-    return ""
+    Raises `EnvironmentError` with a clear message when the variable is unset
+    or empty.  Callers should populate their `.env` file (manually or via
+    `agent-bench populate-env`) before running recordings.
+    """
+    value = os.environ.get(env_var, "")
+    if not value:
+        raise EnvironmentError(
+            f"{env_var} is not set. "
+            "Copy .env.template to .env and fill in credentials, "
+            "or run `agent-bench populate-env`."
+        )
+    return value

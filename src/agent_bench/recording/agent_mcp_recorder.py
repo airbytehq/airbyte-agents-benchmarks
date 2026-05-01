@@ -11,6 +11,8 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from agent_bench.airbyte_mcp import (
     DEFAULT_MCP_URL,
     DEFAULT_TOKEN_PATH,
@@ -126,6 +128,14 @@ async def record_agent_mcp(
     Returns 0 on success, 1 if any scenario failed.
     """
     date = date or default_date()
+    load_dotenv()
+
+    # Allow .env override for per-profile token files (only when caller
+    # didn't pass an explicit --token-path, i.e. still at default).
+    env_token_path = os.environ.get("AIRBYTE_TOKEN_PATH")
+    if env_token_path and token_path == DEFAULT_TOKEN_PATH:
+        token_path = Path(env_token_path)
+
     target = set(connectors.split(",")) if connectors else None
     scenarios = [
         s for s in load_scenarios()

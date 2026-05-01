@@ -65,21 +65,17 @@ Recording new Agent MCP responses (and running the live `agent-mcp` path) requir
 Create your `.env` file:
 
 ```bash
-cp .env.example .env
+cp .env.template .env
+# Fill in Agent MCP values (org ID, client creds, connector IDs) manually.
+
+# Or auto-populate native-MCP secrets from 1Password:
+uv run agent-bench populate-env
 ```
 
-Fill in the values:
-
-```bash
-AIRBYTE_ORGANIZATION_ID=your-org-uuid
-AIRBYTE_CLIENT_ID=your-client-id
-AIRBYTE_CLIENT_SECRET=your-client-secret
-LINEAR_CONNECTOR_ID=your-linear-source-uuid
-SLACK_CONNECTOR_ID=your-slack-source-uuid
-GONG_CONNECTOR_ID=your-gong-source-uuid
-SALESFORCE_CONNECTOR_ID=your-salesforce-source-uuid
-ZENDESK_CONNECTOR_ID=your-zendesk-source-uuid
-```
+The `.env.template` declares every accepted variable. Agent-MCP credentials
+(org ID, client ID/secret, connector IDs) must be filled in manually.
+Native-MCP credentials can be fetched from the `direct-connector-credentials`
+1Password vault via `populate-env`.
 
 ### Authentication note
 
