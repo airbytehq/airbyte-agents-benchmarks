@@ -7,9 +7,9 @@ from pathlib import Path
 from agent_bench.runner import RunReport
 
 
-PATH_ORDER = ["agent-sdk", "agent-mcp", "native-mcp"]
-PATH_LABEL = {"agent-sdk": "REST Baseline (via SDK)", "agent-mcp": "Agent MCP", "native-mcp": "Native MCP"}
-PATH_COLOR = {"agent-sdk": "#3b82f6", "agent-mcp": "#10b981", "native-mcp": "#f59e0b"}
+PATH_ORDER = ["agent-mcp", "native-mcp"]
+PATH_LABEL = {"agent-mcp": "Agent MCP", "native-mcp": "Native MCP"}
+PATH_COLOR = {"agent-mcp": "#10b981", "native-mcp": "#f59e0b"}
 
 
 def render_charts(report: RunReport, out_dir: Path) -> None:
@@ -71,7 +71,8 @@ def _chart_bar_across_tasks(report, out_dir, plt, metric: str, title: str, filen
         xs = [x + i * bar_width for x in range(n)]
         ax.bar(xs, values, bar_width, label=PATH_LABEL[slug], color=PATH_COLOR[slug])
 
-    ax.set_xticks([x + bar_width for x in range(n)])
+    center_offset = (len(PATH_ORDER) - 1) * bar_width / 2
+    ax.set_xticks([x + center_offset for x in range(n)])
     ax.set_xticklabels([f"{conn}\n{label[:22]}" for conn, label, _ in tasks], fontsize=8)
     ax.set_title(title)
     ax.legend()
@@ -104,7 +105,8 @@ def _chart_single_record_gap(report, out_dir, plt) -> None:
         xs = [x + i * bar_width for x in range(len(connectors))]
         ax.bar(xs, values, bar_width, label=PATH_LABEL[slug], color=PATH_COLOR[slug])
 
-    ax.set_xticks([x + bar_width for x in range(len(connectors))])
+    center_offset = (len(PATH_ORDER) - 1) * bar_width / 2
+    ax.set_xticks([x + center_offset for x in range(len(connectors))])
     ax.set_xticklabels([c.title() for c in connectors])
     ax.set_title("Single-record fetch cost (tokens)")
     ax.set_ylabel("Tokens")
@@ -115,9 +117,10 @@ def _chart_single_record_gap(report, out_dir, plt) -> None:
             if c.scenario.connector == "granola" and c.path_short == "native-mcp"
         ]
         if native_match:
+            native_idx = PATH_ORDER.index("native-mcp")
             ax.annotate(
                 "Granola transcript\nvs Agent summary_text",
-                xy=(idx + 2 * bar_width, native_match[0].result.total_tokens),
+                xy=(idx + native_idx * bar_width, native_match[0].result.total_tokens),
                 xytext=(idx + 0.35, native_match[0].result.total_tokens * 1.08),
                 arrowprops={"arrowstyle": "->", "color": "#374151"},
                 fontsize=8,

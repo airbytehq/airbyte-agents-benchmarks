@@ -1,4 +1,4 @@
-"""Protocol for benchmark paths in the new three-path model."""
+"""Protocol for benchmark paths."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ class BenchmarkPath(Protocol):
     instance ID). The runner iterates over tasks and calls `run_task`.
     """
 
-    name: str  # human-readable ("REST Baseline (via SDK)" | "Agent MCP" | "Native MCP")
-    short_name: str  # CLI slug ("agent-sdk" | "agent-mcp" | "native-mcp")
+    name: str  # human-readable ("Agent MCP" | "Native MCP")
+    short_name: str  # CLI slug ("agent-mcp" | "native-mcp")
 
     async def run_task(
         self, task: Task, scenario: Scenario
