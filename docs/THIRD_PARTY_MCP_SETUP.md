@@ -1,6 +1,6 @@
 # Third-Party MCP Servers: Installation and Configuration
 
-This document explains how to install and configure the native MCP servers provided by Linear, Granola, Slack, and Zendesk. These are the third-party alternatives the benchmark compares Airbyte Agents against.
+This document explains how to install and configure the native MCP servers provided by Linear, Granola, Slack, Zendesk, and Salesforce. These are the third-party alternatives the benchmark compares Airbyte Agents against.
 
 The benchmark's `native-mcp` path uses recordings captured from these providers' MCP tools. To capture fresh recordings or independently verify tool call shapes, you need access to these servers.
 
@@ -14,8 +14,9 @@ Each connector in the benchmark has a corresponding MCP server maintained by the
 | Granola | `https://mcp.granola.ai/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
 | Slack | `@modelcontextprotocol/server-slack` | stdio (local, via `npx`) | Bot token + team ID |
 | Zendesk | `ghcr.io/dunialabs/mcp-servers/zendesk` | stdio (local, via Docker) | OAuth access token |
+| Salesforce | `https://api.salesforce.com/.../sobject-reads` | Streamable HTTP (remote) | OAuth 2.0 (Connected App refresh token) |
 
-Linear and Granola run as remote hosted servers with browser-based OAuth. Slack runs locally via `npx` with a bot token. Zendesk runs locally via Docker with an OAuth access token.
+Linear and Granola run as remote hosted servers with browser-based OAuth. Slack runs locally via `npx` with a bot token. Zendesk runs locally via Docker with an OAuth access token. Salesforce uses its official hosted MCP server with OAuth 2.0 via a Connected App.
 
 ---
 
@@ -259,6 +260,104 @@ The server exposes 18 tools total (ticket, user, and organization management). T
 
 ---
 
+## Salesforce MCP
+
+Salesforce provides official hosted MCP servers at `api.salesforce.com`. The benchmark uses the **SObject Reads** server, which supports read-only SOQL queries and SOSL searches.
+
+**Docs:** https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/client-connection-overview.html
+**Server reference:** https://developer.salesforce.com/docs/platform/hosted-mcp-servers/references/reference/servers-reference.html
+
+### Server URL
+
+```
+https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads
+```
+
+### Prerequisites
+
+- A Salesforce org with API access enabled
+- A Connected App (or External Client App) configured with OAuth scopes for MCP access
+- OAuth credentials: `consumer_key` (client ID), `consumer_secret`, and a `refresh_token`
+
+### Authentication
+
+The benchmark authenticates via the OAuth 2.0 refresh token flow. The recording script exchanges the refresh token for an access token at `https://login.salesforce.com/services/oauth2/token`, then passes the access token as a `Bearer` token to the MCP server.
+
+**Required credentials (from 1Password `salesforce` item, section `test-credentials-mcp`):**
+
+| Field | Description |
+|---|---|
+| `consumer_key` | Connected App consumer key (client ID) |
+| `consumer_secret` | Connected App consumer secret |
+| `refresh_token` | OAuth refresh token for the target Salesforce org |
+
+**Environment variable fallbacks** (if 1Password is unavailable):
+
+```bash
+export SF_MCP_CONSUMER_KEY="your-connected-app-consumer-key"
+export SF_MCP_CONSUMER_SECRET="your-connected-app-consumer-secret"
+export SF_MCP_REFRESH_TOKEN="your-oauth-refresh-token"
+```
+
+### Setting Up a Connected App
+
+If you need to create new credentials:
+
+1. In Salesforce Setup, search for "App Manager" and click **New Connected App**
+2. Enable OAuth Settings with callback URL `https://login.salesforce.com/services/oauth2/success`
+3. Add OAuth scopes: **Full access (`full`)** or at minimum **Access and manage your data (`api`)**
+4. Save and wait a few minutes for the app to propagate
+5. From the app detail page, copy the **Consumer Key** and **Consumer Secret**
+6. Generate a refresh token using the OAuth 2.0 authorization code flow or the username-password flow with the consumer key
+
+Alternatively, Salesforce now recommends **External Client Apps** for MCP connections. See the [Salesforce MCP setup guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/create-external-client-app.html) for details.
+
+### How the Recording Script Uses It
+
+The `SalesforceMCP` class in `src/agent_bench/recording/native_mcp_recorder.py` connects to the hosted MCP server using Streamable HTTP transport:
+
+1. Exchanges the refresh token for an access token via `login.salesforce.com`
+2. Sends a JSON-RPC `initialize` request to the MCP server URL
+3. Receives an `mcp-session-id` header for subsequent requests
+4. Calls tools via JSON-RPC `tools/call` requests with the session header
+
+### Claude Desktop / Claude Code
+
+Salesforce hosted MCP servers support native OAuth with Claude. Add via Claude Code:
+
+```bash
+claude mcp add salesforce-reads \
+  --transport http \
+  https://api.salesforce.com/platform/mcp/v1/platform/sobject-reads
+```
+
+Then complete the OAuth flow in your browser when prompted. See [Salesforce's Claude configuration guide](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/configure-claude.html) for details.
+
+### Other MCP Clients (Cursor, Postman, etc.)
+
+For clients that support OAuth 2.0 with PKCE, point them at the server URL and your External Client App's consumer key. Salesforce has tested with Claude, ChatGPT, Cursor, and Postman. See the [client connection overview](https://developer.salesforce.com/docs/platform/hosted-mcp-servers/guide/client-connection-overview.html) for per-client instructions.
+
+### Available Tools
+
+The benchmark uses the SObject Reads server, which exposes these tools:
+
+| Benchmark Task | MCP Tool | Example Args | Description |
+|---|---|---|---|
+| search | `find` | `{"q": "FIND {airbyte} IN ALL FIELDS RETURNING Account(Id, Name, Type, Industry LIMIT 10)"}` | SOSL search across objects |
+| get | `soqlQuery` | `{"q": "SELECT Id, Name, Type, Industry FROM Account WHERE Id = '0015e00000FMsFhAAL'"}` | SOQL query for a single record |
+
+The benchmark records these as `mcp__salesforce__find` and `mcp__salesforce__soqlQuery` in the recording files.
+
+Notable behavior:
+
+- The SObject Reads server is read-only. For write operations, use the SObject All or SObject Mutations servers instead.
+- SOSL `FIND` queries search across all indexed fields. Results depend on the org's search index state.
+- SOQL `SELECT` queries respect the org's field-level security and sharing rules.
+- The server uses Streamable HTTP with session IDs. Each `initialize` handshake returns an `mcp-session-id` header that must be included in subsequent requests.
+- Rate limits follow Salesforce's standard API limits for the org edition.
+
+---
+
 ## Using These Servers With the Benchmark
 
 ### Replaying Committed Recordings
@@ -316,8 +415,8 @@ Some tasks (e.g., Slack list) produce multiple calls per recording file. Use `--
 
 | Dimension | Third-Party MCP | Agent MCP (`agent-mcp`) |
 |---|---|---|
-| Servers | One per service (Linear, Granola, Slack, Zendesk) | Unified `mcp__airbyte-agent__execute` |
+| Servers | One per service (Linear, Granola, Slack, Zendesk, Salesforce) | Unified `mcp__airbyte-agent__execute` |
 | Auth | Per-service (OAuth, bot tokens, or API keys) | Single Airbyte Cloud OAuth credential set |
 | Field selection | Not available; full responses returned | `select_fields` narrows returned fields |
 | Response shape | Varies by provider (JSON, text, markdown) | Uniform typed JSON envelope |
-| Hosting | Remote (Linear, Granola) or local (Slack, Zendesk) | Airbyte-hosted proxy at `mcp.airbyte.ai` |
+| Hosting | Remote (Linear, Granola, Salesforce) or local (Slack, Zendesk) | Airbyte-hosted proxy at `mcp.airbyte.ai` |
