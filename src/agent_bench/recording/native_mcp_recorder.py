@@ -15,10 +15,11 @@ import time
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 
 from agent_bench.recording.common import (
     default_date,
-    load_secret,
+    load_env_secret,
     save_recording,
 )
 
@@ -695,6 +696,7 @@ def record_native_mcp(
 
     Returns 0 on success, 1 on failure.
     """
+    load_dotenv()
     date = date or default_date()
     connector_list = [c.strip() for c in (connectors or _DEFAULT_CONNECTORS).split(",")]
     all_results: list[tuple[str, Path]] = []
@@ -706,47 +708,28 @@ def record_native_mcp(
 
         try:
             if connector == "linear":
-                api_key = load_secret("linear", "api_key", "test-credentials-api-key")
+                api_key = load_env_secret("LINEAR_API_KEY")
                 all_results.extend(record_linear(api_key, date, dry_run))
 
             elif connector == "slack":
-                bot_token = load_secret("slack", "bot_key", "test-credentials-bot")
-                team_id = "T02TET08MDH"
+                bot_token = load_env_secret("SLACK_BOT_TOKEN")
+                team_id = load_env_secret("SLACK_TEAM_ID")
                 all_results.extend(record_slack(bot_token, team_id, date, dry_run))
 
             elif connector == "gong":
-                access_key = load_secret("gong", "access_key", "test-credentials-basic")
-                access_secret = load_secret("gong", "access_key_secret", "test-credentials-basic")
+                access_key = load_env_secret("GONG_ACCESS_KEY")
+                access_secret = load_env_secret("GONG_ACCESS_KEY_SECRET")
                 all_results.extend(record_gong(access_key, access_secret, date, dry_run))
 
             elif connector == "salesforce":
-                consumer_key = load_secret("salesforce", "consumer_key", "test-credentials-mcp")
-                consumer_secret = load_secret("salesforce", "consumer_secret", "test-credentials-mcp")
-                refresh_token = load_secret("salesforce", "refresh_token", "test-credentials-mcp")
-                if not consumer_key:
-                    consumer_key = os.environ.get("SF_MCP_CONSUMER_KEY", "")
-                if not consumer_secret:
-                    consumer_secret = os.environ.get("SF_MCP_CONSUMER_SECRET", "")
-                if not refresh_token:
-                    refresh_token = os.environ.get("SF_MCP_REFRESH_TOKEN", "")
-                missing = [
-                    name for name, val in [
-                        ("consumer_key", consumer_key),
-                        ("consumer_secret", consumer_secret),
-                        ("refresh_token", refresh_token),
-                    ] if not val
-                ]
-                if missing:
-                    raise ValueError(
-                        f"Salesforce MCP credentials incomplete (missing: {', '.join(missing)}). "
-                        "Set 1Password section test-credentials-mcp or env vars "
-                        "SF_MCP_CONSUMER_KEY, SF_MCP_CONSUMER_SECRET, SF_MCP_REFRESH_TOKEN"
-                    )
+                consumer_key = load_env_secret("SF_MCP_CONSUMER_KEY")
+                consumer_secret = load_env_secret("SF_MCP_CONSUMER_SECRET")
+                refresh_token = load_env_secret("SF_MCP_REFRESH_TOKEN")
                 all_results.extend(record_salesforce(consumer_key, consumer_secret, refresh_token, date, dry_run))
 
             elif connector == "zendesk":
-                subdomain = load_secret("zendesk-support", "subdomain", "test-credentials-oauth")
-                access_token = load_secret("zendesk-support", "access_token", "test-credentials-oauth")
+                subdomain = load_env_secret("ZENDESK_SUBDOMAIN")
+                access_token = load_env_secret("ZENDESK_ACCESS_TOKEN")
                 all_results.extend(record_zendesk(subdomain, access_token, date, dry_run))
 
             else:

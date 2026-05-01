@@ -49,7 +49,7 @@ class LiveConfig:
             for var in missing:
                 desc = _ORG_VARS.get(var, f"connector instance UUID for {var}")
                 lines.append(f"  {var}  —  {desc}")
-            lines.append("\nCopy .env.example to .env and fill in your credentials.")
+            lines.append("\nCopy .env.template to .env and fill in credentials, or run `agent-bench populate-env`.")
             raise EnvironmentError("\n".join(lines))
 
         return cls(

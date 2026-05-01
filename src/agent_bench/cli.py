@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path as FSPath
 
 import typer
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
@@ -18,6 +19,7 @@ from agent_bench.airbyte_mcp import (
     AirbyteMCPClient,
     FileTokenStorage,
 )
+from agent_bench.env_manager import DEFAULT_ENV_PATH, populate_env
 from agent_bench.recording.agent_mcp_recorder import record_agent_mcp
 from agent_bench.recording.common import default_date
 from agent_bench.recording.emulated_recorder import record_emulated_agent_mcp
@@ -405,6 +407,25 @@ def _update_symlink(report_path: FSPath, artifacts_root: FSPath) -> None:
         console.print(f"[yellow]warning:[/yellow] could not update symlink: {exc}")
 
 
+@app.command(name="populate-env")
+def populate_env_cmd(
+    output: FSPath = typer.Option(DEFAULT_ENV_PATH, "--output", "-o", help="Path to write the .env file."),
+    overwrite: bool = typer.Option(False, "--overwrite", help="Overwrite existing values instead of preserving them."),
+) -> None:
+    """Populate `.env` from 1Password credentials.
+
+    Reads `.env.template` for the list of accepted variables, fetches
+    native-MCP connector secrets from the `direct-connector-credentials`
+    vault, and writes a `.env` file.  Agent-MCP variables not stored in
+    1Password are left blank for manual entry.
+
+    Existing values in the output file are preserved unless `--overwrite`
+    is passed.
+    """
+    out = populate_env(output_path=FSPath(output), overwrite=overwrite)
+    console.print(f"[green]Wrote {out}[/green]")
+
+
 @app.command()
 def auth(
     server_url: str = typer.Option(DEFAULT_MCP_URL, "--server-url", help="MCP server URL."),
@@ -415,6 +436,11 @@ def auth(
     Opens a browser, completes the PKCE flow, and persists the resulting
     access + refresh tokens. Re-run if you see 401 responses during recording.
     """
+    load_dotenv()
+    env_token_path = os.environ.get("AIRBYTE_TOKEN_PATH")
+    if env_token_path and token_path == DEFAULT_TOKEN_PATH:
+        token_path = FSPath(env_token_path)
+
     async def _auth() -> None:
         storage = FileTokenStorage(token_path)
         client = AirbyteMCPClient(server_url=server_url, storage=storage)
