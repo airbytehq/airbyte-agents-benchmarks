@@ -1,6 +1,6 @@
 # Reproducing the Benchmark
 
-This guide walks through reproducing the Airbyte Agents launch benchmark results from scratch. It covers two tiers of reproduction: replay-only (no credentials needed) and the full benchmark (requires Airbyte Cloud credentials to record).
+This guide walks through reproducing the Airbyte Agents launch benchmark results from scratch. It covers three tiers: stats-only (no credentials), recording agent-mcp (Airbyte Cloud credentials), and full benchmark (all connectors).
 
 ## Prerequisites
 
@@ -22,9 +22,9 @@ Verify the install:
 uv run agent-bench list
 ```
 
-## Tier 1: Replay-Only (No Credentials)
+## Tier 1: Stats-Only (No Credentials)
 
-The committed recordings in `artifacts/YYYY-MM-DD/` make the record-replay paths fully deterministic. You can validate and run them without any API credentials.
+The committed `recording-stats.json` files in `artifacts/YYYY-MM-DD/` contain aggregate metrics (token counts, latency, record counts). Raw `recording.json` files are gitignored and never committed. You can run tests and generate comparison reports without any API credentials or recordings.
 
 ### Run tests
 
@@ -32,26 +32,23 @@ The committed recordings in `artifacts/YYYY-MM-DD/` make the record-replay paths
 uv run pytest -q
 ```
 
-All 5 tests should pass.
+All tests should pass.
 
-### Validate recordings
-
-```bash
-uv run agent-bench validate --scenarios linear,slack,gong,salesforce,zendesk --paths agent-mcp
-```
-
-Expected output: `recordings ok`
-
-### Run replay paths
+### Generate comparison report
 
 ```bash
-uv run agent-bench run \
-  --scenarios linear,slack,gong,salesforce,zendesk \
-  --paths agent-mcp \
-  --export-markdown results.md
+uv run agent-bench compare
 ```
 
-Token totals are deterministic from the committed recordings.
+This reads the committed `recording-stats.json` files and produces a markdown comparison of token efficiency across connectors. No credentials or raw recordings needed.
+
+### List scenarios
+
+```bash
+uv run agent-bench list
+```
+
+Shows all available benchmark scenarios and their connector mappings.
 
 ## Tier 2: Recording Agent MCP (Requires Credentials)
 
@@ -137,7 +134,7 @@ The full benchmark covers all connectors, tasks, and paths. Use `agent-bench lis
 # Linear: all paths
 uv run agent-bench run --scenarios linear --paths all
 
-# All five connectors, agent-mcp replay
+# All connectors, agent-mcp replay
 uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths agent-mcp
 ```
 
@@ -220,6 +217,9 @@ agent-bench run              Run the benchmark across selected scenarios and pat
 agent-bench validate         Validate replay recordings before exporting
 agent-bench compare          Generate a markdown comparison report from recording stats
 agent-bench generate-stats   Generate recording-stats.json from existing recordings
+agent-bench auth             One-time browser OAuth for mcp.airbyte.ai
+agent-bench record           Record MCP responses for benchmark replay
+agent-bench record-one       Save a single MCP tool-call response as a recording
 ```
 
 The `plan`, `run`, and `validate` commands accept `--scenarios` and `--paths` filters. Pass connector names (e.g. `linear`) to `--scenarios` to select all scenarios for that connector, or pass specific scenario names (e.g. `linear-search,linear-get`). Use `--help` on any command for full options.
@@ -237,7 +237,7 @@ For each Agent MCP connector, call `mcp__airbyte-agent__describe_connector` once
 Save MCP responses with:
 
 ```bash
-uv run python scripts/record_response.py \
+uv run agent-bench record-one \
   --path agent-mcp \
   --scenario linear-search \
   --tool mcp__airbyte-agent__execute \
