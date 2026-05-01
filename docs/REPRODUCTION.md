@@ -51,7 +51,7 @@ uv run agent-bench run \
   --export-markdown results.md
 ```
 
-Token totals are deterministic from the committed recordings. Native-mcp recordings are only available for Linear and Granola (April 24 artifact).
+Token totals are deterministic from the committed recordings.
 
 ## Tier 2: Live SDK Path (Requires Credentials)
 
@@ -63,7 +63,7 @@ The REST Baseline path makes live API calls via the `airbyte-agent-sdk` package.
 2. Navigate to Settings, then Applications.
 3. Create or find an application with access to your organization.
 4. Note your Organization ID from the URL or settings page.
-5. Find the connector instance IDs for Linear, Granola, or Slack in your workspace. Each connector has a UUID visible in the URL when you click on it.
+5. Find the connector instance IDs for Linear, Slack, or Gong in your workspace. Each connector has a UUID visible in the URL when you click on it.
 
 Create your `.env` file:
 
@@ -122,17 +122,6 @@ The replay paths (agent-mcp and native-mcp) are deterministic. Their token total
 
 The full benchmark covers all connectors, tasks, and paths. Use `agent-bench list` to see the current scenario matrix.
 
-### Current status
-
-| Connector | agent-sdk | agent-mcp | native-mcp |
-|---|---|---|---|
-| Linear | Available | Recordings committed | April 24 recordings |
-| Slack | Available | Recordings committed | Not yet recorded |
-| Gong | Available | Recordings committed | Not yet recorded |
-| Salesforce | Available | Recordings committed | Not yet recorded |
-| Zendesk | Available | Recordings committed | Not yet recorded |
-| Granola | Tombstoned | April 24 only | April 24 recordings |
-
 ### Running what is available
 
 ```bash
@@ -181,7 +170,7 @@ This is expected. The REST Baseline path is live and returns current data. Repla
 
 ### HTTP 503 on Slack search
 
-The Context Store preview may return 503 while indexing. This is a readiness issue, not a harness bug. Check `docs/SLACK_STATUS.md` for current status.
+The Context Store preview may return 503 while indexing. This is a readiness issue, not a harness bug. See [issue #39](https://github.com/airbytehq/airbyte-agents-benchmarks/issues/39) for current Slack status.
 
 ### "Export blocked: required record-replay files are missing or stale"
 

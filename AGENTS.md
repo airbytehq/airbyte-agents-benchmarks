@@ -100,4 +100,5 @@ If a field is needed for benchmark validity but contains PII, redact it to a pla
 - [docs/REPRODUCTION.md](docs/REPRODUCTION.md) -- end-to-end guide for reproducing benchmark results
 - [docs/THIRD_PARTY_MCP_SETUP.md](docs/THIRD_PARTY_MCP_SETUP.md) -- installation and configuration for Linear, Granola, and Slack MCP servers
 - [docs/METHODOLOGY.md](docs/METHODOLOGY.md) -- measurement design, token counting, export gates
-- [docs/RESULTS.md](docs/RESULTS.md) -- current numbers and safe claims
+- [docs/RESULTS.md](docs/RESULTS.md) -- latest results pointer and known caveats
+- [docs/BENEFITS.md](docs/BENEFITS.md) -- benefits narrative, token efficiency data, and claims guidance

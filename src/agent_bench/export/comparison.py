@@ -570,7 +570,12 @@ def render_comparison_markdown(
         "- Token counts computed with tiktoken `cl100k_base` encoding on raw JSON response payloads"
     )
     lines.append(
-        "- Each scenario executes the same logical operation (search/get/list) on both paths"
+        "- Each scenario executes the same logical operation on both paths (search, get, or list-all)"
+    )
+    lines.append(
+        "- Multi-step scenarios chain recorded tool calls across connectors with statically seeded inputs. "
+        "Results are replayed from committed recordings, not executed live. "
+        "See [METHODOLOGY.md](../../docs/METHODOLOGY.md#multi-step-scenarios) for details"
     )
     lines.append("")
 

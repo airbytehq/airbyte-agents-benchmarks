@@ -1,80 +1,28 @@
 # Results
 
-## Current Status
+The latest benchmark results are in the auto-generated comparison report, symlinked at the repo root:
 
-The included launch artifact is an interim scorecard dated April 24, 2026.
+- **[`latest-benchmark-result-report.md`](../latest-benchmark-result-report.md)** — current report with per-connector and per-scenario breakdowns
 
-| Scope | Status |
-|---|---|
-| Linear | Reproducible |
-| Granola | Reproducible |
-| Slack | Blocked on search readiness and replay recordings |
-| Cells included | 18 of 27 |
+The report is regenerated each time the harness runs with `--export-markdown`. Dated artifacts are preserved under `artifacts/YYYY-MM-DD/`.
 
-Primary artifact:
+## Interpreting the Report
 
-- `artifacts/2026-04-24/scorecard.md`
-- `artifacts/2026-04-24/charts/`
-- `artifacts/2026-04-24/deck/agent-engine-benchmark-deck-image-only.pptx`
+- **Agent MCP** token counts reflect responses after `select_fields` narrows the returned fields (typically 4-9 fields per record).
+- **Native MCP** token counts reflect the vendor MCP server's full response, which varies in shape across connectors (structured JSON, text, or markdown-like).
+- **Ratio** is Agent MCP tokens as a percentage of Native MCP tokens. Lower is better.
+- **Savings** is `100% - Ratio`.
 
-The deck is included only as a supporting, image-only/non-editable artifact. The runnable harness and exported scorecard are the source of truth.
+Token ratios between Agent MCP and Native MCP primarily reflect the effect of field projection — Agent MCP's `select_fields` narrows responses to 4-9 fields versus 30-200+ from native servers. See [METHODOLOGY.md](METHODOLOGY.md#token-counting) for details.
 
-## Aggregate Token Results
+## Known Caveats
 
-Linear + Granola, all three tasks, all three paths:
+The following caveats apply to the current result set:
 
-| Path | Tasks OK | Tokens |
-|---|---:|---:|
-| REST Baseline (via SDK) | 6 | 66,587 |
-| Agent MCP | 6 | 5,229 |
-| Native MCP | 6 | 13,628 |
+1. **Native MCP recordings are not available for all connectors.** The comparison report only includes connectors that have both Agent MCP and Native MCP recordings. See the [README](../README.md#connectors) for the current coverage matrix.
 
-Headline ratios:
-
-- Agent MCP used `12.7x` fewer tokens than the REST Baseline path. **Caveat:** this ratio primarily reflects field projection (`select_fields` narrows to 6-10 fields vs the REST Baseline's full record), not transport or protocol differences.
-- Agent MCP used `2.6x` fewer tokens than native vendor MCPs. **Caveat:** some cells are not semantically equivalent (see Known Issues below).
-
-## Connector-Level Results
-
-| Connector | REST Baseline tokens | Agent MCP tokens | Native MCP tokens | MCP vs Baseline |
-|---|---:|---:|---:|---:|
-| Granola | 14,874 | 1,485 | 5,118 | 10.0x fewer |
-| Linear | 51,713 | 3,744 | 8,510 | 13.8x fewer |
-
-Important caveat for deck/chart language: Linear's roughly `14x` claim is the overall Linear connector result across search, get, and list. It is not a list-only claim.
-
-## Safe Claims
-
-Safe to say:
-
-- Agent MCP with `select_fields` returns narrower payloads than the full REST Baseline response. In the current benchmark, selecting 6-10 fields instead of 30-50+ fields reduces token count significantly.
-- Field projection (`select_fields`) is the primary driver of token reduction between Agent MCP and the REST Baseline.
-- Agent MCP preserves typed JSON while narrowing payload shape, enabling downstream programmatic filtering and joins.
-- Native MCP output shapes vary by connector. In the included cells, they are mixed JSON, text, and markdown-like responses.
-- In the included Linear list task, Airbyte Agents returns 50 records in one call while native MCP returns 25 records.
-
-Do not claim yet:
-
-- That the REST Baseline-vs-MCP token ratio reflects protocol efficiency (it primarily reflects field projection).
-- That the benchmark is final across all Slack, Linear, and Granola cells.
-- That Slack search is healthy.
-- That native MCP latency is measured by this harness.
-- That native MCP outputs are always markdown or prose.
-- That "50 records in one call" applies to every connector in the benchmark.
-
-## Known Issues
-
-The following issues affect the current result set and should be resolved before external publication:
-
-1. **Linear list recording is synthetic.** The Agent MCP Linear list recording uses placeholder IDs (`issue-00` through `issue-49`) with hourly timestamps and missing fields. Real API data would produce higher token counts.
-2. **Granola get task is not semantically equivalent.** The native MCP path fetches the full meeting transcript; the Agent MCP path returns `transcript: null`. This inflates the native MCP token count relative to Agent MCP for this task.
-3. **Granola native-MCP search is an empty-state response.** The recording is a conversational "I don't have any data" message, not a real search result.
-4. **Linear search results contain stringified objects.** The `state`, `team`, and `labels` fields are serialized as `"{}"` strings instead of proper objects, suggesting a context store serialization issue.
+For claims guidance and a narrative summary of the benchmark findings, see [BENEFITS.md](BENEFITS.md).
 
 ## Reproduction
 
 See [REPRODUCTION.md](REPRODUCTION.md) for the full step-by-step walkthrough, from clone to validated results.
-
-The committed April 24 scorecard is the frozen artifact for the headline `66,587` REST Baseline token total. The REST Baseline path is live, so re-running the command can produce a different total when connector data changes. The replay paths are deterministic from the committed recordings in `artifacts/2026-04-24/`.
-
-On April 27, 2026, a live Linear+Granola verification run completed successfully with replay totals unchanged (`5,229` Agent MCP tokens and `13,628` Native MCP tokens), while the live REST Baseline total was `53,000` tokens.
