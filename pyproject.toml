@@ -10,7 +10,9 @@ dependencies = [
     "tiktoken>=0.5",
     "airbyte-agent-sdk",
     "httpx>=0.24",
+    "mcp>=1.10",
     "python-dotenv>=1.0",
+    "requests>=2.28",
     "matplotlib>=3.8",
 ]
 

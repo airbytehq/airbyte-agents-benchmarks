@@ -1,6 +1,6 @@
 # Airbyte Agent MCP: Benefits Over Native MCP Servers
 
-> Data from the [latest benchmark report](../latest-benchmark-result-report.md).
+> Data from the [latest benchmark report](../latest_comparison_report/).
 > See [METHODOLOGY.md](METHODOLOGY.md) for measurement design.
 
 ## Overview
@@ -68,7 +68,7 @@ This is not just a convenience improvement. It is a fundamental reduction in the
 
 We measured token consumption across five connectors (Gong, Linear, Salesforce, Slack, Zendesk) comparing Agent MCP against each vendor's native MCP server across comparable data operations — primarily search and get, plus list-all where supported.
 
-Across all tested connectors, Agent MCP uses significantly fewer tokens than native MCP servers. Per-connector breakdowns are in the [latest comparison report](../latest-benchmark-result-report.md).
+Across all tested connectors, Agent MCP uses significantly fewer tokens than native MCP servers. Per-connector breakdowns are in the [latest comparison report](../latest_comparison_report/).
 
 ### Why the savings are so large
 
@@ -76,7 +76,7 @@ Native MCP servers return the vendor API's full response objects — typically 3
 
 **Example — Gong calls:**
 
-An agent summarizing recent calls needs `id`, `title`, `scheduled`, and `duration`. Four fields. Agent MCP returns only those four fields; the native MCP server returns the full call object with dozens of fields. The token savings come entirely from not sending fields the agent doesn't need. See the [latest comparison report](../latest-benchmark-result-report.md) for exact token counts.
+An agent summarizing recent calls needs `id`, `title`, `scheduled`, and `duration`. Four fields. Agent MCP returns only those four fields; the native MCP server returns the full call object with dozens of fields. The token savings come entirely from not sending fields the agent doesn't need. See the [latest comparison report](../latest_comparison_report/) for exact token counts.
 
 ### What the savings mean in practice
 
@@ -84,7 +84,7 @@ The value of Agent MCP is not simply "shorter output." Agent MCP narrows payload
 
 - **Lower cost per agent action.** Token consumption maps directly to LLM API cost. See [Why Token Reduction Matters](METHODOLOGY.md#why-token-reduction-matters) for details on how token count affects latency, cost, and context window pressure.
 - **Longer effective context windows.** Tokens spent on verbose API responses are tokens unavailable for reasoning, planning, and user interaction.
-- **Compound savings in multi-step workflows.** A cross-connector workflow (Gong → Salesforce → Zendesk) shows dramatic savings via Agent MCP compared to native MCP. See the [multi-step scenario results](../latest-benchmark-result-report.md) and [Multi-Step Scenarios](METHODOLOGY.md#multi-step-scenarios) for how these workflows are benchmarked.
+- **Compound savings in multi-step workflows.** A cross-connector workflow (Gong → Salesforce → Zendesk) shows dramatic savings via Agent MCP compared to native MCP. See the [multi-step scenario results](../latest_comparison_report/) and [Multi-Step Scenarios](METHODOLOGY.md#multi-step-scenarios) for how these workflows are benchmarked.
 
 ### Methodology
 
@@ -116,7 +116,7 @@ An agent that needs to find a channel by name, or look up a channel's details by
 - Multiple round-trips to the MCP server
 - In larger workspaces the cost scales linearly with the number of channels
 
-**Agent MCP handles both operations in a single call** — returning only the requested fields for the matched record(s). See the [latest comparison report](../latest-benchmark-result-report.md) for exact token counts.
+**Agent MCP handles both operations in a single call** — returning only the requested fields for the matched record(s). See the [latest comparison report](../latest_comparison_report/) for exact token counts.
 
 ### The broader pattern
 
@@ -137,4 +137,4 @@ This isn't unique to Slack. Vendor MCP servers are built as thin wrappers around
 
 ## Appendix: Per-Scenario Benchmark Data
 
-Full per-scenario breakdown with record counts, token counts, and annotations is available in the [latest comparison report](../latest-benchmark-result-report.md).
+Full per-scenario breakdown with record counts, token counts, and annotations is available in the [latest comparison report](../latest_comparison_report/).

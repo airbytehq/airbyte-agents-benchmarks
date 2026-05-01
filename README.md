@@ -11,7 +11,7 @@ A head-to-head benchmark measuring the cost and capability of accessing business
 | **Token efficiency** | Full API objects (30-200+ fields per record) | Only requested fields (`select_fields`) — significantly fewer tokens |
 | **Capability** | Limited to vendor's tool set; missing ops require workarounds | Context store provides get, list, and search for every entity |
 
-Across five connectors (Gong, Linear, Salesforce, Slack, Zendesk), Agent MCP uses significantly fewer tokens than native MCP servers for comparable data operations. See the **[latest comparison report](latest-benchmark-result-report.md)** for current per-connector numbers.
+Across five connectors (Gong, Linear, Salesforce, Slack, Zendesk), Agent MCP uses significantly fewer tokens than native MCP servers for comparable data operations. See the **[latest comparison report](latest_comparison_report/)** for current per-connector numbers.
 
 For the full benefits narrative — including setup complexity, credential management, capability gaps, and cross-connector workflow results — see **[docs/BENEFITS.md](docs/BENEFITS.md)**.
 

@@ -110,7 +110,26 @@ uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths 
 uv run agent-bench run --scenarios linear --paths all --export-markdown linear-results.md
 ```
 
-This runs agent-sdk (live), agent-mcp (replay), and native-mcp (replay) side by side.
+This runs agent-sdk (live), agent-mcp (live or replay, see below), and native-mcp (replay) side by side.
+
+### Recording agent-mcp from `mcp.airbyte.ai` (real MCP)
+
+`agent-mcp` recordings come from real JSON-RPC calls to `mcp.airbyte.ai` so that token counts include the FastMCP envelope, server-side `select_fields` projection, response truncation, and compaction — what an agent actually consumes.
+
+The MCP server uses an OIDC-proxy auth flow. There is no API-token shortcut; you must complete a one-time browser login. Tokens then refresh automatically until the FastMCP refresh token expires (~3 days of inactivity).
+
+```bash
+# 1. Once per machine (or whenever you see HTTP 401 during recording):
+uv run agent-bench auth
+
+# 2. Re-record agent-mcp scenarios for today:
+uv run agent-bench record --path agent-mcp --date 2026-04-30
+
+# Or a single connector:
+uv run agent-bench record --path agent-mcp --connectors linear
+```
+
+The recorder reads each scenario's `paths.agent-mcp.tool_calls` block, calls `mcp__airbyte-agent__execute` over JSON-RPC, and writes `recording.json` files in the same shape `agent-bench` already replays.
 
 ### Interpreting live results
 
@@ -203,7 +222,7 @@ artifacts/
     charts/
 ```
 
-A symlink at [`latest-benchmark-result-report.md`](../latest-benchmark-result-report.md) in the repo root points to the most recent report.
+The [`latest_comparison_report/`](../latest_comparison_report/) directory at the repo root contains a symlinked `README.md` pointing to the most recent comparison report.
 
 ## CLI Reference
 

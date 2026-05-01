@@ -12,7 +12,7 @@ from agent_bench.paths.agent_mcp import (
     AgentMCPPath,
     extract_execution_time_ms,
 )
-from agent_bench.scenarios.loader import Scenario, Task, load_scenario
+from agent_bench.scenarios.loader import Scenario, load_scenario
 
 
 RECORD_REPLAY_PATHS = {"agent-mcp", "native-mcp"}
@@ -140,14 +140,17 @@ def _validate_agent_mcp_recording(
                     if item.get(key) != expected.get(key):
                         issues.append(_issue("error", "agent-mcp", scenario.name, action, f"call {idx + 1} item {item_idx + 1} {key} differs from planner"))
 
-        extracted = extract_execution_time_ms(call.get("response"))
+        # Latency: real MCP recordings carry only client-side wall_clock_ms.
+        # Older recordings (from the REST recorder) also embed
+        # execution_metadata.execution_time_ms inside the synthesized
+        # envelope; if present, it must match wall_clock_ms within 1ms.
         wall_clock_ms = call.get("wall_clock_ms")
-        if extracted is None:
-            issues.append(_issue("error", "agent-mcp", scenario.name, action, f"call {idx + 1} response has no execution_metadata.execution_time_ms"))
-        elif not isinstance(wall_clock_ms, int | float):
-            issues.append(_issue("error", "agent-mcp", scenario.name, action, f"call {idx + 1} wall_clock_ms must be set from execution_metadata.execution_time_ms"))
-        elif abs(float(wall_clock_ms) - extracted) > 1:
-            issues.append(_issue("error", "agent-mcp", scenario.name, action, f"call {idx + 1} wall_clock_ms {wall_clock_ms} does not match execution metadata {extracted:.0f}"))
+        if not isinstance(wall_clock_ms, int | float) or wall_clock_ms <= 0:
+            issues.append(_issue("error", "agent-mcp", scenario.name, action, f"call {idx + 1} wall_clock_ms must be a positive number"))
+        else:
+            extracted = extract_execution_time_ms(call.get("response"))
+            if extracted is not None and abs(float(wall_clock_ms) - extracted) > 1:
+                issues.append(_issue("warning", "agent-mcp", scenario.name, action, f"call {idx + 1} wall_clock_ms {wall_clock_ms} differs from execution metadata {extracted:.0f}"))
 
     return issues
 

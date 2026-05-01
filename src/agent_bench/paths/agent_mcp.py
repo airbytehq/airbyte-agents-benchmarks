@@ -1,19 +1,22 @@
 """Path B: Agent MCP (hosted proxy at mcp.airbyte.ai).
 
-Invoked via `mcp__airbyte-agent__execute` in an MCP client runtime.
-Supports both live and replay modes:
+Invoked via `mcp__airbyte-agent__execute`. Supports two modes:
 
-- **replay** (default historically): reads recorded responses from disk.
-- **live**: calls the Airbyte Agent SDK, applying the same `select_fields`
-  that the MCP proxy uses, so token counts remain comparable.
+- **replay**: reads pre-recorded JSON-RPC responses from disk.
+- **live**: speaks real JSON-RPC to ``mcp.airbyte.ai`` via
+  `agent_bench.airbyte_mcp.AirbyteMCPClient` (browser-based
+  PKCE auth, see `agent-bench auth`).
 
-Difference from Path C (SDK): Path B applies `select_fields` to narrow
-the response payload. Path C returns the full provider response.
+Both modes count tokens on the same payload shape that an LLM consumes
+when calling the MCP tool — the FastMCP ``structuredContent`` (or, for
+older recordings, the inner data after peeling the synthesized
+``results[0].result`` envelope).
 """
 
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path as FSPath
 from typing import Any, AsyncIterator, Literal
@@ -21,7 +24,7 @@ from typing import Any, AsyncIterator, Literal
 from agent_bench.config import LiveConfig
 from agent_bench.metrics import BenchmarkResult, StepResult, count_tokens
 from agent_bench.paths.native_mcp import ToolCallSpec, TaskPlan, _count_records
-from agent_bench.paths.agent_sdk import _DISPATCH as _SDK_DISPATCH, _normalize, _translate, _maybe_await
+from agent_bench.paths.agent_sdk import _DISPATCH as _SDK_DISPATCH, _translate
 from agent_bench.scenarios.loader import Scenario, Task
 
 
@@ -98,32 +101,39 @@ class AgentMCPPath:
     async def _run_live(
         self, task: Task, scenario: Scenario
     ) -> AsyncIterator[tuple[StepResult, BenchmarkResult]]:
-        """Make a real API call via the Agent SDK with `select_fields` projection."""
-        from airbyte_agent_sdk import connect
+        """Call `mcp.airbyte.ai` over real JSON-RPC.
+
+        Requires a one-time browser auth via `agent-bench auth`.
+        Token refresh is automatic until the FastMCP refresh token expires
+        (approximately 30 minutes of inactivity).
+        """
+        from agent_bench.airbyte_mcp import AirbyteMCPClient
 
         result = BenchmarkResult(path_name=self.name)
-        dispatch = _SDK_DISPATCH[scenario.connector]
-        sdk_action, sdk_params = _translate(task, dispatch)
+        connector_id = self._config.connector_ids[scenario.connector]
+        sdk_action, sdk_params = _translate(task, _SDK_DISPATCH[scenario.connector])
+        select_fields = _entity_select_fields(scenario.connector, task.entity)
+        args: dict[str, Any] = {
+            "connector_id": connector_id,
+            "entity": task.entity,
+            "action": sdk_action,
+            "params": sdk_params,
+            "select_fields": select_fields,
+        }
 
         if self._connector is None:
-            self._connector = connect(
-                scenario.connector,
-                **self._config.auth_kwargs(scenario.connector),
+            self._connector = AirbyteMCPClient(
+                organization_id=self._config.organization_id,
             )
+            await self._connector.initialize()
 
         t0 = time.perf_counter()
         try:
-            raw = await _maybe_await(
-                self._connector.execute(
-                    entity=task.entity,
-                    action=sdk_action,
-                    params=sdk_params,
-                )
-            )
+            response, _ = await self._connector.call_tool("execute", {"items": [args]})
         except Exception as exc:  # noqa: BLE001
+            elapsed = (time.perf_counter() - t0) * 1000
             result.status = "error"
             result.error = f"{type(exc).__name__}: {exc}"
-            elapsed = (time.perf_counter() - t0) * 1000
             step = StepResult(
                 label=f"{sdk_action} {task.entity} [error]",
                 latency_ms=elapsed,
@@ -136,30 +146,34 @@ class AgentMCPPath:
             return
         elapsed = (time.perf_counter() - t0) * 1000
 
-        records, meta = _normalize(raw)
+        if isinstance(response, dict) and response.get("error"):
+            result.status = "error"
+            result.error = f"MCP error: {response['error']}"
+            step = StepResult(
+                label=f"{sdk_action} {task.entity} [error]",
+                latency_ms=elapsed,
+                payload_bytes=0,
+                tokens=0,
+                records=0,
+            )
+            result.steps.append(step)
+            yield step, result
+            return
 
-        # Apply select_fields projection to match what the MCP proxy returns.
-        select_fields = _entity_select_fields(scenario.connector, task.entity)
-        if select_fields:
-            records = [
-                {k: v for k, v in rec.items() if k in select_fields}
-                for rec in records
-            ]
-
-        payload = json.dumps(records, default=str)
-        took_ms = meta.get("took_ms") or elapsed
-        tokens = count_tokens(records)
+        inner = _extract_inner(response)
+        payload = json.dumps(inner, default=str)
+        tokens = count_tokens(inner)
+        records = _count_records(inner)
 
         step = StepResult(
             label=f"{sdk_action} {task.entity}",
-            latency_ms=took_ms,
+            latency_ms=elapsed,
             payload_bytes=len(payload.encode()),
             tokens=tokens,
-            records=len(records),
+            records=records,
         )
         result.steps.append(step)
-        result.total_records = len(records)
-
+        result.total_records = records
         if task.metric_focus == "single_record_fetch":
             result.single_record_calls = len(result.steps)
             result.single_record_tokens = tokens
@@ -214,7 +228,7 @@ class AgentMCPPath:
 
     async def close(self) -> None:
         if self._connector is not None and hasattr(self._connector, "close"):
-            await _maybe_await(self._connector.close())
+            await self._connector.close()
             self._connector = None
 
 
