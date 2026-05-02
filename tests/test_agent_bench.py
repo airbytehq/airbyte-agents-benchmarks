@@ -18,7 +18,10 @@ def test_scenario_loads_choreographed_format() -> None:
     assert gong_get.is_choreographed
     assert gong_get.paths is not None
     assert "agent-mcp" in gong_get.paths
-    assert "native-mcp" in gong_get.paths
+    # gong-get has no native-mcp path — the upstream kenazk/gong-mcp server
+    # has no get-by-ID tool, so this scenario is marked not-comparable.
+    assert "native-mcp" not in gong_get.paths
+    assert gong_get.is_comparable is False
 
     agent_calls = gong_get.paths["agent-mcp"].tool_calls
     assert len(agent_calls) == 1
@@ -29,11 +32,6 @@ def test_scenario_loads_choreographed_format() -> None:
     assert agent_calls[0].args["params"]["query"]["filter"]["eq"]["id"] == "1005803797056190704"
     assert agent_calls[0].args["params"]["limit"] == 1
     assert "id" in agent_calls[0].args["select_fields"]
-
-    native_calls = gong_get.paths["native-mcp"].tool_calls
-    assert len(native_calls) == 1
-    assert native_calls[0].server == "gong"
-    assert native_calls[0].tool == "get_call"
 
 
 def test_multi_step_scenario_loads() -> None:

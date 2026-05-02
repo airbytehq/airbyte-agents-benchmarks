@@ -434,17 +434,21 @@ Some tasks (e.g., Slack list) produce multiple calls per recording file. Use `--
 
 ## Gong MCP
 
-The benchmark uses the community **kenazk/gong-mcp** server (TypeScript, local Node.js process) via stdio transport.
+The benchmark uses the community **kenazk/gong-mcp** server (TypeScript, local Node.js process) via stdio transport. No official Gong MCP server exists.
 
 **Repo:** https://github.com/kenazk/gong-mcp
+
+> **Note:** This package is not published to npm, so `npx` will not work. You must clone and build locally.
 
 ### Prerequisites
 
 - Node.js 18 or later
-- A Gong API access key and secret (from Gong Settings > API)
-- A local clone of `kenazk/gong-mcp` — the package is not published to npm, so you must build it yourself
+- npm
+- A Gong API access key and secret (see [Obtaining Gong API credentials](#obtaining-gong-api-credentials) below)
 
-### Build the Server
+### Installation
+
+Clone the repo and build:
 
 ```bash
 git clone https://github.com/kenazk/gong-mcp.git
@@ -453,7 +457,22 @@ npm install
 npm run build
 ```
 
-This produces `dist/index.js`, which is the file the recorder spawns.
+Verify the built entry point exists:
+
+```bash
+ls dist/index.js
+```
+
+### Obtaining Gong API credentials
+
+Gong uses Basic authentication with an access key and secret. To generate them:
+
+1. Sign in to Gong as an admin at https://app.gong.io
+2. Go to **Company Settings** > **Ecosystem** > **API**
+3. Click **Get API Key** (or manage existing keys)
+4. Copy the **Access Key** and **Access Key Secret**
+
+API keys are org-wide and require admin permissions to create. Each key pair has full read access to your Gong data.
 
 ### Environment Variables
 
@@ -463,33 +482,50 @@ Set these in your `.env` profile:
 GONG_ACCESS_KEY=your-access-key
 GONG_ACCESS_KEY_SECRET=your-access-secret
 # Absolute path to the dist/index.js you just built (required)
-GONG_MCP_SERVER_PATH=/Users/me/code/gong-mcp/dist/index.js
+GONG_MCP_SERVER_PATH=/absolute/path/to/gong-mcp/dist/index.js
 ```
 
 `GONG_MCP_SERVER_PATH` is required — there is no default. Set it to the absolute path of your local build.
 
+If you store credentials in 1Password, these live under the `gong` item, section `test-credentials-basic`, fields `access_key` and `access_key_secret`. Run `agent-bench populate-env` to sync them to `.env`.
+
+### Verifying credentials
+
+Smoke-test the API credentials before running the full recording:
+
+```bash
+curl -s -u "$GONG_ACCESS_KEY:$GONG_ACCESS_KEY_SECRET" \
+  https://api.gong.io/v2/calls?fromDateTime=2025-01-01T00:00:00Z | head -c 200
+```
+
+A successful response returns JSON with a `calls` array. A `401` means the credentials are invalid or revoked.
+
 ### How the Recording Script Launches It
 
-The `GongMCP` class spawns:
+The `GongMCP` class in `src/agent_bench/recording/native_mcp_recorder.py` spawns the Node.js process with stdio transport:
 
 ```bash
 node "$GONG_MCP_SERVER_PATH"
 ```
 
-The process reads JSON-RPC messages from stdin and writes responses to stdout. The access key and secret are passed via environment variables.
+The process reads JSON-RPC messages from stdin and writes responses to stdout. The access key and secret are passed via environment variables (`GONG_ACCESS_KEY`, `GONG_ACCESS_KEY_SECRET`).
 
 ### Available Tools
 
-| Benchmark Task | MCP Tool | Args | Description |
-|---|---|---|---|
-| get | `get_call` | `{"id": "1005803797056190704"}` | Retrieve a single call by ID |
-| search | `list_calls` | `{"fromDateTime": "2025-01-01T00:00:00Z"}` | List calls from a given date |
+The upstream server exposes two tools:
+
+| MCP Tool | Args | Description |
+|---|---|---|
+| `list_calls` | `{"fromDateTime": "...", "toDateTime": "..."}` | List calls with optional date range filtering |
+| `retrieve_transcripts` | `{"callIds": ["..."]}` | Retrieve transcripts for one or more call IDs |
+
+The benchmark uses `list_calls` for the `gong-search` scenario. Neither tool supports a single-call get-by-ID operation (the Gong REST API has `GET /v2/calls/{id}` but the MCP server does not wrap it), so `gong-get` is marked "Not Comparable".
 
 Notable limitations:
 
 - Gong's API has no keyword search. The `list_calls` tool lists calls by date range with a fixed page size of 100.
 - No field selection; full call objects are always returned.
-- This means the `gong-search` scenario is marked "Not Comparable" since it exercises fundamentally different operations between agent-mcp and native-mcp.
+- Both `gong-get` and `gong-search` are marked "Not Comparable" since native-mcp lacks equivalent operations to agent-mcp's context store.
 
 ---
 
