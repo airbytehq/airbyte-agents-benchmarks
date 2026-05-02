@@ -151,8 +151,8 @@ class AgentMCPPath:
         """Call `mcp.airbyte.ai` over real JSON-RPC.
 
         Requires a one-time browser auth via `agent-bench auth`.
-        Token refresh is automatic until the FastMCP refresh token expires
-        (approximately 30 minutes of inactivity).
+        Token refresh is automatic until the refresh token expires
+        (approximately 60 days).
         """
         from agent_bench.airbyte_mcp import AirbyteMCPClient
 

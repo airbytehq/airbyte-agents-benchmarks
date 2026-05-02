@@ -44,7 +44,16 @@ automatically after every successful recording.
 
 ### Credential setup
 
-1. Go to [Airbyte Cloud](https://cloud.airbyte.com) and sign in.
+For **agent-mcp** recording (the default path), you need:
+- `AIRBYTE_ORGANIZATION_ID` and connector IDs (e.g. `LINEAR_CONNECTOR_ID`) in `.env`
+- A one-time OAuth login via `agent-bench auth` (see below)
+
+For **emulated-mcp** recording (uses Sonar REST API), you additionally need:
+- `AIRBYTE_CLIENT_ID` and `AIRBYTE_CLIENT_SECRET` from an Airbyte Cloud Application
+
+To set up `AIRBYTE_CLIENT_ID`/`AIRBYTE_CLIENT_SECRET` for emulated-mcp:
+
+1. Go to [Airbyte Cloud](https://app.airbyte.ai) and sign in.
 2. Navigate to Settings, then Applications.
 3. Create or find an application with access to your organization.
 4. Note your Organization ID from the URL or settings page.
@@ -54,16 +63,12 @@ Create your `.env` file:
 
 ```bash
 cp .env.template .env
-# Fill in Agent MCP values (org ID, client creds, connector IDs) manually.
-
-# Or auto-populate native-MCP secrets from 1Password:
-uv run agent-bench populate-env
+# Fill in Agent MCP values (org ID, connector IDs) manually.
 ```
 
-The `.env.template` declares every accepted variable. Agent-MCP credentials
-(org ID, client ID/secret, connector IDs) must be filled in manually.
-Native-MCP credentials can be fetched from the `direct-connector-credentials`
-1Password vault via `populate-env`.
+> **Airbyte-internal:** Native-MCP credentials can be fetched from the
+> `direct-connector-credentials` 1Password vault via `uv run agent-bench populate-env`.
+> This requires `SONAR_CONNECTOR_CREDS_1PASS_TOKEN`.
 
 ### Recording prerequisites
 
@@ -80,7 +85,7 @@ field selection via `select_fields`, response truncation, and compaction.
 
 The MCP server uses an OIDC-proxy auth flow. There is no API-token
 shortcut; you must complete a one-time browser login. Tokens refresh
-automatically until the refresh token expires (~3 days of inactivity).
+automatically until the refresh token expires (approximately 60 days).
 
 ```bash
 # 1. Once per machine (or whenever you see HTTP 401 during recording):
@@ -104,12 +109,16 @@ uv run agent-bench record --path native-mcp --connectors linear
 
 ### Regenerating stats only
 
-To regenerate `recording-stats.json` from existing recordings without
-re-recording:
+To regenerate `recording-stats.json` from existing `recording.json`
+files without re-recording:
 
 ```bash
 uv run agent-bench record --stats-only
 ```
+
+> **Note:** This requires local `recording.json` files from a previous
+> recording run. These files are gitignored and not included in a fresh
+> clone — you must record at least once before `--stats-only` will work.
 
 ## Troubleshooting
 
