@@ -12,16 +12,16 @@
 
 | Action | Description | Annotations |
 |---|---|---|
-| get | Fetch a single Gong call by ID.<br>Agent requests id, title, scheduled, and duration. | 💎 Equal record counts; savings driven purely by field projection. |
-| list | List the most recent Gong calls.<br>Agent requests id, title, scheduled, and duration per record. | 💎 Equal record counts; savings driven purely by field projection. |
+| get | Fetch a single Gong call by ID.<br>Agent requests id, title, scheduled, and duration. | 💎 Equal record counts; savings driven purely by field selection. |
+| list | List the most recent Gong calls.<br>Agent requests id, title, scheduled, and duration per record. | 💎 Equal record counts; savings driven purely by field selection. |
 | search | Search Gong calls matching a keyword.<br>Agent requests id, title, scheduled, and duration per result. | ℹ️ Unequal record counts amplify the ratio. Per-record savings are real. |
 
 #### Scenario Benchmark Results
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| get | 51 | 281 | 1 | 1 | 18% | 82% | 💎 Equal record counts; savings driven purely by field projection. |
-| list | 5,147 | 26,080 | 100 | 100 | 20% | 80% | 💎 Equal record counts; savings driven purely by field projection. |
+| get | 51 | 281 | 1 | 1 | 18% | 82% | 💎 Equal record counts; savings driven purely by field selection. |
+| list | 5,147 | 26,080 | 100 | 100 | 20% | 80% | 💎 Equal record counts; savings driven purely by field selection. |
 | search | 529 | 26,578 | 10 | 100 | 2% | 98% | ℹ️ Unequal record counts amplify the ratio. Per-record savings are real. |
 
 **Connector total:** Agent MCP uses 11% of Native MCP tokens (89% savings)
@@ -103,7 +103,7 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 
 | Action | Description | Annotations |
 |---|---|---|
-| get | Fetch a single Zendesk ticket by ID.<br>Agent requests id, subject, status, and priority. | 💎 Equal record counts; savings driven purely by field projection. |
+| get | Fetch a single Zendesk ticket by ID.<br>Agent requests id, subject, status, and priority. | 💎 Equal record counts; savings driven purely by field selection. |
 | list | List recent Zendesk tickets.<br>Agent requests id, subject, status, and priority per record. | 💎 Agent returned more records with fewer tokens. |
 | search | Search Zendesk tickets matching a keyword.<br>Agent requests id, subject, status, and priority per result. |  |
 
@@ -111,7 +111,7 @@ These scenarios could not produce a valid comparison between Agent MCP and the v
 
 | Action | Agent MCP tokens | Native MCP tokens | Agent MCP records | Native MCP records | Ratio | Savings | Notes |
 |---|---:|---:|---:|---:|---:|---:|---|
-| get | 26 | 514 | 1 | 1 | 5% | 95% | 💎 Equal record counts; savings driven purely by field projection. |
+| get | 26 | 514 | 1 | 1 | 5% | 95% | 💎 Equal record counts; savings driven purely by field selection. |
 | list | 3,461 | 24,626 | 100 | 50 | 14% | 86% | 💎 Agent returned more records with fewer tokens. |
 | search | 329 | 1,033 | 10 | 2 | 32% | 68% |  |
 
