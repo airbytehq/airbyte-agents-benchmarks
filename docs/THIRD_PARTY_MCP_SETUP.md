@@ -442,6 +442,18 @@ The benchmark uses the community **kenazk/gong-mcp** server (TypeScript, local N
 
 - Node.js 18 or later
 - A Gong API access key and secret (from Gong Settings > API)
+- A local clone of `kenazk/gong-mcp` — the package is not published to npm, so you must build it yourself
+
+### Build the Server
+
+```bash
+git clone https://github.com/kenazk/gong-mcp.git
+cd gong-mcp
+npm install
+npm run build
+```
+
+This produces `dist/index.js`, which is the file the recorder spawns.
 
 ### Environment Variables
 
@@ -450,14 +462,18 @@ Set these in your `.env` profile:
 ```bash
 GONG_ACCESS_KEY=your-access-key
 GONG_ACCESS_KEY_SECRET=your-access-secret
+# Absolute path to the dist/index.js you just built (required)
+GONG_MCP_SERVER_PATH=/Users/me/code/gong-mcp/dist/index.js
 ```
+
+`GONG_MCP_SERVER_PATH` is required — there is no default. Set it to the absolute path of your local build.
 
 ### How the Recording Script Launches It
 
-The `GongMCP` class clones the repo, builds it, and runs the Node.js process:
+The `GongMCP` class spawns:
 
 ```bash
-node /home/ubuntu/gong-mcp/dist/index.js
+node "$GONG_MCP_SERVER_PATH"
 ```
 
 The process reads JSON-RPC messages from stdin and writes responses to stdout. The access key and secret are passed via environment variables.

@@ -264,18 +264,29 @@ def _summarize_slack_results(response: dict) -> str:
 # Gong MCP (stdio via kenazk/gong-mcp)
 # ---------------------------------------------------------------------------
 
-GONG_MCP_SERVER_PATH = Path("/home/ubuntu/gong-mcp/dist/index.js")
-
-
 class GongMCP:
-    """Stdio-based MCP client for the `kenazk/gong-mcp` server."""
+    """Stdio-based MCP client for the `kenazk/gong-mcp` server.
+
+    The server is not on npm; it must be cloned and built locally
+    (`git clone https://github.com/kenazk/gong-mcp && npm install && npm run
+    build`). Point at the resulting `dist/index.js` via the required
+    `GONG_MCP_SERVER_PATH` env var.
+    """
 
     def __init__(self, access_key: str, access_secret: str) -> None:
+        server_path = Path(load_env_secret("GONG_MCP_SERVER_PATH"))
+        if not server_path.exists():
+            raise FileNotFoundError(
+                f"kenazk/gong-mcp build artifact not found at {server_path}. "
+                "Clone https://github.com/kenazk/gong-mcp, run `npm install && "
+                "npm run build`, then point GONG_MCP_SERVER_PATH at the "
+                "resulting dist/index.js."
+            )
         env = os.environ.copy()
         env["GONG_ACCESS_KEY"] = access_key
         env["GONG_ACCESS_SECRET"] = access_secret
         self.proc = subprocess.Popen(  # noqa: S603, S607
-            ["node", str(GONG_MCP_SERVER_PATH)],
+            ["node", str(server_path)],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=sys.stderr,
