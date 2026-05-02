@@ -186,10 +186,18 @@ def record_emulated_agent_mcp(
                 f"entity={entity} action={action}"
             )
 
-            response, wall_ms = execute_call(
-                base_url, token, org_id,
-                connector_id, entity, action, params, select_fields,
-            )
+            try:
+                response, wall_ms = execute_call(
+                    base_url, token, org_id,
+                    connector_id, entity, action, params, select_fields,
+                )
+            except httpx.HTTPStatusError as exc:
+                body = exc.response.text[:200]
+                print(f"      HTTP {exc.response.status_code}: {body}", file=sys.stderr)
+                results_summary.append((scenario_name, "FAILED", f"HTTP {exc.response.status_code}"))
+                scenario_ok = False
+                break
+
             exec_ms = response.get("execution_metadata", {}).get("execution_time_ms")
             effective_ms = float(exec_ms) if exec_ms is not None else wall_ms
             print(f"      wall_clock_ms: {effective_ms:.1f} (http: {wall_ms:.1f})")
@@ -198,6 +206,9 @@ def record_emulated_agent_mcp(
                 {"results": [{"connector_id": connector_id, "result": response}]}
             )
             if error:
+                snippet = json.dumps(response, default=str)[:200]
+                print(f"      ERROR: {error}", file=sys.stderr)
+                print(f"      Response: {snippet}", file=sys.stderr)
                 results_summary.append((scenario_name, "FAILED", error))
                 scenario_ok = False
                 break
@@ -215,6 +226,9 @@ def record_emulated_agent_mcp(
                 count_response_records(call["response"]) for call in recording
             )
             if total_records == 0:
+                for call in recording:
+                    snippet = json.dumps(call["response"], default=str)[:300]
+                    print(f"      Response: {snippet}", file=sys.stderr)
                 results_summary.append(
                     (scenario_name, "FAILED", "zero records across all calls")
                 )
