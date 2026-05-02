@@ -174,7 +174,7 @@ The benchmark uses the community **dunialabs/mcp-zendesk** server (TypeScript, M
 ### Prerequisites
 
 - Docker
-- A Zendesk OAuth access token (or email + API token for development)
+- A Zendesk instance with an OAuth client configured (Admin Center > Apps > APIs > OAuth clients)
 
 ### Environment Variables
 
@@ -186,9 +186,69 @@ ZENDESK_ACCESS_TOKEN=your-oauth-access-token
 ZENDESK_REFRESH_TOKEN=your-refresh-token
 ZENDESK_CLIENT_ID=your-client-id
 ZENDESK_CLIENT_SECRET=your-client-secret
+ZENDESK_OAUTH_REDIRECT_URI=http://localhost:8080/callback
 ```
 
 See `.env.template` for the full list of credential fields.
+
+### Obtaining OAuth Tokens
+
+The Zendesk MCP Docker container requires an OAuth access token. Tokens expire every 30 minutes, so you will need to refresh or re-authorize periodically.
+
+**Step 1: Start a local callback server**
+
+Start a simple HTTP server on the port that matches your `ZENDESK_OAUTH_REDIRECT_URI`:
+
+```bash
+python3 -m http.server 8080 &
+```
+
+Or use a script that captures the authorization code from the `?code=` query parameter.
+
+**Step 2: Open the authorization URL in a browser**
+
+```
+https://<ZENDESK_SUBDOMAIN>.zendesk.com/oauth/authorizations/new?\
+  response_type=code&\
+  client_id=<ZENDESK_CLIENT_ID>&\
+  redirect_uri=<ZENDESK_OAUTH_REDIRECT_URI>&\
+  scope=read
+```
+
+> **Important:** The `redirect_uri` must exactly match one of the allowed redirect URIs configured on the OAuth client in Zendesk Admin Center (Apps > APIs > OAuth clients). Using a non-allowed URI will fail silently or return an error. Check the client configuration if the flow does not redirect.
+
+**Step 3: Exchange the authorization code for tokens**
+
+```bash
+curl -X POST "https://<ZENDESK_SUBDOMAIN>.zendesk.com/oauth/tokens" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grant_type": "authorization_code",
+    "code": "<AUTH_CODE>",
+    "client_id": "<ZENDESK_CLIENT_ID>",
+    "client_secret": "<ZENDESK_CLIENT_SECRET>",
+    "redirect_uri": "<ZENDESK_OAUTH_REDIRECT_URI>",
+    "scope": "read"
+  }'
+```
+
+The response includes `access_token` and `refresh_token`. Save both to your `.env` file immediately — Zendesk rotates the refresh token on every use, so the old one becomes invalid.
+
+**Step 4: Refresh an expired token**
+
+```bash
+curl -X POST "https://<ZENDESK_SUBDOMAIN>.zendesk.com/oauth/tokens" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grant_type": "refresh_token",
+    "refresh_token": "<ZENDESK_REFRESH_TOKEN>",
+    "client_id": "<ZENDESK_CLIENT_ID>",
+    "client_secret": "<ZENDESK_CLIENT_SECRET>",
+    "scope": "read"
+  }'
+```
+
+> **Warning:** Save the new `refresh_token` from the response immediately. Zendesk invalidates the previous refresh token on use. If you lose the new one, you must redo the full browser authorization flow.
 
 ### How the Recording Script Launches It
 
