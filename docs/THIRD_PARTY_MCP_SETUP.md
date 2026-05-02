@@ -90,11 +90,11 @@ The benchmark uses Slack's official hosted MCP server at `https://mcp.slack.com/
 
 ### Step 2: Enable Model Context Protocol
 
-1. In the app settings sidebar, open the **App Assistant** page
-2. Scroll to the **Model Context Protocol** section and toggle it **on**
+1. In the app settings sidebar under **Features**, open the **Agents & AI Apps** page
+2. Find the **Model Context Protocol** card (it is below the "Agent or Assistant" card) and toggle it **on**
 3. Save if prompted
 
-> **Watch out:** the same page also has a separate **Agent or Assistant** toggle near the top. That is *not* the MCP toggle — flipping it has no effect on `mcp.slack.com/mcp` and you'll still get `App is not enabled for Slack MCP server access` errors. The MCP toggle is further down the page, in its own **Model Context Protocol** card.
+> **Watch out:** the same page also has a separate **Agent or Assistant** toggle near the top. That is *not* the MCP toggle — flipping it has no effect on `mcp.slack.com/mcp` and you'll still get `App is not enabled for Slack MCP server access` errors. The **Model Context Protocol** toggle is in its own card further down the page.
 
 ### Step 3: Add User Token Scopes
 
@@ -236,19 +236,44 @@ The response includes `access_token` and `refresh_token`. Save both to your `.en
 
 **Step 4: Refresh an expired token**
 
+Access tokens expire after 30 minutes. Refresh them programmatically using the
+credentials already in your `.env` file:
+
 ```bash
-curl -X POST "https://<ZENDESK_SUBDOMAIN>.zendesk.com/oauth/tokens" \
+source .env   # loads ZENDESK_SUBDOMAIN, ZENDESK_CLIENT_ID, etc.
+
+curl -s -X POST "https://${ZENDESK_SUBDOMAIN}.zendesk.com/oauth/tokens" \
   -H "Content-Type: application/json" \
-  -d '{
-    "grant_type": "refresh_token",
-    "refresh_token": "<ZENDESK_REFRESH_TOKEN>",
-    "client_id": "<ZENDESK_CLIENT_ID>",
-    "client_secret": "<ZENDESK_CLIENT_SECRET>",
-    "scope": "read"
-  }'
+  -d "{
+    \"grant_type\": \"refresh_token\",
+    \"client_id\": \"${ZENDESK_CLIENT_ID}\",
+    \"client_secret\": \"${ZENDESK_CLIENT_SECRET}\",
+    \"refresh_token\": \"${ZENDESK_REFRESH_TOKEN}\",
+    \"scope\": \"read\"
+  }"
 ```
 
-> **Warning:** Save the new `refresh_token` from the response immediately. Zendesk invalidates the previous refresh token on use. If you lose the new one, you must redo the full browser authorization flow.
+The response contains both a new `access_token` and a new `refresh_token`:
+
+```json
+{
+  "access_token": "...",
+  "refresh_token": "...",
+  "token_type": "bearer",
+  "expires_in": 1799,
+  "scope": "read",
+  "refresh_token_expires_in": 2591999
+}
+```
+
+> **Warning — token rotation:** Zendesk invalidates the previous refresh token
+> on every use. You *must* update **both** `ZENDESK_ACCESS_TOKEN` and
+> `ZENDESK_REFRESH_TOKEN` in your `.env` file immediately after each refresh.
+> The recorder reads `ZENDESK_ACCESS_TOKEN` on every native-mcp run, so
+> leaving the old value will cause a 401 even though the refresh succeeded.
+> If you lose the new refresh token (e.g., by running the refresh again with
+> the old token), you must redo the full browser authorization flow from
+> Step 1.
 
 ### How the Recording Script Launches It
 

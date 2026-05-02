@@ -19,6 +19,7 @@ from pathlib import Path
 import yaml
 
 from agent_bench.metrics import count_tokens
+from agent_bench.scenarios.loader import load_scenario
 
 SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 
@@ -31,7 +32,7 @@ class CellStats:
     connector: str
     path: str
     action: str
-    entity: str
+    entities: list[str]
     status: str
     tokens: int
     payload_bytes: int
@@ -47,6 +48,7 @@ class ComparisonRow:
     scenario: str
     connector: str
     action: str
+    entities: list[str] = field(default_factory=list)
     left_tokens: int | None = None
     right_tokens: int | None = None
     left_bytes: int | None = None
@@ -104,6 +106,15 @@ class ConnectorSummary:
         return 100 - ratio
 
 
+def _parse_entities(data: dict) -> list[str]:
+    """Extract entities from a stats dict, handling both v2 and v3 schemas."""
+    if "entities" in data:
+        return data["entities"]
+    if "entity" in data:
+        return [data["entity"]]
+    return ["unknown"]
+
+
 def load_stats_from_dir(artifacts_dir: Path) -> list[CellStats]:
     """Scan an artifacts date directory for recording-stats.json files."""
     stats: list[CellStats] = []
@@ -111,19 +122,18 @@ def load_stats_from_dir(artifacts_dir: Path) -> list[CellStats]:
         return stats
     for stats_file in sorted(artifacts_dir.rglob("recording-stats.json")):
         data = json.loads(stats_file.read_text())
-        records = data["records"]
 
         stats.append(CellStats(
             scenario=data["scenario"],
             connector=data["connector"],
             path=data["path"],
             action=data["action"],
-            entity=data["entity"],
+            entities=_parse_entities(data),
             status=data["status"],
             tokens=data["tokens"],
             payload_bytes=data["payload_bytes"],
             latency_ms=data.get("latency_ms"),
-            records=records,
+            records=data["records"],
             api_calls=data.get("api_calls", 1),
         ))
     return stats
@@ -212,20 +222,14 @@ def load_stats_from_recordings(artifacts_dir: Path) -> list[CellStats]:
             continue
         scenario = scenario_dir.removesuffix("-scenario")
 
-        # Look up connector/action from scenario YAML if available
+        # Look up connector/action/entities from scenario YAML if available
         scenario_yaml = SCENARIOS_DIR / f"{scenario}.yaml"
+        entities: list[str] = ["unknown"]
         if scenario_yaml.is_file():
-            spec = yaml.safe_load(scenario_yaml.read_text())
-            connector = spec.get("connector", scenario.rsplit("-", 1)[0] if "-" in scenario else scenario)
-            # Derive action from name suffix (same logic as loader.inferred_action)
-            action = "unknown"
-            for suffix in ("get", "search"):
-                if scenario.endswith(f"-{suffix}"):
-                    action = suffix
-                    break
-            else:
-                if "-to-" in scenario or "-and-" in scenario:
-                    action = "multi-step"
+            loaded = load_scenario(scenario)
+            connector = loaded.connector
+            action = loaded.inferred_action
+            entities = loaded.inferred_entities
         else:
             connector = scenario.rsplit("-", 1)[0] if "-" in scenario else scenario
             action = scenario.rsplit("-", 1)[1] if "-" in scenario else "unknown"
@@ -249,7 +253,7 @@ def load_stats_from_recordings(artifacts_dir: Path) -> list[CellStats]:
             connector=connector,
             path=path_name,
             action=action,
-            entity="unknown",
+            entities=entities,
             status="ok",
             tokens=total_tokens,
             payload_bytes=total_bytes,
@@ -284,6 +288,8 @@ def load_scenario_metadata() -> dict[str, dict]:
             "description": data.get("description", "").strip(),
             "annotations": {k: str(v) for k, v in annotations.items()} if annotations else {},
             "is_comparable": data.get("is_comparable", True),
+            "hidden": data.get("hidden", False),
+            "hidden_reason": data.get("hidden_reason", ""),
             "paths": paths_meta,
         }
     return metadata
@@ -340,11 +346,18 @@ def build_comparison(
     stats: list[CellStats],
     left_path: str = "agent-mcp",
     right_path: str = "native-mcp",
+    hidden_scenarios: set[str] | None = None,
 ) -> list[ConnectorSummary]:
-    """Build per-connector comparison summaries from cell stats."""
+    """Build per-connector comparison summaries from cell stats.
+
+    Scenarios in `hidden_scenarios` are excluded entirely.
+    """
+    hidden = hidden_scenarios or set()
     # Group by (connector, scenario)
     by_scenario: dict[str, dict[str, CellStats]] = {}
     for s in stats:
+        if s.scenario in hidden:
+            continue
         key = s.scenario
         by_scenario.setdefault(key, {})[s.path] = s
 
@@ -356,10 +369,12 @@ def build_comparison(
         if left is None and right is None:
             continue
         connector = (left or right).connector
+        entities = (left or right).entities
         row = ComparisonRow(
             scenario=scenario,
             connector=connector,
             action=(left or right).action,
+            entities=entities,
             left_tokens=left.tokens if left else None,
             right_tokens=right.tokens if right else None,
             left_bytes=left.payload_bytes if left else None,
@@ -406,6 +421,38 @@ def render_comparison_markdown(
     lines.append(f"**Connectors:** {', '.join(c.title() for c in connectors)}")
     lines.append("")
 
+    # Per-connector summary table (top-level overview)
+    lines.append("## Per-Connector Summary")
+    lines.append("")
+    lines.append(
+        "> :warning: Please review detailed results below for necessary "
+        "disclaimers, descriptions of issues, and other explanations."
+    )
+    lines.append("")
+    lines.append(
+        f"| Connector | {left_label} tokens | {right_label} tokens | "
+        f"Ratio | Savings |"
+    )
+    lines.append("|---|---:|---:|---:|---:|")
+    for s in summaries:
+        bench_rows = [
+            r for r in s.rows
+            if meta.get(r.scenario, {}).get("is_comparable", True)
+        ]
+        if not bench_rows:
+            continue
+        left_total = sum(r.left_tokens for r in bench_rows if r.left_tokens)
+        right_total = sum(r.right_tokens for r in bench_rows if r.right_tokens)
+        ratio_pct = (left_total / right_total * 100) if right_total else None
+        savings_pct = (100 - ratio_pct) if ratio_pct is not None else None
+        ratio_str = f"{ratio_pct:.0f}%" if ratio_pct is not None else "N/A"
+        savings_str = f"{savings_pct:.0f}%" if savings_pct is not None else "N/A"
+        lines.append(
+            f"| {s.connector.title()} | {left_total:,} | {right_total:,} | "
+            f"{ratio_str} | {savings_str} |"
+        )
+    lines.append("")
+
     # Per-scenario detail
     lines.append("## Per-Scenario Breakdown")
     lines.append("")
@@ -429,25 +476,27 @@ def render_comparison_markdown(
             # Table 1: Scenario Descriptions
             lines.append("#### Scenario Descriptions")
             lines.append("")
-            lines.append("| Action | Description | Annotations |")
-            lines.append("|---|---|---|")
+            lines.append("| Action | Entities | Description | Annotations |")
+            lines.append("|---|---|---|---|")
             for row in benchmark_rows:
+                entities_str = ", ".join(row.entities) if row.entities else "—"
                 desc = meta.get(row.scenario, {}).get("description", "").strip()
                 desc = desc.replace("\n", "<br>")
                 scenario_ann = meta.get(row.scenario, {}).get("annotations", {})
                 ann_str = "; ".join(v.strip() for v in scenario_ann.values()) if scenario_ann else ""
-                lines.append(f"| {row.action} | {desc} | {ann_str} |")
+                lines.append(f"| {row.action} | {entities_str} | {desc} | {ann_str} |")
             lines.append("")
 
             # Table 2: Scenario Benchmark Results
             lines.append("#### Scenario Benchmark Results")
             lines.append("")
             lines.append(
-                f"| Action | {left_label} tokens | {right_label} tokens | "
+                f"| Action | Entities | {left_label} tokens | {right_label} tokens | "
                 f"{left_label} records | {right_label} records | Ratio | Savings | Notes |"
             )
-            lines.append("|---|---:|---:|---:|---:|---:|---:|---|")
+            lines.append("|---|---|---:|---:|---:|---:|---:|---:|---|")
             for row in benchmark_rows:
+                entities_str = ", ".join(row.entities) if row.entities else "—"
                 left_str = f"{row.left_tokens:,}" if row.left_tokens is not None else "—"
                 right_str = f"{row.right_tokens:,}" if row.right_tokens is not None else "—"
                 ratio_str = f"{row.ratio_pct:.0f}%" if row.ratio_pct is not None else "N/A"
@@ -462,7 +511,7 @@ def render_comparison_markdown(
                     notes_parts.append(row.note)
                 note_str = "; ".join(notes_parts)
                 lines.append(
-                    f"| {row.action} | {left_str} | {right_str} | "
+                    f"| {row.action} | {entities_str} | {left_str} | {right_str} | "
                     f"{left_rec} | {right_rec} | {ratio_str} | {savings_str} | {note_str} |"
                 )
             bench_left = sum(r.left_tokens for r in benchmark_rows if r.left_tokens)
@@ -536,14 +585,15 @@ def render_comparison_markdown(
                 "between Agent MCP and the vendor's native MCP server."
             )
             lines.append("")
-            lines.append("| Action | Description | Annotations |")
-            lines.append("|---|---|---|")
+            lines.append("| Action | Entities | Description | Annotations |")
+            lines.append("|---|---|---|---|")
             for row in not_comparable_rows:
+                entities_str = ", ".join(row.entities) if row.entities else "—"
                 desc = meta.get(row.scenario, {}).get("description", "").strip()
                 desc = desc.replace("\n", "<br>")
                 scenario_ann = meta.get(row.scenario, {}).get("annotations", {})
                 ann_str = "; ".join(v.strip() for v in scenario_ann.values()) if scenario_ann else ""
-                lines.append(f"| {row.action} | {desc} | {ann_str} |")
+                lines.append(f"| {row.action} | {entities_str} | {desc} | {ann_str} |")
             lines.append("")
 
         # Cross-link to scenario YAML definitions (after all sections for this connector)
@@ -580,38 +630,6 @@ def render_comparison_markdown(
     )
     lines.append("")
 
-    # Per-connector summary table at the bottom (benchmark rows only)
-    lines.append("## Per-Connector Summary")
-    lines.append("")
-    lines.append(
-        "> :warning: Please review detailed results above for necessary "
-        "disclaimers, descriptions of issues, and other explanations."
-    )
-    lines.append("")
-    lines.append(
-        f"| Connector | {left_label} tokens | {right_label} tokens | "
-        f"Ratio | Savings |"
-    )
-    lines.append("|---|---:|---:|---:|---:|")
-    for s in summaries:
-        bench_rows = [
-            r for r in s.rows
-            if meta.get(r.scenario, {}).get("is_comparable", True)
-        ]
-        if not bench_rows:
-            continue
-        left_total = sum(r.left_tokens for r in bench_rows if r.left_tokens)
-        right_total = sum(r.right_tokens for r in bench_rows if r.right_tokens)
-        ratio_pct = (left_total / right_total * 100) if right_total else None
-        savings_pct = (100 - ratio_pct) if ratio_pct is not None else None
-        ratio_str = f"{ratio_pct:.0f}%" if ratio_pct is not None else "N/A"
-        savings_str = f"{savings_pct:.0f}%" if savings_pct is not None else "N/A"
-        lines.append(
-            f"| {s.connector.title()} | {left_total:,} | {right_total:,} | "
-            f"{ratio_str} | {savings_str} |"
-        )
-    lines.append("")
-
     return "\n".join(lines)
 
 
@@ -639,7 +657,10 @@ def generate_comparison_report(
     date = artifacts_dir.name if artifacts_dir.name[0].isdigit() else None
 
     scenario_meta = load_scenario_metadata()
-    summaries = build_comparison(stats, left_path, right_path)
+    hidden_scenarios = {
+        name for name, m in scenario_meta.items() if m.get("hidden", False)
+    }
+    summaries = build_comparison(stats, left_path, right_path, hidden_scenarios)
     report = render_comparison_markdown(
         summaries, left_label, right_label, date, scenario_meta,
         artifacts_dir=artifacts_dir, left_path=left_path, right_path=right_path,

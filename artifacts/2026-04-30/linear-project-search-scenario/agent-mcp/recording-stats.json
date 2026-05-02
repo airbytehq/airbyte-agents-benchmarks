@@ -1,14 +1,16 @@
 {
-  "schema_version": 2,
-  "run_date": "2026-05-01T05:44:26.258029+00:00",
+  "schema_version": 3,
+  "run_date": "2026-05-02T18:28:57.252118+00:00",
   "scenario": "linear-project-search",
   "connector": "linear",
   "path": "agent-mcp",
   "action": "search",
-  "entity": "unknown",
+  "entities": [
+    "projects"
+  ],
   "status": "ok",
-  "tokens": 234,
-  "payload_bytes": 589,
+  "tokens": 227,
+  "payload_bytes": 571,
   "latency_ms": null,
   "records": 2,
   "api_calls": 1

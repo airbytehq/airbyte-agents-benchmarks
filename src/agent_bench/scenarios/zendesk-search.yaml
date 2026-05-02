@@ -29,3 +29,4 @@ paths:
         tool: zendeskSearchTickets
         args:
           query: "sync"
+          max_results: 10  # recorder truncates response to cap at agent-mcp limit

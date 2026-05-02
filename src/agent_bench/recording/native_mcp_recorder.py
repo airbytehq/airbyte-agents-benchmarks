@@ -97,7 +97,7 @@ def record_linear(api_key: str, date: str, dry_run: bool = False) -> list[tuple[
 
     # Search
     tool = "list_issues"
-    args = {"query": "backend", "limit": 10}
+    args = {"query": "backend", "limit": 8}  # capped to match agent-mcp context store count
     response, wall_ms = mcp.call_tool(tool, args)
     path = save_recording("linear-search", [{
         "tool": f"mcp__claude_ai_Linear__{tool}",
@@ -602,17 +602,22 @@ def record_zendesk(subdomain: str, access_token: str, date: str, dry_run: bool =
     try:
         # Search
         tool = "zendeskSearchTickets"
+        max_results = 10  # cap to match agent-mcp limit (MCP tool has no per_page support)
         args = {"query": "sync"}
         response, wall_ms = mcp.call_tool(tool, args)
+        # Truncate tickets to max_results — the Zendesk MCP tool does not support per_page
+        if isinstance(response, dict) and "tickets" in response:
+            response["tickets"] = response["tickets"][:max_results]
+            response["count"] = len(response["tickets"])
         path = save_recording("zendesk-search", [{
             "tool": f"mcp__zendesk__{tool}",
-            "args": args,
+            "args": {**args, "max_results": max_results},
             "wall_clock_ms": round(wall_ms, 1),
             "response": response,
         }], date, "native-mcp")
         results.append(("zendesk-search", path))
         tickets = response.get("tickets", []) if isinstance(response, dict) else []
-        print(f"    zendesk-search: {len(tickets)} tickets (via zendeskSearchTickets)")
+        print(f"    zendesk-search: {len(tickets)} tickets (via zendeskSearchTickets, capped to {max_results})")
 
         # Get
         tool = "zendeskGetTicket"

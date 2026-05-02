@@ -66,6 +66,8 @@ class Scenario:
     description: str = ""
     annotations: dict[str, str] = field(default_factory=dict)
     is_comparable: bool = True
+    hidden: bool = False
+    hidden_reason: str = ""
     faux_prompt: str = ""
     # Legacy single-task format
     task: Task | None = None
@@ -89,15 +91,25 @@ class Scenario:
     @property
     def inferred_entity(self) -> str:
         """Best-effort entity label, derived from task or first tool call."""
+        entities = self.inferred_entities
+        return entities[0] if entities else self.connector
+
+    @property
+    def inferred_entities(self) -> list[str]:
+        """All entities referenced by this scenario, in tool-call order."""
         if self.task:
-            return self.task.entity
+            return [self.task.entity]
         if self.paths:
             first_path = self.paths.get("agent-mcp") or next(iter(self.paths.values()), None)
             if first_path and first_path.tool_calls:
-                entity = first_path.tool_calls[0].args.get("entity")
-                if entity:
-                    return entity
-        return self.connector
+                seen: list[str] = []
+                for tc in first_path.tool_calls:
+                    entity = tc.args.get("entity")
+                    if entity and entity not in seen:
+                        seen.append(entity)
+                if seen:
+                    return seen
+        return [self.connector]
 
     @property
     def connectors(self) -> list[str]:
@@ -169,6 +181,8 @@ def load_scenario(name: str) -> Scenario:
         description=data.get("description", ""),
         annotations=data.get("annotations", {}),
         is_comparable=data.get("is_comparable", True),
+        hidden=data.get("hidden", False),
+        hidden_reason=data.get("hidden_reason", ""),
         faux_prompt=data.get("faux_prompt", ""),
         paths=paths,
     )

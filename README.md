@@ -31,7 +31,7 @@ Each connector has named scenarios (e.g., `linear-search`, `gong-get`, `slack-us
 | Connector | Agent MCP | Native MCP |
 |---|---|---|
 | Linear | ✅ | [Linear MCP](https://linear.app/docs/mcp) |
-| Slack | ✅ | [`@modelcontextprotocol/server-slack`](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack) |
+| Slack | ✅ | [Slack Hosted MCP](https://docs.slack.dev/ai/slack-mcp-server) |
 | Gong | ✅ | [`kenazk/gong-mcp`](https://github.com/kenazk/gong-mcp) |
 | Salesforce | ✅ | [`mcp-salesforce-connector`](https://github.com/smn2gnt/mcp-salesforce) |
 | Zendesk | ✅ | [`dunialabs/mcp-zendesk`](https://github.com/dunialabs/mcp-servers/tree/main/mcp-zendesk) |

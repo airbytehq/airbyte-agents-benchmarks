@@ -13,7 +13,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def build_stats_dict(
@@ -22,7 +22,7 @@ def build_stats_dict(
     connector: str,
     path: str,
     action: str,
-    entity: str,
+    entities: list[str],
     status: str,
     tokens: int,
     payload_bytes: int,
@@ -38,7 +38,7 @@ def build_stats_dict(
         "connector": connector,
         "path": path,
         "action": action,
-        "entity": entity,
+        "entities": entities,
         "status": status,
         "tokens": tokens,
         "payload_bytes": payload_bytes,
@@ -65,7 +65,7 @@ def write_stats_for_dir(artifacts_dir: Path) -> int:
             connector=s.connector,
             path=s.path,
             action=s.action,
-            entity=s.entity,
+            entities=s.entities,
             status=s.status,
             tokens=s.tokens,
             payload_bytes=s.payload_bytes,
