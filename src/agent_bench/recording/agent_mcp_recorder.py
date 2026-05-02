@@ -7,10 +7,12 @@ expires (approximately 60 days).
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
 
+import httpx
 from dotenv import load_dotenv
 
 from agent_bench.airbyte_mcp import (
@@ -86,13 +88,23 @@ async def record_scenario(
         while True:
             page_num += 1
             execute_args = {"items": [current_args]}
-            response, wall_ms = await client.call_tool(EXECUTE_TOOL_NAME, execute_args)
+            try:
+                response, wall_ms = await client.call_tool(EXECUTE_TOOL_NAME, execute_args)
+            except httpx.HTTPStatusError as exc:
+                body = exc.response.text[:200]
+                print(f"      HTTP {exc.response.status_code}: {body}", file=sys.stderr)
+                return (name, "FAILED", f"HTTP {exc.response.status_code}")
 
             error = check_response_error(response)
             if error:
+                snippet = json.dumps(response, default=str)[:200]
+                print(f"      ERROR: {error}", file=sys.stderr)
+                print(f"      Response: {snippet}", file=sys.stderr)
                 return (name, "FAILED", error)
 
-            total_records += count_response_records(response)
+            call_records = count_response_records(response)
+            total_records += call_records
+            print(f"      {call_records} record(s), {round(wall_ms, 1)} ms")
 
             recording.append({
                 "tool": "mcp__airbyte-agent__execute",
@@ -110,6 +122,9 @@ async def record_scenario(
             current_args = {**base_args, "params": {**base_args.get("params", {}), "cursor": next_cursor}}
 
     if total_records == 0:
+        for call in recording:
+            snippet = json.dumps(call["response"], default=str)[:300]
+            print(f"      Response from {call['args']}: {snippet}", file=sys.stderr)
         return (name, "FAILED", "zero records across all calls")
 
     save_recording(name, recording, date, "agent-mcp")
