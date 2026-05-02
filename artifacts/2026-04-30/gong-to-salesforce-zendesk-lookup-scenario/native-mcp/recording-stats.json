@@ -1,11 +1,15 @@
 {
-  "schema_version": 2,
-  "run_date": "2026-04-30T23:13:22.864129+00:00",
+  "schema_version": 3,
+  "run_date": "2026-05-02T18:28:57.251549+00:00",
   "scenario": "gong-to-salesforce-zendesk-lookup",
   "connector": "multi_source",
   "path": "native-mcp",
   "action": "multi-step",
-  "entity": "unknown",
+  "entities": [
+    "calls",
+    "accounts",
+    "tickets"
+  ],
   "status": "ok",
   "tokens": 30208,
   "payload_bytes": 80337,

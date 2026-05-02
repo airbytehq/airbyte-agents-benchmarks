@@ -1,11 +1,13 @@
 {
-  "schema_version": 2,
-  "run_date": "2026-05-01T19:54:32.699940+00:00",
+  "schema_version": 3,
+  "run_date": "2026-05-02T18:28:57.255257+00:00",
   "scenario": "zendesk-search",
   "connector": "zendesk",
   "path": "agent-mcp",
   "action": "search",
-  "entity": "unknown",
+  "entities": [
+    "tickets"
+  ],
   "status": "ok",
   "tokens": 431,
   "payload_bytes": 1357,

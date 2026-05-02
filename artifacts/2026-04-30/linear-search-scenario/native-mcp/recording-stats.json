@@ -1,15 +1,17 @@
 {
-  "schema_version": 2,
-  "run_date": "2026-05-01T05:44:26.258637+00:00",
+  "schema_version": 3,
+  "run_date": "2026-05-02T18:28:57.252532+00:00",
   "scenario": "linear-search",
   "connector": "linear",
   "path": "native-mcp",
   "action": "search",
-  "entity": "unknown",
+  "entities": [
+    "issues"
+  ],
   "status": "ok",
-  "tokens": 1044,
-  "payload_bytes": 2971,
+  "tokens": 3725,
+  "payload_bytes": 11464,
   "latency_ms": null,
-  "records": 3,
+  "records": 8,
   "api_calls": 1
 }

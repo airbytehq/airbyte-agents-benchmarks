@@ -1,14 +1,16 @@
 {
-  "schema_version": 2,
-  "run_date": "2026-05-01T19:54:32.696831+00:00",
+  "schema_version": 3,
+  "run_date": "2026-05-02T18:28:57.250814+00:00",
   "scenario": "gong-get",
   "connector": "gong",
   "path": "agent-mcp",
   "action": "get",
-  "entity": "unknown",
+  "entities": [
+    "calls"
+  ],
   "status": "ok",
-  "tokens": 194,
-  "payload_bytes": 514,
+  "tokens": 195,
+  "payload_bytes": 515,
   "latency_ms": null,
   "records": 1,
   "api_calls": 1

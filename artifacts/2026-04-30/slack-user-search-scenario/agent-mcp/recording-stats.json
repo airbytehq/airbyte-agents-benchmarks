@@ -1,11 +1,13 @@
 {
-  "schema_version": 2,
-  "run_date": "2026-05-01T05:44:26.261404+00:00",
+  "schema_version": 3,
+  "run_date": "2026-05-02T18:28:57.254395+00:00",
   "scenario": "slack-user-search",
   "connector": "slack",
   "path": "agent-mcp",
   "action": "search",
-  "entity": "unknown",
+  "entities": [
+    "users"
+  ],
   "status": "ok",
   "tokens": 132,
   "payload_bytes": 375,

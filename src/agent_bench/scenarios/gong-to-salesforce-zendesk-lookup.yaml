@@ -2,6 +2,10 @@ name: gong-to-salesforce-zendesk-lookup
 title: "Cross-system: Gong calls on 2026-04-28 → Salesforce + Zendesk lookup"
 connector: multi_source
 connector_id_env: GONG_CONNECTOR_ID
+hidden: true
+hidden_reason: >
+  Record counts diverge between paths (agent-mcp: 22, native-mcp: 145).
+  Working on revising scenario to return finite sets comparably.
 description: |
   Multi-step cross-connector workflow: search Gong for calls scheduled
   on 2026-04-28, then look up associated account names in Salesforce and

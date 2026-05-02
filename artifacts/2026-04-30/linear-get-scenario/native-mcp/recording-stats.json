@@ -1,11 +1,13 @@
 {
-  "schema_version": 2,
-  "run_date": "2026-05-02T01:07:04.304508+00:00",
+  "schema_version": 3,
+  "run_date": "2026-05-02T18:28:57.251925+00:00",
   "scenario": "linear-get",
   "connector": "linear",
   "path": "native-mcp",
   "action": "get",
-  "entity": "unknown",
+  "entities": [
+    "issues"
+  ],
   "status": "ok",
   "tokens": 487,
   "payload_bytes": 1426,

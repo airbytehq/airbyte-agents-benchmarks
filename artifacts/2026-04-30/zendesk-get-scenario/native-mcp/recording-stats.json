@@ -1,14 +1,16 @@
 {
-  "schema_version": 2,
-  "run_date": "2026-04-30T23:13:22.867099+00:00",
+  "schema_version": 3,
+  "run_date": "2026-05-02T18:28:57.254967+00:00",
   "scenario": "zendesk-get",
   "connector": "zendesk",
   "path": "native-mcp",
   "action": "get",
-  "entity": "unknown",
+  "entities": [
+    "tickets"
+  ],
   "status": "ok",
-  "tokens": 511,
-  "payload_bytes": 1528,
+  "tokens": 4002,
+  "payload_bytes": 11771,
   "latency_ms": null,
   "records": 1,
   "api_calls": 1

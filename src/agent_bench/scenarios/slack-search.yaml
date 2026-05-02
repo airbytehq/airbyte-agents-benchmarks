@@ -3,6 +3,11 @@ title: "Slack — Search channels by keyword"
 connector: slack
 connector_id_env: SLACK_CONNECTOR_ID
 is_comparable: false
+hidden: true
+hidden_reason: |
+  No Context Store Data.
+  Timeline: https://cloud.airbyte.com/workspaces/df5fa524-ed3a-4f59-90ef-0906f3b945c0/connections/b8626fbd-20d7-4c50-ac28-1153295ea2b2/timeline
+  Workspace: https://app.airbyte.ai/organizations/145bfc59-1eed-4266-96bf-d527fb3e5765/connectors
 skip_recording: true  # Context store not populated; context_store_search returns 0 records.
 description: |
   Search Slack channels by keyword.
