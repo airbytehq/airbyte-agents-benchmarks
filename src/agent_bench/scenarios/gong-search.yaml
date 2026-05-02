@@ -1,18 +1,10 @@
 name: gong-search
-title: "Gong — Search calls by keyword"
+title: "Gong — List calls by date range"
 connector: gong
 connector_id_env: GONG_CONNECTOR_ID
-is_comparable: false
 description: |
-  Search Gong calls matching a keyword.
+  List Gong calls within a date range.
   Agent requests id, title, scheduled, and duration per result.
-
-annotations:
-  not_comparable: >
-    ℹ️ The Gong REST API (and the third-party kenazk/gong-mcp server) does not expose
-    a keyword/text search endpoint. Native MCP can only list calls by date range with
-    a fixed page size of 100. Agent-mcp uses context_store_search with fuzzy matching,
-    a capability that has no native equivalent.
 
 paths:
   agent-mcp:
@@ -26,9 +18,11 @@ paths:
           params:
             query:
               filter:
-                fuzzy:
-                  title: "airbyte"
-            limit: 10
+                gte:
+                  scheduled: "2026-04-01"
+                lte:
+                  scheduled: "2026-04-30"
+            limit: 100
           select_fields: [id, title, scheduled, duration]
 
   native-mcp:
@@ -36,4 +30,5 @@ paths:
       - server: gong
         tool: list_calls
         args:
-          fromDateTime: "2025-01-01T00:00:00Z"
+          fromDateTime: "2026-04-01T00:00:00Z"
+          toDateTime: "2026-04-30T23:59:59Z"

@@ -357,9 +357,12 @@ def record_gong(access_key: str, access_secret: str, date: str, dry_run: bool = 
         # gong-get is not recorded here — the upstream kenazk/gong-mcp server
         # has no get-by-ID tool, so gong-get is marked not-comparable.
 
-        # Search
+        # List calls by date range (matches agent-mcp date-range query)
         tool = "list_calls"
-        args = {"fromDateTime": "2025-01-01T00:00:00Z"}
+        args = {
+            "fromDateTime": "2026-04-01T00:00:00Z",
+            "toDateTime": "2026-04-30T23:59:59Z",
+        }
         response, wall_ms = mcp.call_tool(tool, args)
         path = save_recording("gong-search", [{
             "tool": f"mcp__gong__{tool}",

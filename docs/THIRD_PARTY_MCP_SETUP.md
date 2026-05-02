@@ -525,7 +525,8 @@ Notable limitations:
 
 - Gong's API has no keyword search. The `list_calls` tool lists calls by date range with a fixed page size of 100.
 - No field selection; full call objects are always returned.
-- Both `gong-get` and `gong-search` are marked "Not Comparable" since native-mcp lacks equivalent operations to agent-mcp's context store.
+- `gong-get` is marked "Not Comparable" since native-mcp has no get-by-ID tool.
+- `gong-search` uses date-range filtering on both paths (comparable).
 
 ---
 
