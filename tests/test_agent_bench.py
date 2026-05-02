@@ -3,13 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 
-import pytest
-
 from agent_bench.config import LiveConfig
-from agent_bench.export.scorecard import render_scorecard
-from agent_bench.metrics import BenchmarkResult, StepResult
+from agent_bench.metrics import BenchmarkResult
 from agent_bench.paths.agent_mcp import _DISPATCH, AgentMCPPath, _translate
-from agent_bench.runner import Cell, RunReport
 from agent_bench.scenarios.loader import Task, load_scenario
 
 
@@ -97,23 +93,6 @@ def test_agent_mcp_recording_parses_execution_metadata_latency(tmp_path) -> None
     assert result.single_record_tokens > 0
 
 
-def test_scorecard_renders_interim_ratios(tmp_path) -> None:
-    scenario = load_scenario("linear-search")
-    report = RunReport(
-        cells=[
-            _cell(scenario, "Agent MCP", "agent-mcp", 100),
-            _cell(scenario, "Native MCP", "native-mcp", 300),
-        ],
-        requested_scenarios=["linear-search"],
-        requested_paths=["agent-mcp", "native-mcp"],
-    )
-
-    out = tmp_path / "scorecard.md"
-    render_scorecard(report, out)
-    text = out.read_text()
-    assert "Interim scorecard" in text
-    assert "3.0× fewer tokens" in text
-
 
 def test_context_store_search_passthrough() -> None:
     """context_store_search action passes params directly through."""
@@ -170,19 +149,3 @@ def _config() -> LiveConfig:
     )
 
 
-def _cell(scenario, path_name: str, path_short: str, tokens: int) -> Cell:
-    result = BenchmarkResult(path_name=path_name)
-    result.steps.append(StepResult(
-        label="step",
-        latency_ms=1,
-        payload_bytes=tokens,
-        tokens=tokens,
-        records=1,
-    ))
-    result.total_records = 1
-    return Cell(
-        scenario=scenario,
-        path_name=path_name,
-        path_short=path_short,
-        result=result,
-    )

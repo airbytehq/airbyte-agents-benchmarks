@@ -13,8 +13,6 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from agent_bench.runner import Cell
-
 SCHEMA_VERSION = 2
 
 
@@ -48,40 +46,6 @@ def build_stats_dict(
         "records": records,
         "api_calls": api_calls,
     }
-
-
-def cell_to_stats(cell: Cell) -> dict:
-    """Serialize a single Cell to the normalized stats schema."""
-    r = cell.result
-    return build_stats_dict(
-        scenario=cell.scenario.name,
-        connector=cell.scenario.connector,
-        path=cell.path_short,
-        action=cell.scenario.inferred_action,
-        entity=cell.scenario.inferred_entity,
-        status=r.status,
-        tokens=r.total_tokens,
-        payload_bytes=r.total_payload_bytes,
-        latency_ms=r.total_latency_ms,
-        records=r.total_records,
-        api_calls=r.api_calls,
-    )
-
-
-def stats_path(base_dir: Path, cell: Cell) -> Path:
-    """Return the output path for a cell's stats file.
-
-    Layout: `{base_dir}/{scenario}-scenario/{path}/recording-stats.json`
-    """
-    return base_dir / f"{cell.scenario.name}-scenario" / cell.path_short / "recording-stats.json"
-
-
-def write_cell_stats(base_dir: Path, cell: Cell) -> Path:
-    """Write a single cell's stats JSON and return the file path."""
-    out = stats_path(base_dir, cell)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(cell_to_stats(cell), indent=2) + "\n")
-    return out
 
 
 def write_stats_for_dir(artifacts_dir: Path) -> int:
