@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path as FSPath
 
+import httpx
 import typer
 from dotenv import load_dotenv
 from rich.console import Console
@@ -138,7 +139,18 @@ def auth(
             await client.close()
         console.print(f"[green]Authenticated. Tokens saved to {token_path}.[/green]")
 
-    asyncio.run(_auth())
+    try:
+        asyncio.run(_auth())
+    except httpx.ConnectError as exc:
+        console.print(f"[red]Cannot reach MCP server at {server_url}: {exc}[/red]")
+        raise typer.Exit(1) from None
+    except httpx.HTTPStatusError as exc:
+        console.print(f"[red]MCP server returned HTTP {exc.response.status_code}: {exc}[/red]")
+        raise typer.Exit(1) from None
+    except TimeoutError as exc:
+        console.print(f"[red]{exc}[/red]")
+        console.print("Ensure your browser completed the OAuth flow and the redirect reached localhost.")
+        raise typer.Exit(1) from None
 
 
 @app.command()
@@ -204,6 +216,7 @@ def record(
         )
 
     if rc != 0:
+        console.print(f"[red]Recording failed (exit code {rc}). See errors above.[/red]")
         raise typer.Exit(rc)
 
     if dry_run:

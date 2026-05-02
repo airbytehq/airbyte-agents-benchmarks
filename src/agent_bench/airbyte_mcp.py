@@ -17,6 +17,7 @@ import os
 import socket
 import threading
 import time
+import warnings
 import webbrowser
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -54,9 +55,15 @@ class FileTokenStorage(TokenStorage):
     def _read(self) -> dict:
         if not self.path.is_file():
             return {}
+        text = self.path.read_text()
         try:
-            return json.loads(self.path.read_text())
+            return json.loads(text)
         except json.JSONDecodeError:
+            warnings.warn(
+                f"Token file {self.path} is corrupted (invalid JSON). "
+                "Starting with empty state. Re-run `agent-bench auth` to re-authenticate.",
+                stacklevel=2,
+            )
             return {}
 
     def _write(self, data: dict) -> None:
