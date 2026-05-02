@@ -16,16 +16,10 @@ annotations:
     seeded. See also `slack-get` which has the same limitation and uses
     `action: get` as a workaround.
   tool_mismatch: >
-    🛑No native search/filter tool exists in
-    [@modelcontextprotocol/server-slack](https://github.com/modelcontextprotocol/servers-archived/tree/main/src/slack)
-    ([v2025.4.25](https://www.npmjs.com/package/@modelcontextprotocol/server-slack)).
-    All 8 tools:
-    `slack_list_channels`, `slack_post_message`, `slack_reply_to_thread`, `slack_add_reaction`,
-    `slack_get_channel_history`, `slack_get_thread_replies`, `slack_get_users`, `slack_get_user_profile`.
-    None support keyword filtering on channel names.
-    Alternative path: paginate `slack_list_channels` (all pages) and filter client-side by keyword
-    (est. approximately 13,400 tokens to scan all approximately 60 channels at approximately 4,500 tokens/page of 20;
-    must exhaust every page to find all matches).
+    Slack's hosted MCP server (`https://mcp.slack.com/mcp`) exposes
+    [`slack_search_channels`](https://docs.slack.dev/ai/slack-mcp-server/),
+    which is a clean fit for keyword channel search. Results are
+    cursor-paginated and capped at 20 per call.
 
 paths:
   agent-mcp:
@@ -47,6 +41,7 @@ paths:
   native-mcp:
     tool_calls:
       - server: slack
-        tool: slack_list_channels
+        tool: slack_search_channels
         args:
+          query: "agent"
           limit: 20

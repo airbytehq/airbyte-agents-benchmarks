@@ -28,7 +28,7 @@ VAULT = "direct-connector-credentials"
 # Only native-MCP credentials that live in 1Password are listed here.
 _OP_FIELD_MAP: dict[str, tuple[str, str, str]] = {
     "LINEAR_API_KEY": ("linear", "api_key", "test-credentials-api-key"),
-    "SLACK_BOT_TOKEN": ("slack", "bot_key", "test-credentials-bot"),
+    "SLACK_USER_OAUTH_TOKEN": ("slack", "user_oauth_token", "test-credentials-mcp"),
     "GONG_ACCESS_KEY": ("gong", "access_key", "test-credentials-basic"),
     "GONG_ACCESS_KEY_SECRET": ("gong", "access_key_secret", "test-credentials-basic"),
     "SF_MCP_CONSUMER_KEY": ("salesforce", "consumer_key", "test-credentials-mcp"),

@@ -1,9 +1,8 @@
 """Path A: Native MCP servers.
 
-These MCP tools (`mcp__claude_ai_Slack__*`, `mcp__claude_ai_Linear__*`,
-`mcp__claude_ai_Granola__*`) are provided by each SaaS vendor and invoked via
-an MCP client (e.g. Claude Code or Cursor), not by Python code. So this path is built
-around a "record once, replay" model:
+These MCP tools are provided by each SaaS vendor and invoked via an MCP
+client (e.g. Claude Code or Cursor), not by Python code. So this path is
+built around a "record once, replay" model:
 
   1. Call `tool_specs(task, scenario)` to get the exact tool+args the
      benchmark would invoke for a task.
@@ -12,9 +11,11 @@ around a "record once, replay" model:
   3. `run_task` reads the recording and computes StepResult metrics.
 
 Tool surface notes:
-  - Slack: no get-channel-by-ID → single-record-fetch falls back to
-    slack_search_channels(query=<name_hint>). List falls back to three
-    20-result search calls (API max is 20/page).
+  - Slack (hosted MCP at `mcp.slack.com/mcp`): exposes search-style tools
+    only. Channel/user search use `slack_search_channels` /
+    `slack_search_users` (20 results/page max). No get-by-ID or true
+    list-all tools — channel "get" falls back to search-then-filter; the
+    list-all and user-list scenarios have no native equivalent.
   - Linear: clean direct mappings for all three tasks.
   - Granola: query_granola_meetings returns a synthesized answer (not
     records); list_meetings has no limit param; get_meeting_transcript
@@ -67,7 +68,17 @@ def _register(connector: str, action: str):
 def _slack_search(task: Task) -> TaskPlan:
     return TaskPlan(
         calls=[ToolCallSpec(
-            tool="mcp__claude_ai_Slack__slack_search_channels",
+            tool="mcp__slack__slack_search_channels",
+            args={"query": task.params["keyword"], "limit": 20},
+        )],
+    )
+
+
+@_register("slack", "user_search")
+def _slack_user_search(task: Task) -> TaskPlan:
+    return TaskPlan(
+        calls=[ToolCallSpec(
+            tool="mcp__slack__slack_search_users",
             args={"query": task.params["keyword"], "limit": 20},
         )],
     )
@@ -79,7 +90,7 @@ def _slack_get(task: Task) -> TaskPlan:
     hint = task.params.get("name_hint") or task.params["id"]
     return TaskPlan(
         calls=[ToolCallSpec(
-            tool="mcp__claude_ai_Slack__slack_search_channels",
+            tool="mcp__slack__slack_search_channels",
             args={"query": hint, "limit": 20},
             note="No native get-channel-by-ID; search-then-filter.",
         )],
@@ -94,7 +105,7 @@ def _slack_list(task: Task) -> TaskPlan:
     pages = max(1, (limit + 19) // 20)
     return TaskPlan(
         calls=[ToolCallSpec(
-            tool="mcp__claude_ai_Slack__slack_search_channels",
+            tool="mcp__slack__slack_search_channels",
             args={"query": " ", "limit": 20} | ({"cursor": f"<page{p + 1}-cursor>"} if p else {}),
             note=f"page {p + 1}/{pages}",
         ) for p in range(pages)],

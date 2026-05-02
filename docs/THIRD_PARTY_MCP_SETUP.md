@@ -12,12 +12,12 @@ Each connector in the benchmark has a corresponding MCP server maintained by the
 |---|---|---|---|
 | Linear | `https://mcp.linear.app/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) or API key |
 | Granola | `https://mcp.granola.ai/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
-| Slack | `@modelcontextprotocol/server-slack` | stdio (local, via `npx`) | Bot token + team ID |
+| Slack | `https://mcp.slack.com/mcp` | Streamable HTTP (remote) | OAuth 2.0 (user token) |
 | Zendesk | `ghcr.io/dunialabs/mcp-servers/zendesk` | stdio (local, via Docker) | OAuth access token |
 | Gong | `kenazk/gong-mcp` | stdio (local, via Node.js) | Basic (access key + secret) |
 | Salesforce | `api.salesforce.com/platform/mcp` | SSE (remote) | OAuth 2.0 (refresh token) |
 
-Linear and Granola run as remote hosted servers with browser-based OAuth. Slack and Gong run locally via `npx`/Node.js. Zendesk runs locally via Docker. Salesforce uses its hosted MCP endpoint.
+Linear, Granola, Slack, and Salesforce all run as remote hosted servers. Linear and Granola use browser-based OAuth; Slack and Salesforce use OAuth 2.0 with a custom app (a Slack app and a Salesforce Connected App, respectively). Zendesk runs locally via Docker with an OAuth access token.
 
 ---
 
@@ -134,84 +134,95 @@ Notable behavior:
 
 ## Slack MCP
 
-Slack has two MCP options. The benchmark uses the `@modelcontextprotocol/server-slack` package, which runs locally via `npx`.
+The benchmark uses Slack's official hosted MCP server at `https://mcp.slack.com/mcp` (Streamable HTTP, JSON-RPC 2.0, OAuth 2.0). Authenticating requires creating a Slack app in your workspace, enabling the Model Context Protocol toggle, adding User Token Scopes, and minting a User OAuth Token (`xoxp-...`).
 
-**Package:** https://www.npmjs.com/package/@modelcontextprotocol/server-slack
 **Slack official docs:** https://docs.slack.dev/ai/slack-mcp-server
 
 ### Prerequisites
 
-- Node.js 18 or later with `npx`
 - A Slack workspace where you can create or manage apps
-- A Slack Bot Token (`xoxb-...`) with the required scopes
-- Your Slack Team ID (starts with `T`)
+- Permission to install/reinstall the app in that workspace
 
 ### Step 1: Create a Slack App
 
 1. Go to https://api.slack.com/apps
 2. Click "Create New App" > "From scratch"
-3. Name your app and select your workspace
+3. Name your app (e.g., "agent-bench-mcp") and select your workspace
 
-### Step 2: Configure Bot Token Scopes
+### Step 2: Enable Model Context Protocol
 
-Navigate to "OAuth & Permissions" and add these bot scopes:
+1. In the app settings sidebar, open the **App Assistant** page
+2. Scroll to the **Model Context Protocol** section and toggle it **on**
+3. Save if prompted
 
-- `channels:history` — view messages in public channels
-- `channels:read` — view basic channel information
-- `chat:write` — send messages as the app
-- `reactions:write` — add emoji reactions
-- `users:read` — view users and basic info
-- `users.profile:read` — view detailed user profiles
+> **Watch out:** the same page also has a separate **Agent or Assistant** toggle near the top. That is *not* the MCP toggle — flipping it has no effect on `mcp.slack.com/mcp` and you'll still get `App is not enabled for Slack MCP server access` errors. The MCP toggle is further down the page, in its own **Model Context Protocol** card.
 
-### Step 3: Install and Get Tokens
+### Step 3: Add User Token Scopes
 
-1. Click "Install to Workspace" and authorize
-2. Copy the Bot User OAuth Token (starts with `xoxb-`)
-3. Get your Team ID by following [Slack's guide](https://slack.com/help/articles/221769328-Locate-your-Slack-URL-or-ID#find-your-workspace-or-org-id)
+The hosted MCP requires *user* token scopes (not bot scopes — bot tokens are not accepted). Navigate to **OAuth & Permissions** > **User Token Scopes** and add:
 
-### Claude Desktop / Claude Code Config
+- `search:read.public` — search public channel content
+- `search:read.private` — search private channel content
+- `search:read.users` — search users by name/email/profile attributes
+- `users:read` — read workspace member directory
+- `users:read.email` — read member email addresses
 
-```json
-{
-  "mcpServers": {
-    "slack": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-slack"],
-      "env": {
-        "SLACK_BOT_TOKEN": "xoxb-your-bot-token",
-        "SLACK_TEAM_ID": "T01234567"
-      }
-    }
-  }
-}
+(Slack's umbrella `search:read` scope also covers the three `search:read.*` entries; either choice works.)
+
+### Step 4: Install and Get the User OAuth Token
+
+1. Sidebar > **Install App** > click **Install to Workspace** (or **Reinstall to Workspace** if you've changed scopes)
+2. Approve the consent screen
+3. Copy the **User OAuth Token** at the top of the page — it starts with `xoxp-...`
+
+> **Watch out:** any time you change scopes or toggle MCP on/off, you must **reinstall** the app for the existing tokens to pick up the new capability. A token minted before MCP was enabled will continue to return `App is not enabled for Slack MCP server access` until you reinstall.
+
+### Step 4b: Verify the Token Works
+
+Quick smoke test before wiring it into the recorder:
+
+```bash
+curl -sS -X POST https://mcp.slack.com/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H "Authorization: Bearer $SLACK_USER_OAUTH_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0.1"}}}'
 ```
 
-Optionally add `SLACK_CHANNEL_IDS` (comma-separated) to restrict which channels the server can access.
+A successful response includes `"serverInfo":{"name":"Slack MCP",...}` and a `mcp-session-id` header. Common failures:
+
+| Error | Cause |
+|---|---|
+| `missing_token` | `Authorization` header not sent or empty |
+| `App is not enabled for Slack MCP server access` | MCP toggle off, or app not reinstalled after enabling |
+| `invalid_auth` | Token revoked, app uninstalled, or token from a different workspace |
+
+### Step 5: Configure the Recorder
+
+Add the token to your `.env` profile:
+
+```
+SLACK_USER_OAUTH_TOKEN=xoxp-...
+```
+
+The recorder reads only from `.env` (see `.env.template` for the full list of credential fields). If you keep credentials in 1Password, store this one under the `slack` item, section `test-credentials-mcp`, field `user_oauth_token`, and run `agent-bench populate-env` to sync it down to `.env`.
 
 ### Available Tools
 
-The Slack MCP server exposes server-native tool names that differ from the Claude Code tool names used by the benchmark harness. For `--tool`, use the benchmark-facing Claude Code names.
+The benchmark exercises two of the hosted MCP's tools:
 
-| MCP Server Tool | Claude Code / Benchmark Tool | Description |
+| MCP Server Tool | Benchmark Tool | Description |
 |---|---|---|
-| `slack_list_channels` | `mcp__claude_ai_Slack__slack_list_channels` | List channels (paginated); the benchmark uses this for search, get, and list tasks |
-| `slack_post_message` | `mcp__claude_ai_Slack__slack_post_message` | Post a message to a channel |
-| `slack_reply_to_thread` | `mcp__claude_ai_Slack__slack_reply_to_thread` | Reply to a message thread |
-| `slack_add_reaction` | `mcp__claude_ai_Slack__slack_add_reaction` | Add an emoji reaction |
-| `slack_get_channel_history` | `mcp__claude_ai_Slack__slack_get_channel_history` | Get recent messages from a channel |
-| `slack_get_thread_replies` | `mcp__claude_ai_Slack__slack_get_thread_replies` | Get all replies in a thread |
-| `slack_get_users` | `mcp__claude_ai_Slack__slack_get_users` | List workspace users (max 200 per page) |
-| `slack_get_user_profile` | `mcp__claude_ai_Slack__slack_get_user_profile` | Get detailed profile for a user |
+| `slack_search_channels` | `mcp__slack__slack_search_channels` | Search channels by name/description (cursor-paginated, max 20/call). Used by `slack-search` and the search-then-filter fallback for `slack-get` and `slack-list-all`. |
+| `slack_search_users` | `mcp__slack__slack_search_users` | Search users by name, email, or profile attributes (cursor-paginated, max 20/call). Used by `slack-user-search`. |
 
-The benchmark uses channel-oriented read tools. Notable limitations:
+Notable limitations of the hosted MCP relative to the older `@modelcontextprotocol/server-slack` stdio package:
 
-- There is no dedicated get-channel-by-ID tool. The benchmark falls back to `mcp__claude_ai_Slack__slack_list_channels` for all channel operations (search, get, and list).
-- The list API caps at 20 results per page. The benchmark's list-all task issues multiple paginated calls to approximate a bulk list.
-- The Slack MCP server is subject to Slack API rate limits (Tier 2: 20+ per minute for search, Tier 3: 50+ per minute for history).
+- **No `list_channels` or `list_users` tools.** Every channel/user lookup goes through search. The `slack-list-all` and `slack-user-list` scenarios therefore have no clean native counterpart and are not currently recorded for native-mcp.
+- **No get-channel-by-ID tool.** The `slack-get` scenario also has no clean native counterpart on the hosted MCP.
+- Search results are capped at 20 per call across both `slack_search_channels` and `slack_search_users`.
 
-### Alternative: Slack's Official Remote MCP
-
-Slack also provides a hosted remote MCP server at `https://mcp.slack.com/mcp` (Streamable HTTP, OAuth 2.0). This requires a published or internal Slack app and uses user tokens with granular scopes. See https://docs.slack.dev/ai/slack-mcp-server for details. The benchmark does not currently use this server but it is an option for future evaluation.
+The hosted MCP also exposes message-search, channel-read, thread-read, canvas, and chat-write tools (gated by `channels:history`, `chat:write`, `canvases:*`, etc.) — the benchmark does not use them today.
 
 ---
 

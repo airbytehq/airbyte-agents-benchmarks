@@ -159,22 +159,26 @@ def record_linear(api_key: str, date: str, dry_run: bool = False) -> list[tuple[
 
 
 # ---------------------------------------------------------------------------
-# Slack MCP (stdio via npx)
+# Slack Hosted MCP (Streamable HTTP)
 # ---------------------------------------------------------------------------
 
 
-class SlackMCP:
-    """Stdio-based MCP client for the Slack MCP server (`npx`)."""
+class SlackHostedMCP:
+    """Streamable HTTP client for Slack's hosted MCP server (`mcp.slack.com`).
 
-    def __init__(self, bot_token: str, team_id: str) -> None:
-        env = os.environ.copy()
-        env["SLACK_BOT_TOKEN"] = bot_token
-        env["SLACK_TEAM_ID"] = team_id
-        self.proc = subprocess.Popen(  # noqa: S603, S607
-            ["npx", "-y", "@modelcontextprotocol/server-slack"],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, env=env,
-        )
+    Uses a long-lived user OAuth token (`xoxp-...`) as a bearer credential.
+    See docs/THIRD_PARTY_MCP_SETUP.md#slack-mcp for how to mint one.
+    """
+
+    URL = "https://mcp.slack.com/mcp"
+
+    def __init__(self, user_token: str) -> None:
+        self.headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Authorization": f"Bearer {user_token}",
+        }
+        self.session_id: str | None = None
         self._initialize()
 
     def _initialize(self) -> None:
@@ -186,27 +190,35 @@ class SlackMCP:
                 "clientInfo": {"name": "agent-bench-recorder", "version": "0.1"},
             },
         }
-        self.proc.stdin.write(json.dumps(init_req) + "\n")
-        self.proc.stdin.flush()
-        self.proc.stdout.readline()  # consume init response
+        r = requests.post(self.URL, json=init_req, headers=self.headers, timeout=30)
+        r.raise_for_status()
+        session_id = r.headers.get("mcp-session-id")
+        if not session_id or not session_id.strip():
+            raise RuntimeError(
+                "Slack MCP initialize response did not include a non-empty "
+                "'mcp-session-id' header"
+            )
+        self.session_id = session_id.strip()
+        self.headers["mcp-session-id"] = self.session_id
         notif = {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
-        self.proc.stdin.write(json.dumps(notif) + "\n")
-        self.proc.stdin.flush()
+        notif_resp = requests.post(self.URL, json=notif, headers=self.headers, timeout=30)
+        notif_resp.raise_for_status()
 
-    def call_tool(self, tool_name: str, arguments: dict) -> tuple[dict | list | str, float]:
+    def call_tool(self, tool_name: str, arguments: dict) -> tuple[dict, float]:
         req = {
             "jsonrpc": "2.0", "id": 2,
             "method": "tools/call",
             "params": {"name": tool_name, "arguments": arguments},
         }
         start = time.time()
-        self.proc.stdin.write(json.dumps(req) + "\n")
-        self.proc.stdin.flush()
-        resp_line = self.proc.stdout.readline()
+        r = requests.post(self.URL, json=req, headers=self.headers, timeout=60)
         wall_ms = (time.time() - start) * 1000
-
-        data = json.loads(resp_line)
+        r.raise_for_status()
+        data = r.json()
         result = data.get("result", {})
+        structured = result.get("structuredContent")
+        if structured:
+            return structured, wall_ms
         content = result.get("content", [])
         if content:
             text = content[0].get("text", "")
@@ -214,101 +226,73 @@ class SlackMCP:
                 return json.loads(text), wall_ms
             except json.JSONDecodeError:
                 return {"text": text}, wall_ms
-        return {"error": "no content"}, wall_ms
+        error = data.get("error")
+        if error:
+            return {"error": error}, wall_ms
+        return {"error": "no response"}, wall_ms
 
-    def close(self) -> None:
-        self.proc.terminate()
-        self.proc.wait(timeout=5)
 
+def record_slack(user_token: str, date: str, dry_run: bool = False) -> list[tuple[str, Path]]:
+    """Record Slack native-mcp via the hosted MCP server (`mcp.slack.com`).
 
-def record_slack(bot_token: str, team_id: str, date: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Slack native-mcp for search, get, list-all, and user-list scenarios."""
+    Records the two scenarios with a clean tool mapping on the hosted MCP:
+    - `slack-search` -> `slack_search_channels`
+    - `slack-user-search` -> `slack_search_users`
+
+    The hosted MCP exposes only search-style tools (no `list_channels` /
+    `list_users` equivalents), so `slack-get`, `slack-list-all`, and
+    `slack-user-list` have no native counterpart and are not recorded here.
+    """
     results: list[tuple[str, Path]] = []
     if dry_run:
-        print("  [dry-run] Would record slack-search, slack-get, slack-list-all, slack-user-list")
+        print("  [dry-run] Would record slack-search, slack-user-search")
         return results
 
-    mcp = SlackMCP(bot_token, team_id)
+    mcp = SlackHostedMCP(user_token)
 
-    try:
-        # Search
-        tool = "slack_list_channels"
-        args = {"limit": 20}
-        response, wall_ms = mcp.call_tool(tool, args)
-        path = save_recording("slack-search", [{
-            "tool": "mcp__claude_ai_Slack__slack_list_channels",
-            "args": args,
-            "wall_clock_ms": round(wall_ms, 1),
-            "response": response,
-        }], date, "native-mcp")
-        results.append(("slack-search", path))
-        channels = response.get("channels", []) if isinstance(response, dict) else []
-        print(f"    slack-search: {len(channels)} channels")
+    # slack-search -> channel search by keyword
+    tool = "slack_search_channels"
+    args = {"query": "agent", "limit": 20}
+    response, wall_ms = mcp.call_tool(tool, args)
+    path = save_recording("slack-search", [{
+        "tool": f"mcp__slack__{tool}",
+        "args": args,
+        "wall_clock_ms": round(wall_ms, 1),
+        "response": response,
+    }], date, "native-mcp")
+    results.append(("slack-search", path))
+    print(f"    slack-search: {_summarize_slack_results(response)}")
 
-        # Get (search-then-filter since no get-by-ID)
-        tool = "slack_list_channels"
-        args = {"limit": 20}
-        response, wall_ms = mcp.call_tool(tool, args)
-        path = save_recording("slack-get", [{
-            "tool": "mcp__claude_ai_Slack__slack_list_channels",
-            "args": args,
-            "wall_clock_ms": round(wall_ms, 1),
-            "response": response,
-        }], date, "native-mcp")
-        results.append(("slack-get", path))
-        print(f"    slack-get: {json.dumps(response)[:80]}...")
-
-        # List-all — paginate all channels (100 per page until exhausted)
-        calls: list[dict] = []
-        page_args: dict = {"limit": 100}
-        while True:
-            response, wall_ms = mcp.call_tool("slack_list_channels", page_args)
-            calls.append({
-                "tool": "mcp__claude_ai_Slack__slack_list_channels",
-                "args": page_args,
-                "wall_clock_ms": round(wall_ms, 1),
-                "response": response,
-            })
-            metadata = response.get("response_metadata", {}) if isinstance(response, dict) else {}
-            next_cursor = metadata.get("next_cursor", "")
-            if not next_cursor:
-                break
-            page_args = {"limit": 100, "cursor": next_cursor}
-        path = save_recording("slack-list-all", calls, date, "native-mcp")
-        results.append(("slack-list-all", path))
-        total_channels = sum(
-            len(c["response"].get("channels", []))
-            for c in calls if isinstance(c.get("response"), dict)
-        )
-        print(f"    slack-list-all: {total_channels} channels across {len(calls)} calls")
-
-        # User list — paginate all users (200 per page until exhausted)
-        user_calls = []
-        page_args = {"limit": 200}
-        while True:
-            response, wall_ms = mcp.call_tool("slack_get_users", page_args)
-            user_calls.append({
-                "tool": "mcp__claude_ai_Slack__slack_get_users",
-                "args": page_args,
-                "wall_clock_ms": round(wall_ms, 1),
-                "response": response,
-            })
-            metadata = response.get("response_metadata", {}) if isinstance(response, dict) else {}
-            next_cursor = metadata.get("next_cursor", "")
-            if not next_cursor:
-                break
-            page_args = {"limit": 200, "cursor": next_cursor}
-        path = save_recording("slack-user-list", user_calls, date, "native-mcp")
-        results.append(("slack-user-list", path))
-        total_members = sum(
-            len(c["response"].get("members", []))
-            for c in user_calls if isinstance(c.get("response"), dict)
-        )
-        print(f"    slack-user-list: {total_members} members across {len(user_calls)} calls")
-    finally:
-        mcp.close()
+    # slack-user-search -> user search by display-name keyword
+    tool = "slack_search_users"
+    args = {"query": "airbyte", "limit": 20}
+    response, wall_ms = mcp.call_tool(tool, args)
+    path = save_recording("slack-user-search", [{
+        "tool": f"mcp__slack__{tool}",
+        "args": args,
+        "wall_clock_ms": round(wall_ms, 1),
+        "response": response,
+    }], date, "native-mcp")
+    results.append(("slack-user-search", path))
+    print(f"    slack-user-search: {_summarize_slack_results(response)}")
 
     return results
+
+
+def _summarize_slack_results(response: dict) -> str:
+    """Pull a short human summary out of the hosted Slack MCP response shape.
+
+    The hosted MCP returns `{pagination_info, results}` with `results` as a
+    pre-rendered markdown string ("## Channels (19 results)"); not a list.
+    """
+    if not isinstance(response, dict):
+        return str(response)[:80]
+    text = response.get("results")
+    if not isinstance(text, str):
+        return json.dumps(response)[:80]
+    import re
+    m = re.search(r"\((\d+) results?\)", text)
+    return f"{m.group(1)} results (markdown)" if m else f"{len(text)} chars (markdown)"
 
 
 # ---------------------------------------------------------------------------
@@ -713,9 +697,8 @@ def record_native_mcp(
                 all_results.extend(record_linear(api_key, date, dry_run))
 
             elif connector == "slack":
-                bot_token = load_env_secret("SLACK_BOT_TOKEN")
-                team_id = load_env_secret("SLACK_TEAM_ID")
-                all_results.extend(record_slack(bot_token, team_id, date, dry_run))
+                user_token = load_env_secret("SLACK_USER_OAUTH_TOKEN")
+                all_results.extend(record_slack(user_token, date, dry_run))
 
             elif connector == "gong":
                 access_key = load_env_secret("GONG_ACCESS_KEY")
