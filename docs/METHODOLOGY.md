@@ -57,12 +57,6 @@ Timing is path-specific:
 
 `agent-mcp` and `native-mcp` are record-replay paths. Their recordings live in `artifacts/{date}/{scenario}-scenario/{path}/recording.json`.
 
-The validation command checks that required replay files exist and that Agent MCP recordings are not stale:
-
-```bash
-uv run agent-bench validate --scenarios linear,slack --paths native-mcp,agent-mcp
-```
-
 Agent MCP recordings must include:
 
 - `mcp__airbyte-agent__execute`
