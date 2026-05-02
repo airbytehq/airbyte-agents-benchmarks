@@ -348,25 +348,14 @@ def record_gong(access_key: str, access_secret: str, date: str, dry_run: bool = 
     """Record Gong native-mcp via the `kenazk/gong-mcp` MCP server."""
     results: list[tuple[str, Path]] = []
     if dry_run:
-        print("  [dry-run] Would record gong-get, gong-search")
+        print("  [dry-run] Would record gong-search")
         return results
 
     mcp = GongMCP(access_key, access_secret)
 
     try:
-        # Get single call metadata by ID
-        call_id = "1005803797056190704"
-        tool = "get_call"
-        args = {"id": call_id}
-        response, wall_ms = mcp.call_tool(tool, args)
-        path = save_recording("gong-get", [{
-            "tool": f"mcp__gong__{tool}",
-            "args": args,
-            "wall_clock_ms": round(wall_ms, 1),
-            "response": response,
-        }], date, "native-mcp")
-        results.append(("gong-get", path))
-        print(f"    gong-get: {json.dumps(response)[:80]}...")
+        # gong-get is not recorded here — the upstream kenazk/gong-mcp server
+        # has no get-by-ID tool, so gong-get is marked not-comparable.
 
         # Search
         tool = "list_calls"

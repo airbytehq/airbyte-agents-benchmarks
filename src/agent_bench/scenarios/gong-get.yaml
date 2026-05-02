@@ -2,6 +2,7 @@ name: gong-get
 title: "Gong — Get single call by ID"
 connector: gong
 connector_id_env: GONG_CONNECTOR_ID
+is_comparable: false
 description: |
   Look up a single Gong call by ID.
   Agent requests id, title, scheduled, and duration.
@@ -9,6 +10,13 @@ description: |
 annotations:
   highlight: >
     💎Only requested fields consume token context: `id`, `title`, `scheduled`, and `duration`.
+  tool_mismatch: >
+    🛑No native get-by-ID tool exists in
+    [kenazk/gong-mcp](https://github.com/kenazk/gong-mcp).
+    The server exposes only two tools: `list_calls` (date-range listing)
+    and `retrieve_transcripts` (transcript text by call ID).
+    Neither returns single-call metadata (id, title, scheduled, duration).
+    The Gong REST API has `GET /v2/calls/{id}` but the MCP server does not wrap it.
 
 paths:
   agent-mcp:
@@ -27,9 +35,4 @@ paths:
             limit: 1
           select_fields: [id, title, scheduled, duration]
 
-  native-mcp:
-    tool_calls:
-      - server: gong
-        tool: get_call
-        args:
-          id: "1005803797056190704"
+  # native-mcp intentionally omitted — no get-by-ID tool exists in kenazk/gong-mcp
