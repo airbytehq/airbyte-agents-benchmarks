@@ -71,7 +71,7 @@ for s in secrets:
     print(config)
 ```
 
-**Current GSM coverage:** Slack credentials are available. Linear and Granola are not currently in GSM.
+**Current GSM coverage:** Slack credentials are available. Linear is not currently in GSM.
 
 ## Salesforce Native MCP — Token Refresh
 

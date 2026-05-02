@@ -39,10 +39,6 @@ _DISPATCH: dict[str, dict[str, Any]] = {
         "search_field": {"issues": "title", "projects": "name", "users": "name"},
         "get_key": {"issues": "id", "projects": "id", "users": "id"},
     },
-    "granola": {
-        "search_field": {"notes": "summary_text"},
-        "get_key": {"notes": "note_id"},
-    },
     "gong": {
         "search_field": {"calls": "title"},
         "get_key": {"calls": "id"},
@@ -90,7 +86,6 @@ def _entity_select_fields(connector: str, entity: str) -> list[str]:
     mapping: dict[tuple[str, str], list[str]] = {
         ("slack", "channels"): ["id", "name", "num_members", "is_archived", "is_private", "created", "updated", "topic", "purpose"],
         ("linear", "issues"): ["id", "identifier", "title", "state", "priority", "createdAt", "updatedAt", "team", "labels"],
-        ("granola", "notes"): ["id", "title", "created_at", "updated_at", "attendees", "summary_text", "transcript"],
         ("gong", "calls"): ["id", "title", "scheduled", "duration"],
         ("salesforce", "accounts"): ["Id", "Name", "Type", "Industry"],
         ("zendesk", "tickets"): ["id", "subject", "status", "priority"],

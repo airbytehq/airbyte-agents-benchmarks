@@ -23,7 +23,7 @@ def render_scorecard(report: RunReport, path: Path) -> None:
 
     lines: list[str] = []
     connectors = sorted({c.scenario.connector for c in report.cells})
-    final_connectors = {"slack", "linear", "granola"}
+    final_connectors = {"slack", "linear", "gong", "salesforce", "zendesk"}
     missing_final = sorted(final_connectors - set(connectors))
     included_cells = len(report.cells)
     expected_final_cells = 27
@@ -64,7 +64,7 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     lines.append("")
     lines.append("Notes:")
     lines.append("- Latency is not reported. The benchmark does not pass data through an LLM, so API round-trip time (1\u20132 s) is negligible compared to LLM inference time, which is the dominant cost driver. Latency becomes meaningful only when a task-completion layer measures end-to-end time through an LLM.")
-    lines.append("- Native MCP connectors return varying shapes: Slack returns markdown-like text, Linear returns structured JSON, Granola returns an aggregated string for list_meetings and a natural-language synthesis for query_granola_meetings.")
+    lines.append("- Native MCP connectors return varying shapes: Slack returns markdown-like text, Linear returns structured JSON.")
     lines.append("")
 
     for connector in sorted({c.scenario.connector for c in report.cells}):

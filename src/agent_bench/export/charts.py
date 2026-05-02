@@ -110,22 +110,6 @@ def _chart_single_record_gap(report, out_dir, plt) -> None:
     ax.set_xticklabels([c.title() for c in connectors])
     ax.set_title("Single-record fetch cost (tokens)")
     ax.set_ylabel("Tokens")
-    if "granola" in connectors:
-        idx = connectors.index("granola")
-        native_match = [
-            c for c in get_cells
-            if c.scenario.connector == "granola" and c.path_short == "native-mcp"
-        ]
-        if native_match:
-            native_idx = PATH_ORDER.index("native-mcp")
-            ax.annotate(
-                "Granola transcript\nvs Agent summary_text",
-                xy=(idx + native_idx * bar_width, native_match[0].result.total_tokens),
-                xytext=(idx + 0.35, native_match[0].result.total_tokens * 1.08),
-                arrowprops={"arrowstyle": "->", "color": "#374151"},
-                fontsize=8,
-                color="#374151",
-            )
     ax.legend()
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
