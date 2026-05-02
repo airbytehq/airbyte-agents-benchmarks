@@ -13,13 +13,11 @@ built around a "record once, replay" model:
 Tool surface notes:
   - Slack (hosted MCP at `mcp.slack.com/mcp`): exposes search-style tools
     only. Channel/user search use `slack_search_channels` /
-    `slack_search_users` (20 results/page max). No get-by-ID or true
-    list-all tools — channel "get" falls back to search-then-filter; the
-    list-all and user-list scenarios have no native equivalent.
-  - Linear: clean direct mappings for all three tasks.
+    `slack_search_users` (20 results/page max). No get-by-ID; channel
+    "get" falls back to search-then-filter.
+  - Linear: clean direct mappings for search and get.
   - Granola: query_granola_meetings returns a synthesized answer (not
-    records); list_meetings has no limit param; get_meeting_transcript
-    expects a UUID.
+    records); get_meeting_transcript expects a UUID.
 """
 
 from __future__ import annotations
@@ -98,21 +96,6 @@ def _slack_get(task: Task) -> TaskPlan:
     )
 
 
-@_register("slack", "list")
-def _slack_list(task: Task) -> TaskPlan:
-    # Search API caps at 20/page — paginate to approximate bulk list.
-    limit = int(task.params.get("limit", 50))
-    pages = max(1, (limit + 19) // 20)
-    return TaskPlan(
-        calls=[ToolCallSpec(
-            tool="mcp__slack__slack_search_channels",
-            args={"query": " ", "limit": 20} | ({"cursor": f"<page{p + 1}-cursor>"} if p else {}),
-            note=f"page {p + 1}/{pages}",
-        ) for p in range(pages)],
-        notes=[f"Native MCP caps channel search at 20/page; {pages} calls needed to approach {limit}."],
-    )
-
-
 # ---------- Linear ----------
 
 @_register("linear", "search")
@@ -133,16 +116,6 @@ def _linear_get(task: Task) -> TaskPlan:
         calls=[ToolCallSpec(
             tool="mcp__claude_ai_Linear__get_issue",
             args={"id": ident},
-        )],
-    )
-
-
-@_register("linear", "list")
-def _linear_list(task: Task) -> TaskPlan:
-    return TaskPlan(
-        calls=[ToolCallSpec(
-            tool="mcp__claude_ai_Linear__list_issues",
-            args={"limit": int(task.params.get("limit", 50))},
         )],
     )
 
@@ -173,18 +146,6 @@ def _granola_get(task: Task) -> TaskPlan:
             args={"meeting_id": mid},
             note="Takes UUID; Airbyte Agents note IDs need translation.",
         )],
-    )
-
-
-@_register("granola", "list")
-def _granola_list(task: Task) -> TaskPlan:
-    return TaskPlan(
-        calls=[ToolCallSpec(
-            tool="mcp__claude_ai_Granola__list_meetings",
-            args={"time_range": "last_30_days"},
-            note="No limit param; returns all meetings in the range.",
-        )],
-        notes=["Native MCP's list_meetings has no limit; record count = whatever the time range yields."],
     )
 
 

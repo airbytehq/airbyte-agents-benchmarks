@@ -87,10 +87,10 @@ class LinearMCP:
 
 
 def record_linear(api_key: str, date: str, dry_run: bool = False) -> list[tuple[str, Path]]:
-    """Record Linear native-mcp for search, get, project-list, user-list scenarios."""
+    """Record Linear native-mcp for search and get scenarios."""
     results: list[tuple[str, Path]] = []
     if dry_run:
-        print("  [dry-run] Would record linear-search, linear-get, linear-project-list, linear-user-list")
+        print("  [dry-run] Would record linear-search, linear-get")
         return results
 
     mcp = LinearMCP(api_key)
@@ -120,40 +120,6 @@ def record_linear(api_key: str, date: str, dry_run: bool = False) -> list[tuple[
     }], date, "native-mcp")
     results.append(("linear-get", path))
     print(f"    linear-get: {json.dumps(response)[:80]}...")
-
-    # Project list (list all projects)
-    tool = "list_projects"
-    args = {}
-    response, wall_ms = mcp.call_tool(tool, args)
-    path = save_recording("linear-project-list", [{
-        "tool": f"mcp__claude_ai_Linear__{tool}",
-        "args": args,
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": response,
-    }], date, "native-mcp")
-    results.append(("linear-project-list", path))
-    projects = response.get("projects", response.get("nodes", []))
-    if isinstance(projects, list):
-        print(f"    linear-project-list: {len(projects)} projects")
-    else:
-        print(f"    linear-project-list: {json.dumps(response)[:80]}...")
-
-    # User list (list all users)
-    tool = "list_users"
-    args = {}
-    response, wall_ms = mcp.call_tool(tool, args)
-    path = save_recording("linear-user-list", [{
-        "tool": f"mcp__claude_ai_Linear__{tool}",
-        "args": args,
-        "wall_clock_ms": round(wall_ms, 1),
-        "response": response,
-    }], date, "native-mcp")
-    results.append(("linear-user-list", path))
-    users = response.get("users", response.get("nodes", []))
-    if isinstance(users, list):
-        print(f"    linear-user-list: {len(users)} users")
-    else:
-        print(f"    linear-user-list: {json.dumps(response)[:80]}...")
 
     return results
 
@@ -239,9 +205,8 @@ def record_slack(user_token: str, date: str, dry_run: bool = False) -> list[tupl
     - `slack-search` -> `slack_search_channels`
     - `slack-user-search` -> `slack_search_users`
 
-    The hosted MCP exposes only search-style tools (no `list_channels` /
-    `list_users` equivalents), so `slack-get`, `slack-list-all`, and
-    `slack-user-list` have no native counterpart and are not recorded here.
+    `slack-get` has no native counterpart on the hosted MCP (no
+    get-channel-by-ID tool) and is not recorded here.
     """
     results: list[tuple[str, Path]] = []
     if dry_run:

@@ -219,7 +219,7 @@ def load_stats_from_recordings(artifacts_dir: Path) -> list[CellStats]:
             connector = spec.get("connector", scenario.rsplit("-", 1)[0] if "-" in scenario else scenario)
             # Derive action from name suffix (same logic as loader.inferred_action)
             action = "unknown"
-            for suffix in ("get", "list-all", "list", "search"):
+            for suffix in ("get", "search"):
                 if scenario.endswith(f"-{suffix}"):
                     action = suffix
                     break

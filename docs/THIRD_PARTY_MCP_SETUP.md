@@ -213,13 +213,12 @@ The benchmark exercises two of the hosted MCP's tools:
 
 | MCP Server Tool | Benchmark Tool | Description |
 |---|---|---|
-| `slack_search_channels` | `mcp__slack__slack_search_channels` | Search channels by name/description (cursor-paginated, max 20/call). Used by `slack-search` and the search-then-filter fallback for `slack-get` and `slack-list-all`. |
+| `slack_search_channels` | `mcp__slack__slack_search_channels` | Search channels by name/description (cursor-paginated, max 20/call). Used by `slack-search` and the search-then-filter fallback for `slack-get`. |
 | `slack_search_users` | `mcp__slack__slack_search_users` | Search users by name, email, or profile attributes (cursor-paginated, max 20/call). Used by `slack-user-search`. |
 
-Notable limitations of the hosted MCP relative to the older `@modelcontextprotocol/server-slack` stdio package:
+Notable limitations of the hosted MCP:
 
-- **No `list_channels` or `list_users` tools.** Every channel/user lookup goes through search. The `slack-list-all` and `slack-user-list` scenarios therefore have no clean native counterpart and are not currently recorded for native-mcp.
-- **No get-channel-by-ID tool.** The `slack-get` scenario also has no clean native counterpart on the hosted MCP.
+- **No get-channel-by-ID tool.** The `slack-get` scenario has no clean native counterpart and falls back to a search-then-filter approximation in the planner.
 - Search results are capped at 20 per call across both `slack_search_channels` and `slack_search_users`.
 
 The hosted MCP also exposes message-search, channel-read, thread-read, canvas, and chat-write tools (gated by `channels:history`, `chat:write`, `canvases:*`, etc.) — the benchmark does not use them today.
