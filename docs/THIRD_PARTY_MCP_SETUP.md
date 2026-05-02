@@ -485,4 +485,4 @@ Notable limitations:
 | Auth | Per-service (OAuth, bot tokens, or API keys) | Single Airbyte Cloud OAuth credential set |
 | Field selection | Not available; full responses returned | `select_fields` narrows returned fields |
 | Response shape | Varies by provider (JSON, text, markdown) | Uniform typed JSON envelope |
-| Hosting | Remote (Linear, Salesforce) or local (Slack, Zendesk, Gong) | Airbyte-hosted proxy at `mcp.airbyte.ai` |
+| Hosting | Remote (Linear, Slack, Salesforce) or local (Zendesk, Gong) | Airbyte-hosted proxy at `mcp.airbyte.ai` |

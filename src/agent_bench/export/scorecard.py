@@ -26,7 +26,7 @@ def render_scorecard(report: RunReport, path: Path) -> None:
     final_connectors = {"slack", "linear", "gong", "salesforce", "zendesk"}
     missing_final = sorted(final_connectors - set(connectors))
     included_cells = len(report.cells)
-    expected_final_cells = 27
+    expected_final_cells = 28
     is_interim = bool(missing_final) or included_cells != expected_final_cells
 
     lines.append("# Airbyte Agents Launch Benchmark - April 22, 2026")
@@ -40,7 +40,7 @@ def render_scorecard(report: RunReport, path: Path) -> None:
         lines.append("")
         lines.append(
             f"**Status:** Interim scorecard. {pending.title()} is pending a fresh successful run "
-            "before this becomes the final 27-cell launch scorecard."
+            f"before this becomes the final {expected_final_cells}-cell launch scorecard."
         )
     lines.append("")
     lines.append(_exec_summary(report, is_interim=is_interim))
