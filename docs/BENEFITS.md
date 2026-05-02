@@ -11,7 +11,7 @@ AI agents need to access business data from dozens of SaaS tools — CRMs, suppo
 2. **Credential sprawl** — agents accumulate dozens of secrets across vendors.
 3. **Context is wasted** — native MCP servers return full API objects, burning tokens on fields the agent never uses.
 
-Airbyte's Agent MCP solves all three. One MCP server. One credential. Field-level projection across every connector.
+Airbyte's Agent MCP solves all three. One MCP server. One credential. Field-level selection across every connector.
 
 ---
 

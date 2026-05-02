@@ -65,11 +65,18 @@ The `.env.template` declares every accepted variable. Agent-MCP credentials
 Native-MCP credentials can be fetched from the `direct-connector-credentials`
 1Password vault via `populate-env`.
 
+### Recording prerequisites
+
+Before recording `agent-mcp` scenarios, ensure:
+
+1. **Connector credentials are configured.** Each connector you plan to record (e.g., Linear, Slack, Gong) must have valid credentials added in the [Agent Engine](https://docs.airbyte.com/ai-agents/mcp-server/). Users must [authenticate](https://docs.airbyte.com/ai-agents/platform/authenticate/) with each connected service.
+2. **The context store has completed its initial sync.** Search-based scenarios depend on the [context store](https://docs.airbyte.com/ai-agents/entity-cache/), which must finish its first full data population before search results are available. You can check sync status in the Agent Engine UI under Connectors.
+
 ### Recording agent-mcp
 
 `agent-mcp` recordings come from real JSON-RPC calls to `mcp.airbyte.ai`
 so that token counts include the FastMCP envelope, server-side
-`select_fields` projection, response truncation, and compaction.
+field selection via `select_fields`, response truncation, and compaction.
 
 The MCP server uses an OIDC-proxy auth flow. There is no API-token
 shortcut; you must complete a one-time browser login. Tokens refresh

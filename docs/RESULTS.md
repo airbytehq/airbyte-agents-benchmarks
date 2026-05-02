@@ -13,7 +13,7 @@ The report is regenerated each time the harness runs with `--export-markdown`. D
 - **Ratio** is Agent MCP tokens as a percentage of Native MCP tokens. Lower is better.
 - **Savings** is `100% - Ratio`.
 
-Token ratios between Agent MCP and Native MCP primarily reflect the effect of field projection — Agent MCP's `select_fields` narrows responses to 4-9 fields versus 30-200+ from native servers. See [METHODOLOGY.md](METHODOLOGY.md#token-counting) for details.
+Token ratios between Agent MCP and Native MCP primarily reflect the effect of field selection — Agent MCP's `select_fields` narrows responses to 4-9 fields versus 30-200+ from native servers. See [METHODOLOGY.md](METHODOLOGY.md#token-counting) for details.
 
 ## Known Caveats
 

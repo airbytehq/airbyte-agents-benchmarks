@@ -472,7 +472,7 @@ The process reads JSON-RPC messages from stdin and writes responses to stdout. T
 Notable limitations:
 
 - Gong's API has no keyword search. The `list_calls` tool lists calls by date range with a fixed page size of 100.
-- No field projection; full call objects are always returned.
+- No field selection; full call objects are always returned.
 - This means the `gong-search` scenario is marked "Not Comparable" since it exercises fundamentally different operations between agent-mcp and native-mcp.
 
 ---
