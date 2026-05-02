@@ -11,13 +11,12 @@ Each connector in the benchmark has a corresponding MCP server maintained by the
 | Connector | MCP Server | Transport | Auth |
 |---|---|---|---|
 | Linear | `https://mcp.linear.app/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) or API key |
-| Granola | `https://mcp.granola.ai/mcp` | Streamable HTTP (remote) | OAuth 2.0 (browser flow) |
 | Slack | `https://mcp.slack.com/mcp` | Streamable HTTP (remote) | OAuth 2.0 (user token) |
 | Zendesk | `ghcr.io/dunialabs/mcp-servers/zendesk` | stdio (local, via Docker) | OAuth access token |
 | Gong | `kenazk/gong-mcp` | stdio (local, via Node.js) | Basic (access key + secret) |
 | Salesforce | `api.salesforce.com/platform/mcp` | SSE (remote) | OAuth 2.0 (refresh token) |
 
-Linear, Granola, Slack, and Salesforce all run as remote hosted servers. Linear and Granola use browser-based OAuth; Slack and Salesforce use OAuth 2.0 with a custom app (a Slack app and a Salesforce Connected App, respectively). Zendesk runs locally via Docker with an OAuth access token.
+Linear, Slack, and Salesforce all run as remote hosted servers. Linear uses browser-based OAuth; Slack and Salesforce use OAuth 2.0 with a custom app (a Slack app and a Salesforce Connected App, respectively). Zendesk runs locally via Docker with an OAuth access token.
 
 ---
 
@@ -69,66 +68,6 @@ The benchmark uses these Linear MCP tools (tool names as they appear in Claude C
 | list | `mcp__claude_ai_Linear__list_issues` | `{"limit": 50}` |
 
 The Linear MCP server also provides tools for creating and updating issues, managing projects, and more. Only the read tools are relevant to this benchmark.
-
----
-
-## Granola MCP
-
-Granola provides an official remote MCP server at `https://mcp.granola.ai/mcp`. It uses Streamable HTTP transport with browser-based OAuth.
-
-**Docs:** https://docs.granola.ai/help-center/sharing/integrations/mcp
-
-### Prerequisites
-
-- A Granola account with existing meeting notes
-- A paid Claude or ChatGPT account (free-plan users can only query notes from the last 30 days)
-
-### Claude Code
-
-```bash
-claude mcp add granola --transport http https://mcp.granola.ai/mcp
-```
-
-Then open a new terminal tab, run `claude`, then run `/mcp`, select the Granola MCP, and select "Authenticate" to complete the browser OAuth flow.
-
-### Claude Desktop
-
-Navigate to Settings > Connectors, search for Granola, and connect. You must authenticate via the browser when prompted.
-
-### ChatGPT
-
-Go to Settings, search for "Granola", and connect. You can then `@Granola` or just ask to reference your meetings.
-
-### Other MCP Clients
-
-For clients supporting Streamable HTTP, use the public URL `https://mcp.granola.ai/mcp` as a custom MCP connection. The client must support OAuth 2.0 browser-based authentication.
-
-There is no API key or service account access method for Granola MCP. Each user authenticates individually through the browser OAuth flow.
-
-### Available Tools
-
-The benchmark's `claude` path records and replays the Claude Code tool names below. The underlying Granola MCP server tool names are included for reference.
-
-| Benchmark Task | MCP Server Tool | Claude Code Tool | Description |
-|---|---|---|---|
-| search | `query_granola_meetings` | `mcp__claude_ai_Granola__query_granola_meetings` | Chat-style query; returns a synthesized natural-language answer, not structured records |
-| get | `get_meeting_transcript` | `mcp__claude_ai_Granola__get_meeting_transcript` | Returns meeting ID, title, and full raw transcript (paid plans only) |
-| list | `list_meetings` | `mcp__claude_ai_Granola__list_meetings` | Returns meeting ID, title, date, and attendees; no limit parameter |
-
-Additional tools (not used by this benchmark):
-
-| MCP Server Tool | Claude Code Tool | Description |
-|---|---|---|
-| `list_meeting_folders` | `mcp__claude_ai_Granola__list_meeting_folders` | List folders you are a member of (paid plans only) |
-| `get_meetings` | `mcp__claude_ai_Granola__get_meetings` | Search through meeting content including notes and attendees |
-
-Notable behavior:
-
-- `query_granola_meetings` returns a synthesized answer, not raw records. This is a fundamentally different response shape from Agent MCP, which returns typed JSON.
-- `list_meetings` has no limit parameter. It returns all meetings in the queried time range.
-- `get_meeting_transcript` requires a meeting UUID. Airbyte Agents note IDs (`not_...`) are not UUIDs and need translation.
-- Free-plan users are limited to notes from the last 30 days.
-- Rate limits average approximately 100 requests per minute across all tools.
 
 ---
 
@@ -542,8 +481,8 @@ Notable limitations:
 
 | Dimension | Third-Party MCP | Agent MCP (`agent-mcp`) |
 |---|---|---|
-| Servers | One per service (Linear, Granola, Slack, Zendesk, Gong, Salesforce) | Unified `integrations_connectors_id_execute` |
+| Servers | One per service (Linear, Slack, Zendesk, Gong, Salesforce) | Unified `integrations_connectors_id_execute` |
 | Auth | Per-service (OAuth, bot tokens, or API keys) | Single Airbyte Cloud OAuth credential set |
 | Field selection | Not available; full responses returned | `select_fields` narrows returned fields |
 | Response shape | Varies by provider (JSON, text, markdown) | Uniform typed JSON envelope |
-| Hosting | Remote (Linear, Granola, Salesforce) or local (Slack, Zendesk, Gong) | Airbyte-hosted proxy at `mcp.airbyte.ai` |
+| Hosting | Remote (Linear, Salesforce) or local (Slack, Zendesk, Gong) | Airbyte-hosted proxy at `mcp.airbyte.ai` |

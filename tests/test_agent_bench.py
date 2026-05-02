@@ -167,7 +167,7 @@ def _config() -> LiveConfig:
         connector_ids={
             "slack": "slack-id",
             "linear": "linear-id",
-            "granola": "granola-id",
+
         },
     )
 

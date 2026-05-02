@@ -16,8 +16,6 @@ Tool surface notes:
     `slack_search_users` (20 results/page max). No get-by-ID; channel
     "get" falls back to search-then-filter.
   - Linear: clean direct mappings for search and get.
-  - Granola: query_granola_meetings returns a synthesized answer (not
-    records); get_meeting_transcript expects a UUID.
 """
 
 from __future__ import annotations
@@ -120,34 +118,6 @@ def _linear_get(task: Task) -> TaskPlan:
     )
 
 
-# ---------- Granola ----------
-
-@_register("granola", "search")
-def _granola_search(task: Task) -> TaskPlan:
-    return TaskPlan(
-        calls=[ToolCallSpec(
-            tool="mcp__claude_ai_Granola__query_granola_meetings",
-            args={"query": task.params["keyword"]},
-            note="Returns synthesized answer with citations, not raw records.",
-        )],
-        notes=["Native MCP's Granola search returns a synthesized answer (not structured records)."],
-    )
-
-
-@_register("granola", "get")
-def _granola_get(task: Task) -> TaskPlan:
-    # Native MCP expects a UUID; Airbyte Agents' note ID (not_…) is not a UUID.
-    # Use a claude_mcp_id override if present; otherwise the recording step
-    # must map the Airbyte Agents ID to Granola's UUID out-of-band.
-    mid = task.params.get("claude_mcp_id") or task.params["id"]
-    return TaskPlan(
-        calls=[ToolCallSpec(
-            tool="mcp__claude_ai_Granola__get_meeting_transcript",
-            args={"meeting_id": mid},
-            note="Takes UUID; Airbyte Agents note IDs need translation.",
-        )],
-    )
-
 
 # ---------- Path ----------
 
@@ -244,4 +214,4 @@ def _count_records(response: Any) -> int:
         return 1  # fallback: one response = one record
     if isinstance(response, list):
         return len(response)
-    return 1  # free-form text (e.g., query_granola_meetings)
+    return 1  # free-form text
