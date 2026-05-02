@@ -5,8 +5,8 @@ JSON-RPC over Streamable HTTP to the hosted MCP server and uses the
 official MCP SDK's `OAuthClientProvider` for browser-based PKCE auth.
 
 Tokens persist to ``~/.airbyte/agent-mcp-tokens.json`` so subsequent runs
-refresh automatically. After ~3 days of inactivity the FastMCP refresh
-token expires and the user must re-auth in a browser.
+refresh automatically. The refresh token has an approximately 60-day TTL;
+after it expires the user must re-auth in a browser.
 """
 
 from __future__ import annotations

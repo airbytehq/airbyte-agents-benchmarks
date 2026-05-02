@@ -1,8 +1,8 @@
 """Record agent-mcp responses via real JSON-RPC to `mcp.airbyte.ai`.
 
 Requires a one-time browser auth via `agent-bench auth` to seed the local
-token store. Token refresh is automatic until the FastMCP refresh token
-expires (approximately 3 days of inactivity).
+token store. Token refresh is automatic until the refresh token
+expires (approximately 60 days).
 """
 
 from __future__ import annotations
