@@ -110,7 +110,7 @@ def record_linear(api_key: str, date: str, dry_run: bool = False) -> list[tuple[
 
     # Get
     tool = "get_issue"
-    args = {"id": "AGENTIC-55"}
+    args = {"id": "AGENTIC-1294"}
     response, wall_ms = mcp.call_tool(tool, args)
     path = save_recording("linear-get", [{
         "tool": f"mcp__claude_ai_Linear__{tool}",

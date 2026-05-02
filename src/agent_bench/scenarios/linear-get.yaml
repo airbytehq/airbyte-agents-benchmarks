@@ -28,4 +28,4 @@ paths:
       - server: linear
         tool: get_issue
         args:
-          id: "AGENTIC-55"
+          id: "AGENTIC-1294"
