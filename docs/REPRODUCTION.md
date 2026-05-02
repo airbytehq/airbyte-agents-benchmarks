@@ -1,6 +1,8 @@
 # Reproducing the Benchmark
 
-This guide walks through reproducing the Airbyte Agents launch benchmark results from scratch. It covers three tiers: stats-only (no credentials), recording agent-mcp (Airbyte Cloud credentials), and full benchmark (all connectors).
+This guide covers reproducing the Airbyte Agents benchmark results.
+The repo ships with committed `recording-stats.json` files, so you can
+generate comparison reports without any credentials or recordings.
 
 ## Prerequisites
 
@@ -22,29 +24,23 @@ Verify the install:
 uv run agent-bench --help
 ```
 
-## Tier 1: Stats-Only (No Credentials)
+## Generate a Comparison Report (No Credentials)
 
-The committed `recording-stats.json` files in `artifacts/YYYY-MM-DD/` contain aggregate metrics (token counts, latency, record counts). Raw `recording.json` files are gitignored and never committed. You can run tests and generate comparison reports without any API credentials or recordings.
-
-### Run tests
-
-```bash
-uv run pytest -q
-```
-
-All tests should pass.
-
-### Generate comparison report
+The committed `recording-stats.json` files in `artifacts/YYYY-MM-DD/`
+contain aggregate metrics (token counts, latency, record counts). Raw
+`recording.json` files are gitignored and never committed.
 
 ```bash
 uv run agent-bench compare
 ```
 
-This reads the committed `recording-stats.json` files and produces a markdown comparison of token efficiency across connectors. No credentials or raw recordings needed.
+This reads the committed stats and produces a markdown comparison of
+token efficiency across connectors.
 
-## Tier 2: Recording Agent MCP (Requires Credentials)
+## Recording (Optional)
 
-Recording new Agent MCP responses (and running the live `agent-mcp` path) requires Airbyte Cloud credentials.
+Recording captures fresh MCP responses. Stats are generated
+automatically after every successful recording.
 
 ### Credential setup
 
@@ -69,41 +65,43 @@ The `.env.template` declares every accepted variable. Agent-MCP credentials
 Native-MCP credentials can be fetched from the `direct-connector-credentials`
 1Password vault via `populate-env`.
 
-### Authentication note
+### Recording agent-mcp
 
-The MCP server uses an OIDC-proxy auth flow with one-time browser login. If you see a `401` error with "Client has no organization_admin permissions," verify that:
+`agent-mcp` recordings come from real JSON-RPC calls to `mcp.airbyte.ai`
+so that token counts include the FastMCP envelope, server-side
+`select_fields` projection, response truncation, and compaction.
 
-1. The `AIRBYTE_ORGANIZATION_ID` matches the org your application belongs to.
-2. The application has `organization_admin` permissions on the Agent REST API.
-3. You are using the correct client ID and secret pair for that specific organization.
-
-Some Airbyte Cloud application credentials are scoped to a particular org. The same `client_id`/`client_secret` may fail for one org but succeed for another. The org ID must match the org that granted the application its permissions.
-
-### Recording agent-mcp from `mcp.airbyte.ai` (real MCP)
-
-`agent-mcp` recordings come from real JSON-RPC calls to `mcp.airbyte.ai` so that token counts include the FastMCP envelope, server-side `select_fields` projection, response truncation, and compaction — what an agent actually consumes.
-
-The MCP server uses an OIDC-proxy auth flow. There is no API-token shortcut; you must complete a one-time browser login. Tokens then refresh automatically until the FastMCP refresh token expires (~3 days of inactivity).
+The MCP server uses an OIDC-proxy auth flow. There is no API-token
+shortcut; you must complete a one-time browser login. Tokens refresh
+automatically until the refresh token expires (~3 days of inactivity).
 
 ```bash
 # 1. Once per machine (or whenever you see HTTP 401 during recording):
 uv run agent-bench auth
 
-# 2. Re-record agent-mcp scenarios for today:
-uv run agent-bench record --path agent-mcp --date 2026-04-30
+# 2. Record agent-mcp scenarios:
+uv run agent-bench record --path agent-mcp
 
 # Or a single connector:
 uv run agent-bench record --path agent-mcp --connectors linear
 ```
 
-The recorder reads each scenario's `paths.agent-mcp.tool_calls` block, calls `mcp__airbyte-agent__execute` over JSON-RPC, and writes `recording.json` files in the same shape `agent-bench` already replays.
+### Recording native-mcp
 
-## Tier 3: Recording Native MCP
-
-Native MCP recordings use vendor-provided MCP servers. See [THIRD_PARTY_MCP_SETUP.md](THIRD_PARTY_MCP_SETUP.md) for setup details.
+Native MCP recordings use vendor-provided MCP servers. See
+[THIRD_PARTY_MCP_SETUP.md](THIRD_PARTY_MCP_SETUP.md) for setup details.
 
 ```bash
 uv run agent-bench record --path native-mcp --connectors linear
+```
+
+### Regenerating stats only
+
+To regenerate `recording-stats.json` from existing recordings without
+re-recording:
+
+```bash
+uv run agent-bench record --stats-only
 ```
 
 ## Troubleshooting
@@ -116,6 +114,8 @@ The application credentials do not have `organization_admin` scope on the target
 - The application has not been revoked or its permissions changed.
 - You are not mixing credentials from different organizations.
 
+Some Airbyte Cloud application credentials are scoped to a particular org. The same `client_id`/`client_secret` may fail for one org but succeed for another.
+
 ### "missing recording at artifacts/..."
 
 The requested replay file does not exist. Either:
@@ -123,32 +123,26 @@ The requested replay file does not exist. Either:
 - You are running a scenario or path whose recordings have not been committed yet.
 - The artifacts directory was not included in your clone. Run `git status` to verify.
 
-### Live agent-mcp token counts differ from the artifact
-
-This is expected when running with `--mode live`. The live path returns current data; replay paths are the stable reference for comparison.
-
 ### HTTP 503 on Slack search
 
 The Context Store preview may return 503 while indexing. This is a readiness issue, not a harness bug. See [issue #39](https://github.com/airbytehq/airbyte-agents-benchmarks/issues/39) for current Slack status.
 
 ## Artifact Layout
 
-Each recording run produces immutable artifacts under a dated directory:
+Each recording run produces artifacts under a dated directory:
 
 ```
 artifacts/
   YYYY-MM-DD/
     linear-search-scenario/
       agent-mcp/
-        recording.json
-        recording-stats.json
+        recording.json          # gitignored
+        recording-stats.json    # committed
       native-mcp/
-        recording.json
-        recording-stats.json
+        recording.json          # gitignored
+        recording-stats.json    # committed
     gong-get-scenario/
       ...
-    <report>.md          # filename varies by export command
-    charts/
 ```
 
 The [`latest_comparison_report/`](../latest_comparison_report/) directory at the repo root contains a symlinked `README.md` pointing to the most recent comparison report.
@@ -163,21 +157,4 @@ agent-bench record-one    Save a single MCP tool-call response as a recording
 agent-bench populate-env  Populate .env from 1Password credentials
 ```
 
-The `record` command accepts `--stats-only` to regenerate stats from existing
-recordings without re-recording. Use `--help` on any command for full options.
-
-## Recording Individual Responses
-
-Save individual MCP responses with:
-
-```bash
-uv run agent-bench record-one \
-  --path agent-mcp \
-  --scenario linear-search \
-  --tool mcp__airbyte-agent__execute \
-  --args '{"items":[...]}' \
-  --response-file /tmp/response.json \
-  --reset
-```
-
-For Agent MCP, `--wall-ms` can be omitted when the response contains `execution_metadata.execution_time_ms`.
+Use `--help` on any command for full options.
