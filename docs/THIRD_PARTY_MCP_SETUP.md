@@ -463,11 +463,16 @@ To record a single connector:
 uv run agent-bench record --path native-mcp --connectors linear --date 2026-04-30
 ```
 
-After recording, regenerate stats and the comparison report:
+Stats are generated automatically after recording. To regenerate the comparison report:
 
 ```bash
-uv run agent-bench generate-stats --date 2026-04-30
 uv run agent-bench compare --date 2026-04-30 --output artifacts/2026-04-30/comparison-report.md
+```
+
+To regenerate stats from existing recordings without re-recording:
+
+```bash
+uv run agent-bench record --path native-mcp --stats-only --date 2026-04-30
 ```
 
 ### Recording File Format

@@ -19,7 +19,7 @@ uv sync
 Verify the install:
 
 ```bash
-uv run agent-bench list
+uv run agent-bench --help
 ```
 
 ## Tier 1: Stats-Only (No Credentials)
@@ -41,14 +41,6 @@ uv run agent-bench compare
 ```
 
 This reads the committed `recording-stats.json` files and produces a markdown comparison of token efficiency across connectors. No credentials or raw recordings needed.
-
-### List scenarios
-
-```bash
-uv run agent-bench list
-```
-
-Shows all available benchmark scenarios and their connector mappings.
 
 ## Tier 2: Recording Agent MCP (Requires Credentials)
 
@@ -87,14 +79,6 @@ The MCP server uses an OIDC-proxy auth flow with one-time browser login. If you 
 
 Some Airbyte Cloud application credentials are scoped to a particular org. The same `client_id`/`client_secret` may fail for one org but succeed for another. The org ID must match the org that granted the application its permissions.
 
-### Run all paths for a connector
-
-```bash
-uv run agent-bench run --scenarios linear --paths all --export-markdown linear-results.md
-```
-
-This runs agent-mcp (live or replay, see below) and native-mcp (replay) side by side.
-
 ### Recording agent-mcp from `mcp.airbyte.ai` (real MCP)
 
 `agent-mcp` recordings come from real JSON-RPC calls to `mcp.airbyte.ai` so that token counts include the FastMCP envelope, server-side `select_fields` projection, response truncation, and compaction — what an agent actually consumes.
@@ -114,36 +98,12 @@ uv run agent-bench record --path agent-mcp --connectors linear
 
 The recorder reads each scenario's `paths.agent-mcp.tool_calls` block, calls `mcp__airbyte-agent__execute` over JSON-RPC, and writes `recording.json` files in the same shape `agent-bench` already replays.
 
-### Interpreting live results
+## Tier 3: Recording Native MCP
 
-When `agent-mcp` runs in `--mode live`, token counts will vary as the underlying data changes. This is expected behavior, not a test failure.
-
-The replay paths (agent-mcp and native-mcp) are deterministic. Their token totals should always match the committed recordings.
-
-## Tier 3: Full Benchmark
-
-The full benchmark covers all connectors, tasks, and paths. Use `agent-bench list` to see the current scenario matrix.
-
-### Running what is available
+Native MCP recordings use vendor-provided MCP servers. See [THIRD_PARTY_MCP_SETUP.md](THIRD_PARTY_MCP_SETUP.md) for setup details.
 
 ```bash
-# Linear: all paths
-uv run agent-bench run --scenarios linear --paths all
-
-# All connectors, agent-mcp replay
-uv run agent-bench run --scenarios linear,slack,gong,salesforce,zendesk --paths agent-mcp
-```
-
-### Full export
-
-The full export command is intentionally gated. It will fail if any replay recordings are missing:
-
-```bash
-uv run agent-bench run \
-  --scenarios all \
-  --paths all \
-  --export-markdown artifacts/YYYY-MM-DD/final-scorecard.md \
-  --export-charts artifacts/YYYY-MM-DD/final-charts
+uv run agent-bench record --path native-mcp --connectors linear
 ```
 
 ## Troubleshooting
@@ -171,20 +131,9 @@ This is expected when running with `--mode live`. The live path returns current 
 
 The Context Store preview may return 503 while indexing. This is a readiness issue, not a harness bug. See [issue #39](https://github.com/airbytehq/airbyte-agents-benchmarks/issues/39) for current Slack status.
 
-### "Export blocked: required record-replay files are missing or stale"
-
-The export gate prevents incomplete scorecards. Run with specific `--scenarios` and `--paths` flags to export only the cells you have recordings for:
-
-```bash
-uv run agent-bench run \
-  --scenarios linear,slack,gong \
-  --paths agent-mcp \
-  --export-markdown partial-results.md
-```
-
 ## Artifact Layout
 
-Each benchmark run produces immutable artifacts under a dated directory:
+Each recording run produces immutable artifacts under a dated directory:
 
 ```
 artifacts/
@@ -207,30 +156,19 @@ The [`latest_comparison_report/`](../latest_comparison_report/) directory at the
 ## CLI Reference
 
 ```text
-agent-bench list             List available benchmark scenarios
-agent-bench plan             Print MCP tool-call specs for record-replay paths
-agent-bench run              Run the benchmark across selected scenarios and paths
-agent-bench validate         Validate replay recordings before exporting
-agent-bench compare          Generate a markdown comparison report from recording stats
-agent-bench generate-stats   Generate recording-stats.json from existing recordings
-agent-bench auth             One-time browser OAuth for mcp.airbyte.ai
-agent-bench record           Record MCP responses for benchmark replay
-agent-bench record-one       Save a single MCP tool-call response as a recording
+agent-bench compare       Generate a markdown comparison report from recording stats
+agent-bench auth          One-time browser OAuth for mcp.airbyte.ai
+agent-bench record        Record MCP responses and auto-generate recording-stats.json
+agent-bench record-one    Save a single MCP tool-call response as a recording
+agent-bench populate-env  Populate .env from 1Password credentials
 ```
 
-The `plan`, `run`, and `validate` commands accept `--scenarios` and `--paths` filters. Pass connector names (e.g. `linear`) to `--scenarios` to select all scenarios for that connector, or pass specific scenario names (e.g. `linear-search,linear-get`). Use `--help` on any command for full options.
+The `record` command accepts `--stats-only` to regenerate stats from existing
+recordings without re-recording. Use `--help` on any command for full options.
 
-Export is blocked when recordings or cells have issues. See [METHODOLOGY.md](METHODOLOGY.md#export-gates) for the full list of export gates.
+## Recording Individual Responses
 
-## Recording New Responses
-
-```bash
-uv run agent-bench plan --scenarios all --paths native-mcp,agent-mcp
-```
-
-For each Agent MCP connector, call `mcp__airbyte-agent__describe_connector` once before recording the planned `mcp__airbyte-agent__execute` call. Every execute item must include `select_fields`.
-
-Save MCP responses with:
+Save individual MCP responses with:
 
 ```bash
 uv run agent-bench record-one \
