@@ -60,23 +60,44 @@ def _resolve_artifacts_dir(artifacts_dir: FSPath, date: str | None) -> FSPath:
     return artifacts_dir / datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
+REPORT_FILENAME = "comparison-report.md"
+SYMLINK_DIR = FSPath(__file__).parent.parent.parent / "latest_comparison_report"
+
+
+def _update_symlink(report_path: FSPath) -> None:
+    """Point `latest_comparison_report/README.md` at the given report."""
+    SYMLINK_DIR.mkdir(exist_ok=True)
+    link = SYMLINK_DIR / "README.md"
+    target = FSPath(os.path.relpath(report_path, SYMLINK_DIR))
+    if link.is_symlink() or link.exists():
+        link.unlink()
+    link.symlink_to(target)
+
+
 @app.command()
 def compare(
     artifacts_dir: FSPath = typer.Option(_DEFAULT_ARTIFACTS, "--artifacts-dir"),
     date: str | None = typer.Option(None, "--date", help="Artifact date folder (e.g. 2026-04-29). Defaults to latest."),
     left: str = typer.Option("agent-mcp", "--left", help="Left path slug for comparison"),
     right: str = typer.Option("native-mcp", "--right", help="Right path slug for comparison"),
-    output: FSPath | None = typer.Option(None, "--output", "-o", help="Write markdown report to this file"),
+    output: FSPath | None = typer.Option(None, "--output", "-o", help="Write markdown report to this file instead of the default location"),
+    stdout: bool = typer.Option(False, "--stdout", help="Print report to stdout instead of writing to a file"),
 ) -> None:
     """Generate a markdown comparison report from recording-stats.json files.
 
     Compares token efficiency between two paths (default: agent-mcp vs native-mcp).
     Falls back to deriving stats from recording.json if stats files are absent.
+
+    By default, writes the report to `<artifacts-dir>/<date>/comparison-report.md`
+    and updates the `latest_comparison_report/README.md` symlink. Use `--stdout`
+    to print instead, or `--output` to write to a custom path.
     """
     dated_dir = _resolve_artifacts_dir(artifacts_dir, date)
     if not dated_dir.is_dir():
         console.print(f"[red]Artifacts directory not found: {dated_dir}[/red]")
         raise typer.Exit(1)
+
+    resolved_output = output or (None if stdout else dated_dir / REPORT_FILENAME)
 
     left_label = PATH_LABEL.get(left, left)
     right_label = PATH_LABEL.get(right, right)
@@ -87,11 +108,13 @@ def compare(
         right_path=right,
         left_label=left_label,
         right_label=right_label,
-        output_path=output,
+        output_path=resolved_output,
     )
 
-    if output:
-        console.print(f"[green]report →[/green] {output}")
+    if resolved_output:
+        console.print(f"[green]report →[/green] {resolved_output}")
+        _update_symlink(resolved_output)
+        console.print(f"[green]symlink →[/green] {SYMLINK_DIR / 'README.md'}")
     else:
         console.print(report)
 
