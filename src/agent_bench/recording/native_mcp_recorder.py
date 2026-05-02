@@ -650,6 +650,7 @@ def record_native_mcp(
     date = date or default_date()
     connector_list = [c.strip() for c in (connectors or _DEFAULT_CONNECTORS).split(",")]
     all_results: list[tuple[str, Path]] = []
+    failures: list[tuple[str, str]] = []
 
     for connector in connector_list:
         print(f"\n{'=' * 40}")
@@ -682,15 +683,20 @@ def record_native_mcp(
                 all_results.extend(record_zendesk(subdomain, access_token, date, dry_run))
 
             else:
-                print(f"  Unknown connector: {connector}")
+                print(f"  Unknown connector: {connector}", file=sys.stderr)
 
         except Exception as e:  # noqa: BLE001
-            print(f"  ERROR: {e}")
-            traceback.print_exc()
+            print(f"  FAILED: {connector}: {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            failures.append((connector, str(e)))
 
     print(f"\n{'=' * 40}")
-    print(f"Done. Recorded {len(all_results)} scenarios.")
+    print(f"Done. Recorded {len(all_results)} scenario(s).")
     for scenario, path in all_results:
         print(f"  {scenario} -> {path}")
+    if failures:
+        print(f"\n{len(failures)} connector(s) failed:", file=sys.stderr)
+        for connector, error in failures:
+            print(f"  {connector}: {error}", file=sys.stderr)
 
-    return 0
+    return 1 if failures else 0
