@@ -34,33 +34,26 @@ _DISPATCH: dict[str, dict[str, Any]] = {
     "slack": {
         "search_field": {"channels": "name", "users": "real_name"},
         "get_key": {"channels": "channel", "users": "user"},
-        "list_limit_key": "limit",
     },
     "linear": {
         "search_field": {"issues": "title", "projects": "name", "users": "name"},
         "get_key": {"issues": "id", "projects": "id", "users": "id"},
-        "list_limit_key": "first",
     },
     "granola": {
         "search_field": {"notes": "summary_text"},
         "get_key": {"notes": "note_id"},
-        "list_limit_key": "page_size",
     },
     "gong": {
         "search_field": {"calls": "title"},
         "get_key": {"calls": "id"},
-        "list_limit_key": "limit",
     },
     "salesforce": {
         "search_field": {"accounts": "Name"},
         "get_key": {"accounts": "id"},
-        "list_limit_key": "q",
-        "list_soql": {"accounts": "SELECT Id, Name, Type, Industry FROM Account"},
     },
     "zendesk": {
         "search_field": {"tickets": "subject"},
         "get_key": {"tickets": "ticket_id"},
-        "list_limit_key": "limit",
     },
 }
 
@@ -85,19 +78,6 @@ def _translate(task: Task, dispatch: dict[str, Any]) -> tuple[str, dict]:
         if key is None:
             raise ValueError(f"No get-key mapping for entity {task.entity!r}")
         return "get", {key: task.params["id"]}
-    if task.action == "list":
-        soql_templates = dispatch.get("list_soql", {})
-        soql = soql_templates.get(task.entity)
-        limit = int(task.params.get("limit", 50))
-        if soql:
-            return "list", {"q": f"{soql} LIMIT {limit}"}
-        limit_key = dispatch["list_limit_key"]
-        if limit_key == "q" and not soql:
-            raise ValueError(
-                f"Salesforce entity {task.entity!r} requires a list_soql template "
-                f"but none is defined in _DISPATCH."
-            )
-        return "list", {limit_key: limit}
     raise ValueError(f"Unsupported task action {task.action!r}")
 
 

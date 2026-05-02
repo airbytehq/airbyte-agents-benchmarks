@@ -133,16 +133,6 @@ def test_context_store_search_passthrough() -> None:
     assert params["limit"] == 1
 
 
-def test_salesforce_list_without_soql_raises() -> None:
-    task = Task(label="test", action="list", entity="unknown_entity", metric_focus="bulk_list", params={"limit": 10})
-    dispatch = {
-        "list_limit_key": "q",
-        "list_soql": {},
-    }
-    with pytest.raises(ValueError, match="requires a list_soql template"):
-        _translate(task, dispatch)
-
-
 def _run_path(path: AgentMCPPath, scenario) -> BenchmarkResult:
     task = scenario.task
     if task is None:

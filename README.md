@@ -24,7 +24,7 @@ The harness compares two paths for the same tasks:
 | Agent MCP | `agent-mcp` | Record-replay of the hosted Airbyte Platform MCP with mandatory `select_fields` |
 | Native MCP | `native-mcp` | Record-replay of vendor-native MCP server responses |
 
-Each connector has named scenarios (e.g., `linear-search`, `gong-get`, `slack-list-all`). The benchmark currently covers five connectors. Granola recordings from April 24 are preserved but the connector is tombstoned.
+Each connector has named scenarios (e.g., `linear-search`, `gong-get`, `slack-user-search`). The benchmark currently covers five connectors. Granola recordings from April 24 are preserved but the connector is tombstoned.
 
 ## Connectors
 

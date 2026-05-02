@@ -23,7 +23,7 @@ import yaml
 SCENARIOS_DIR = Path(__file__).parent
 
 
-Action = Literal["search", "get", "list", "list-all", "context_store_search"]
+Action = Literal["search", "get", "context_store_search"]
 
 
 @dataclass
@@ -81,7 +81,7 @@ class Scenario:
         """Best-effort action label, derived from task or scenario name."""
         if self.task:
             return self.task.action
-        for suffix in ("get", "list-all", "list", "search"):
+        for suffix in ("get", "search"):
             if self.name.endswith(f"-{suffix}"):
                 return suffix
         return "multi-step"
