@@ -3,8 +3,7 @@ title: "Salesforce — Search accounts by keyword"
 connector: salesforce
 connector_id_env: SALESFORCE_CONNECTOR_ID
 description: |
-  Search Salesforce accounts matching a keyword.
-  Agent requests Id, Name, Type, and Industry per result.
+  Search Salesforce accounts matching a keyword, retrieving specific fields such as Name, Type, and Industry.
 
 paths:
   agent-mcp:

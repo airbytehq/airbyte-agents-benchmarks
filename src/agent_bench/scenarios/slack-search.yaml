@@ -10,21 +10,7 @@ hidden_reason: |
   Workspace: https://app.airbyte.ai/organizations/145bfc59-1eed-4266-96bf-d527fb3e5765/connectors
 skip_recording: true  # Context store not populated; context_store_search returns 0 records.
 description: |
-  Search Slack channels by keyword.
-  Agent requests id, name, num_members, is_archived, is_private, created, updated, topic, and purpose per result.
-
-annotations:
-  context_store_empty: >
-    The Slack connector's context store is not populated in the benchmark
-    workspace. `context_store_search` returns `data: []` for any query.
-    This scenario is excluded from recording until the context store is
-    seeded. See also `slack-get` which has the same limitation and uses
-    `action: get` as a workaround.
-  tool_mismatch: >
-    Slack's hosted MCP server (`https://mcp.slack.com/mcp`) exposes
-    [`slack_search_channels`](https://docs.slack.dev/ai/slack-mcp-server/),
-    which is a clean fit for keyword channel search. Results are
-    cursor-paginated and capped at 20 per call.
+  Search Slack channels by keyword, retrieving specific fields: `id`, `name`, `num_members`, `is_archived`, `is_private`, `created`, `updated`, `topic`, and `purpose`.
 
 paths:
   agent-mcp:

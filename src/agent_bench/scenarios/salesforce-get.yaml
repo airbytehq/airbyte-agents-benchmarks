@@ -3,8 +3,8 @@ title: "Salesforce — Get single account by ID"
 connector: salesforce
 connector_id_env: SALESFORCE_CONNECTOR_ID
 description: |
-  Look up a single Salesforce account by ID.
-  Agent requests Id, Name, Type, and Industry.
+  Look up a single Salesforce account by ID, retrieving specific fields such as
+  Name, Type, and Industry.
 
 paths:
   agent-mcp:

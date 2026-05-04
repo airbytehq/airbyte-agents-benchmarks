@@ -4,18 +4,20 @@ connector: linear
 connector_id_env: LINEAR_CONNECTOR_ID
 is_comparable: false
 description: |
-  Search Linear projects by name keyword.
-  Agent requests id, name, state, and progress.
+  Search Linear projects by name keyword, retrieving specific fields such as
+  name, state, progress, etc.
 
 annotations:
   tool_mismatch: >
-    🛑No native project search tool exists in Linear's official MCP server
+    🛑 No native "project search" tool exists in Linear's official MCP server
     ([mcp.linear.app](https://linear.app/docs/mcp), 24 tools).
     `list_projects` returns all projects with no name filter parameter.
     `get_project` requires a project ID.
+
     The Linear GraphQL API supports `projects(filter: { name: { contains: "..." } })`
     ([filtering docs](https://linear.app/developers/filtering)),
     but the MCP does not expose this capability.
+
     Alternative path: call `list_projects` to retrieve all projects and filter client-side.
 
 paths:
@@ -34,4 +36,3 @@ paths:
                   name: "Launch"
             limit: 10
           select_fields: [id, name, state, progress]
-

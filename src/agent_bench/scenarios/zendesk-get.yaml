@@ -8,7 +8,7 @@ description: |
 
 annotations:
   highlight: >
-    💎Only requested fields consume token context: `id`, `subject`, `status`, and `priority`.
+    💎 Only requested fields consume token context: `id`, `subject`, `status`, and `priority`.
 
 paths:
   agent-mcp:

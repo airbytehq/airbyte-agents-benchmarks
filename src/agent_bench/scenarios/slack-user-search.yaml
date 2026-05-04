@@ -9,15 +9,7 @@ hidden_reason: |
   Timeline: https://cloud.airbyte.com/workspaces/df5fa524-ed3a-4f59-90ef-0906f3b945c0/connections/b8626fbd-20d7-4c50-ac28-1153295ea2b2/timeline
   Workspace: https://app.airbyte.ai/organizations/145bfc59-1eed-4266-96bf-d527fb3e5765/connectors
 description: |
-  Search Slack workspace members by display name.
-  Agent requests id, real_name, team_id, is_admin, is_bot, and deleted.
-
-annotations:
-  tool_mismatch: >
-    Slack's hosted MCP server (`https://mcp.slack.com/mcp`) exposes
-    [`slack_search_users`](https://docs.slack.dev/ai/slack-mcp-server/),
-    which searches across name, email, and other profile attributes.
-    Results are cursor-paginated and capped at 20 per call.
+  Search Slack workspace members by display name, retrieving specific fields such as `id`, `real_name`, `team_id`, `is_admin`, `is_bot`, and `deleted`.
 
 paths:
   agent-mcp:
@@ -43,4 +35,3 @@ paths:
         args:
           query: "airbyte"
           limit: 20
-

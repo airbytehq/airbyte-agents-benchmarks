@@ -83,11 +83,13 @@ The value of Agent MCP is not simply "shorter output." Agent MCP narrows payload
 
 - **Lower cost per agent action.** Token consumption maps directly to LLM API cost. See [Why Token Reduction Matters](METHODOLOGY.md#why-token-reduction-matters) for details on how token count affects latency, cost, and context window pressure.
 - **Longer effective context windows.** Tokens spent on verbose API responses are tokens unavailable for reasoning, planning, and user interaction.
-- **Compound savings in multi-step workflows.** A cross-connector workflow (Gong → Salesforce → Zendesk) shows dramatic savings via Agent MCP compared to native MCP. See the [multi-step scenario results](../latest_comparison_report/) and [Multi-Step Scenarios](METHODOLOGY.md#multi-step-scenarios) for how these workflows are benchmarked.
+- **Compound savings in multi-step workflows.** Cross-connector workflows (e.g., Gong → Salesforce → Zendesk) compound per-step token savings — each step's smaller payload means less context consumed by the LLM for planning the next step. Multi-step scenarios are currently hidden from the comparison report while record-count alignment is being finalized. See [Multi-Step Scenarios](METHODOLOGY.md#multi-step-scenarios) for how these workflows are benchmarked.
 
 ### Methodology
 
 Token counts are measured with tiktoken `cl100k_base` encoding on raw JSON response payloads. Each scenario executes the same logical operation on both paths. Recordings use record-replay for deterministic, reproducible measurements. See [METHODOLOGY.md](METHODOLOGY.md) for full details.
+
+The numbers above measure **tool-call tokens only** — the size of the request and response payloads an agent would process during calls to the MCP server. They do not include the LLM tokens a real agent loop would spend on chain reasoning, intermediate parsing, or tool formatting.
 
 ---
 

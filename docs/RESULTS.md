@@ -21,6 +21,8 @@ The following caveats apply to the current result set:
 
 1. **Native MCP recordings are not available for all connectors.** The comparison report only includes connectors that have both Agent MCP and Native MCP recordings. See the [README](../README.md#connectors) for the current coverage matrix.
 
+2. **Multi-step scenarios measure data-path tokens only, not end-to-end agent cost.** Cross-connector workflows like `gong-to-salesforce-zendesk-lookup` use statically seeded inputs for downstream steps (identical seeds across both paths). This means the benchmark does *not* count the LLM tokens that a real agent loop would spend on chain reasoning — extracting account names from Step 1, normalizing them, and formatting them into Step 2. Those costs scale with Step 1's response size, so the real-world delta in favor of smaller payloads is likely larger than what these numbers show. See [METHODOLOGY.md → Multi-Step Scenarios](METHODOLOGY.md#multi-step-scenarios) for the full disclosure.
+
 For claims guidance and a narrative summary of the benchmark findings, see [BENEFITS.md](BENEFITS.md).
 
 ## Reproduction
