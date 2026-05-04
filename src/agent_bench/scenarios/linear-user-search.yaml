@@ -9,13 +9,15 @@ description: |
 
 annotations:
   tool_mismatch: >
-    🛑No native user search tool exists in Linear's official MCP server
+    🛑 No native "user search" tool exists in Linear's official MCP server
     ([mcp.linear.app](https://linear.app/docs/mcp), 24 tools).
+
     `list_users` returns all members with no name filter parameter.
     `get_user` requires a user ID.
     The Linear GraphQL API supports `users(filter: { name: { contains: "..." } })`
     ([filtering docs](https://linear.app/developers/filtering)),
     but the MCP does not expose this capability.
+
     Alternative path: call `list_users` to retrieve all workspace members and filter client-side.
 
 paths:
@@ -34,4 +36,3 @@ paths:
                   name: "airbyte"
             limit: 10
           select_fields: [id, name, active, admin, isMe]
-

@@ -3,8 +3,11 @@ title: "Zendesk — Search tickets by keyword"
 connector: zendesk
 connector_id_env: ZENDESK_CONNECTOR_ID
 description: |
-  Search Zendesk tickets matching a keyword.
-  Agent requests id, subject, status, and priority per result.
+  Search Zendesk tickets matching a keyword, retrieving fields: `id`, `subject`, `status`, and `priority`.
+
+annotations:
+  highlight: >
+    💎 Only requested fields consume token context: `id`, `subject`, `status`, and `priority`.
 
 paths:
   agent-mcp:

@@ -31,6 +31,18 @@ Two properties of multi-step scenarios are important for understanding the bench
 
 2. **Subsequent step inputs are statically seeded.** In a multi-step scenario, the inputs to later steps (e.g., which account names are passed to the Salesforce lookup) are fixed values captured at recording time and reused during benchmark replay. The harness does not dynamically pass the output of step 1 as input to step 2 at benchmark runtime. This ensures that every run of the benchmark replays the same tool interactions regardless of when it runs. The specific input values do not affect the benchmark's evaluation methodology — the benchmark measures token efficiency of the response payloads, not the relevance of the query parameters.
 
+   Each multi-step scenario YAML records the provenance of its seed values (which step they came from, when they were captured, and from which path's response). The seeds are intentionally identical across both paths so neither side gets a chaining shortcut the other lacks.
+
+   **Seeds are injected via environment variables, not committed values.** Multi-step scenario YAMLs reference seeds with `${VAR}` placeholders (e.g., `${CUSTOMER_1}`, `${CUSTOMER_2}`, `${CUSTOMER_3}` in `gong-to-salesforce-zendesk-lookup`). The recorder substitutes these from your `.env` at run time. **You must set these env vars** to names/IDs that exist in your own workspace before running the scenario — otherwise both paths will faithfully record empty results. The values can be anything; the benchmark measures payload size, not which records you query. See `.env.template` for the required vars per scenario.
+
+#### What multi-step scenarios do *not* measure
+
+The deterministic, no-LLM design has explicit limits that readers should keep in mind when interpreting cross-connector results:
+
+- **Chain-reasoning cost is not measured.** In a real agent loop, the LLM consumes Step 1's full response into its context, generates an intermediate plan, and formats Step 2's call. Those input/output tokens scale with response size — a large native-mcp Step 1 response makes every subsequent decision more expensive. The benchmark only counts response-payload tokens, so the real-world delta in favor of smaller payloads is likely *larger* than what we report.
+- **Intermediate parsing / normalization is not measured.** Mapping a Gong call title to a Salesforce account name involves real work (case folding, fuzzy matching, schema mismatch handling). By using seed values directly, we skip this; both paths benefit equally from the skip, but the absolute end-to-end cost of the workflow is understated.
+- **The benchmark is not an end-to-end agent benchmark.** It measures the data-path delta between two ways of fetching the same business data. It does not measure how well an LLM can plan a multi-step workflow, how often it gets stuck, or how many tokens it spends on tool-formatting. A complementary live-LLM benchmark would be needed to quantify those.
+
 ## Token Counting
 
 Token counts are computed with `tiktoken` using the `cl100k_base` encoding. The harness measures the raw response payload that the agent would consume for each path, not a cleaned summary.

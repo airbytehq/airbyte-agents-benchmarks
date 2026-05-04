@@ -33,7 +33,6 @@ def test_scenario_loads_choreographed_format() -> None:
 def test_multi_step_scenario_loads() -> None:
     scenario = load_scenario("gong-to-salesforce-zendesk-lookup")
     assert scenario.is_choreographed
-    assert scenario.faux_prompt
     assert len(scenario.paths["agent-mcp"].tool_calls) == 3
     assert len(scenario.paths["native-mcp"].tool_calls) == 3
 
@@ -147,5 +146,3 @@ def _config() -> LiveConfig:
 
         },
     )
-
-

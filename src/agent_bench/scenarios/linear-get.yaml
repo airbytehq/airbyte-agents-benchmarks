@@ -3,8 +3,8 @@ title: "Linear — Get single issue by ID"
 connector: linear
 connector_id_env: LINEAR_CONNECTOR_ID
 description: |
-  Look up a single Linear issue by ID.
-  Agent requests id, identifier, title, state, priority, createdAt, updatedAt, team, and labels.
+  Look up a single Linear issue by ID, retrieving specific fields such as title,
+  state, priority, etc.
 
 paths:
   agent-mcp:
