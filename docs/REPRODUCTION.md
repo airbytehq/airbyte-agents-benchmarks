@@ -1,5 +1,8 @@
 # Reproducing the Benchmark
 
+Video Walkthrough:
+https://github.com/airbytehq/airbyte-agents-benchmarks/blob/main/docs/assets/benchmark-repro-walkthrough.mp4
+
 This guide covers reproducing the Airbyte Agents benchmark results.
 The repo ships with committed `recording-stats.json` files, so you can
 generate comparison reports without any credentials or recordings.
