@@ -600,7 +600,7 @@ def render_comparison_markdown(
         all_rows_for_connector = benchmark_rows + not_comparable_rows
         yaml_links = []
         for row in all_rows_for_connector:
-            yaml_rel = f"../../src/agent_bench/scenarios/{row.scenario}.yaml"
+            yaml_rel = f"/src/agent_bench/scenarios/{row.scenario}.yaml"
             yaml_links.append(f"[{row.scenario}]({yaml_rel})")
         if yaml_links:
             lines.append(f"**Scenario definitions:** {' | '.join(yaml_links)}")
@@ -626,7 +626,7 @@ def render_comparison_markdown(
     lines.append(
         "- Multi-step scenarios chain recorded tool calls across connectors with statically seeded inputs. "
         "Results are replayed from committed recordings, not executed live. "
-        "See [METHODOLOGY.md](../../docs/METHODOLOGY.md#multi-step-scenarios) for details"
+        "See [METHODOLOGY.md](/docs/METHODOLOGY.md#multi-step-scenarios) for details"
     )
     lines.append("")
 
