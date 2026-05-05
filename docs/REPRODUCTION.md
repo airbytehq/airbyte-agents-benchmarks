@@ -1,5 +1,8 @@
 # Reproducing the Benchmark
 
+Video Walkthrough:
+https://github.com/airbytehq/airbyte-agents-benchmarks/blob/main/docs/assets/benchmark-repro-walkthrough.mp4
+
 This guide covers reproducing the Airbyte Agents benchmark results.
 The repo ships with committed `recording-stats.json` files, so you can
 generate comparison reports without any credentials or recordings.
@@ -24,20 +27,7 @@ Verify the install:
 uv run agent-bench --help
 ```
 
-## Generate a Comparison Report (No Credentials)
-
-The committed `recording-stats.json` files in `artifacts/YYYY-MM-DD/`
-contain aggregate metrics (token counts, latency, record counts). Raw
-`recording.json` files are gitignored and never committed.
-
-```bash
-uv run agent-bench compare
-```
-
-This reads the committed stats and produces a markdown comparison of
-token efficiency across connectors.
-
-## Recording (Optional)
+## Create New Benchmark Recordings (Optional)
 
 Recording captures fresh MCP responses. Stats are generated
 automatically after every successful recording.
@@ -45,10 +35,12 @@ automatically after every successful recording.
 ### Credential setup
 
 For **agent-mcp** recording (the default path), you need:
+
 - `AIRBYTE_ORGANIZATION_ID` and connector IDs (e.g. `LINEAR_CONNECTOR_ID`) in `.env`
 - A one-time OAuth login via `agent-bench auth` (see below)
 
 For **emulated-mcp** recording (uses Sonar REST API), you additionally need:
+
 - `AIRBYTE_CLIENT_ID` and `AIRBYTE_CLIENT_SECRET` from an Airbyte Cloud Application
 
 To set up `AIRBYTE_CLIENT_ID`/`AIRBYTE_CLIENT_SECRET` for emulated-mcp:
@@ -119,6 +111,19 @@ uv run agent-bench record --stats-only
 > **Note:** This requires local `recording.json` files from a previous
 > recording run. These files are gitignored and not included in a fresh
 > clone — you must record at least once before `--stats-only` will work.
+
+## Generate a Comparison Report (No Credentials)
+
+The committed `recording-stats.json` files in `artifacts/YYYY-MM-DD/`
+contain aggregate metrics (token counts, latency, record counts). Raw
+`recording.json` files are gitignored and never committed.
+
+```bash
+uv run agent-bench compare
+```
+
+This reads the committed stats and produces a markdown comparison of
+token efficiency across connectors.
 
 ## Troubleshooting
 
