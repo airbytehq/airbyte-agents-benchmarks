@@ -10,7 +10,7 @@ dependencies = [
     "tiktoken>=0.5",
     "httpx>=0.24",
     "mcp>=1.10",
-    "python-dotenv>=1.0",
+    "python-dotenv>=1.2.2",
     "requests>=2.28",
 ]
 
